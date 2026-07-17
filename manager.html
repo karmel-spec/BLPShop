@@ -171,6 +171,7 @@
     <section class="view" id="view-pipeline"></section>
     <section class="view" id="view-qc"></section>
     <section class="view" id="view-client"></section>
+    <section class="view" id="view-team"></section>
   </main>
 </div>
 
@@ -186,6 +187,7 @@ const CONFIG = {
   REFINISH_SHEET: "1bfF4pmuGv7TefVlDG4lo_04gRjiX9QYerK4o9qih6kc",
   PIANOLOG_SHEET: "1ZunbPKygpQlcXfTyPowDHdUE9spJ3uV1XA4iX1eoKRc",
   DRAFT_FN: "/.netlify/functions/draft-client-update",
+  APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby9WPjupHsyTV0TvujoE8ZL9Qq7x2_E8Qu2HSQQe0hQFkN3_jwttZICwqnRxg-foRksfA/exec",
   PIANOLOG_URL: "https://pianologapp.netlify.app/",
   HANDBOOK_URL: "https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit",
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
@@ -280,6 +282,21 @@ const I18N = {
   cli_sent_done:["Sent ✓","Enviado ✓"],
   cli_no_evidence:["No report mentions since the last update — the draft will be a brief check-in.","Sin menciones en reportes desde la última actualización — el borrador será un saludo breve."],
   cli_signin_needed:["Sign in again (session token expired) and retry.","Vuelve a iniciar sesión (el token expiró) e inténtalo de nuevo."],
+
+  /* team */
+  nav_team:["Team","Equipo"],
+  team_title:["Team Roster","Plantilla del equipo"],
+  team_sub:["Add technicians when they're hired — they appear in the report name picker and Weekly Review immediately. Deactivate them when they leave — their report history stays intact, they just drop off the active lists. Changes save to a Roster tab on the report spreadsheet, shared across all devices.","Agrega técnicos al contratarlos — aparecen de inmediato en el selector de reportes y en la Revisión semanal. Desactívalos cuando se van — su historial se conserva, solo salen de las listas activas. Los cambios se guardan en una pestaña Roster de la hoja de reportes, compartida entre todos los dispositivos."],
+  team_active:["Active technicians","Técnicos activos"],
+  team_inactive:["Deactivated","Desactivados"],
+  team_add_ph:["New technician's first name (as it should appear on reports)","Nombre del nuevo técnico (como aparecerá en los reportes)"],
+  team_add:["Add to team","Agregar al equipo"],
+  team_deactivate:["Deactivate","Desactivar"],
+  team_reactivate:["Reactivate","Reactivar"],
+  team_src_reports:["from reports","por reportes"],
+  team_src_roster:["roster","roster"],
+  team_saving:["Saving…","Guardando…"],
+  team_bridge_old:["The bridge script needs a quick update before Team changes can save — the new Code.gs is in the repo; paste it into the Shop Reports Bridge (Extensions → Apps Script) and deploy a new version.","El script del puente necesita una actualización antes de poder guardar cambios de equipo — el nuevo Code.gs está en el repositorio; pégalo en el Shop Reports Bridge y publica una nueva versión."],
 };
 const t = (k, ...args) => {
   let s = (I18N[k] || [k,k])[LANG === "es" ? 1 : 0];
@@ -375,20 +392,42 @@ async function boot(){
       if(fresh.length) REPORTS.entries = REPORTS.entries.filter(e=>e.year!==YEAR).concat(fresh);
     }
   }catch(e){}
+  await fetchRosterOverrides();
   buildRoster(); buildPianoIndex();
   renderAll();
 }
 
 const validTechName = n => /^[A-Za-z][A-Za-z'’.-]+( [A-Za-z'’.-]+)?$/.test(n) && n.length<=22 && !/complete/i.test(n);
 function seqRows(){ return SEQ.filter(r=>validTechName((r[1]||"").trim()) && r.slice(2).some(c=>(c||"").trim())); }
+let ROSTER_OVR=null;   // {name -> 'active'|'inactive'} from the Roster tab via the bridge
+async function fetchRosterOverrides(){
+  try{
+    const r=await fetch(CONFIG.APPS_SCRIPT_URL+"?action=roster");
+    const out=await r.json();
+    if(out.ok && Array.isArray(out.roster)){
+      ROSTER_OVR={};
+      out.roster.forEach(x=>{ ROSTER_OVR[x.name.toLowerCase()]=x.status; });
+      return true;
+    }
+  }catch(e){}
+  ROSTER_OVR=ROSTER_OVR||{};
+  return false;
+}
 function buildRoster(){
   // Weekly Review covers the ACTIVE Friday-report roster (same rule as the
-  // shop app). The sequence tab lists everyone ever — it feeds the Sequence
-  // board, not this roster.
+  // shop app), plus Roster-tab additions, minus Roster-tab deactivations.
   const cutoff=new Date(thisFriday()); cutoff.setDate(cutoff.getDate()-8*7);
   const active=new Set(REPORTS.entries.filter(e=>e.date&&e.date>=iso(cutoff)).map(e=>e.tech));
   REPORTS.entries.filter(e=>e.year===YEAR).forEach(e=>active.add(e.tech));
-  ROSTER=[...active].sort();
+  const ovr=ROSTER_OVR||{};
+  Object.entries(ovr).forEach(([lc,status])=>{
+    if(status!=="active") return;
+    if(![...active].some(n=>n.toLowerCase()===lc)){
+      const orig=(REPORTS.entries.find(e=>e.tech.toLowerCase()===lc)||{}).tech;
+      active.add(orig || lc.replace(/(^|\s)\w/g,c=>c.toUpperCase()));
+    }
+  });
+  ROSTER=[...active].filter(n=>ovr[n.toLowerCase()]!=="inactive").sort();
 }
 function seqRowFor(tech){
   const f=tech.split(/\s+/)[0].toLowerCase();
@@ -493,7 +532,7 @@ const store = {
 const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_KEY="blpmgr.qc", PH_KEY="blpmgr.phase";
 
 /* ================= SHELL ================= */
-const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"]];
+const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"]];
 let ACTIVE = location.hash.slice(1) || "review";
 function renderShell(){
   $("#langEn").classList.toggle("on",LANG==="en"); $("#langEs").classList.toggle("on",LANG==="es");
@@ -508,7 +547,7 @@ function renderShell(){
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients();
+  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -1120,6 +1159,56 @@ function renderClients(){
       const log=store.get(CLI_LOG,{}); log[c.key]={sentAt:iso(new Date()),by:USER?.email||""}; store.set(CLI_LOG,log);
       CLI_OPEN=null; renderClients();};
   }
+}
+
+/* ================= TEAM ROSTER ================= */
+let TEAM_BUSY=false, TEAM_ERR="";
+async function rosterSet(tech, status){
+  TEAM_BUSY=true; TEAM_ERR=""; renderTeam();
+  try{
+    const r=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"rosterSet", tech, status})});
+    const out=await r.json();
+    if(!out.ok) throw new Error(out.error||"error");
+    await fetchRosterOverrides();
+    buildRoster();
+  }catch(e){
+    TEAM_ERR = /unknown action/i.test(String(e.message||e)) ? t("team_bridge_old") : String(e.message||e);
+  }
+  TEAM_BUSY=false; renderAll();
+}
+function renderTeam(){
+  const el=$("#view-team"); if(!el) return;
+  const ovr=ROSTER_OVR||{};
+  const inactive=Object.entries(ovr).filter(([,s])=>s==="inactive")
+    .map(([lc])=>(REPORTS.entries.find(e=>e.tech.toLowerCase()===lc)||{}).tech||lc.replace(/(^|\s)\w/g,c=>c.toUpperCase()));
+  el.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("team_title")}</h2><div class="sub">${t("team_sub")}</div></div></div>
+    ${TEAM_ERR?`<div class="banner" style="background:var(--red-deep)">${esc(TEAM_ERR)}</div>`:""}
+    <div class="card wa-form" style="flex-direction:row;flex-wrap:wrap;align-items:center">
+      <input id="teamName" placeholder="${t("team_add_ph")}" style="flex:1;min-width:220px">
+      <button class="btn" id="teamAdd" ${TEAM_BUSY?"disabled":""}>${TEAM_BUSY?t("team_saving"):t("team_add")}</button>
+    </div>
+    <h5 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#57524b;margin:18px 0 8px">${t("team_active")} <span class="num">(${ROSTER.length})</span></h5>
+    <div class="card">${ROSTER.map(n=>`
+      <div class="rev-row" style="cursor:default">
+        <span class="tech">${esc(n)}</span>
+        <span style="font-size:11px;color:var(--mut2)">${ovr[n.toLowerCase()]==="active"?t("team_src_roster"):t("team_src_reports")}</span>
+        <span></span><span></span>
+        <button class="btn3 teamOff" data-t="${esc(n)}" ${TEAM_BUSY?"disabled":""}>${t("team_deactivate")}</button>
+      </div>`).join("")}
+    </div>
+    ${inactive.length?`<h5 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#57524b;margin:18px 0 8px">${t("team_inactive")} <span class="num">(${inactive.length})</span></h5>
+    <div class="card">${inactive.map(n=>`
+      <div class="rev-row" style="cursor:default;opacity:.7">
+        <span class="tech">${esc(n)}</span><span></span><span></span><span></span>
+        <button class="btn3 teamOn" data-t="${esc(n)}" ${TEAM_BUSY?"disabled":""}>${t("team_reactivate")}</button>
+      </div>`).join("")}
+    </div>`:""}`;
+  $("#teamAdd").onclick=()=>{ const n=$("#teamName").value.trim(); if(n) rosterSet(n,"active"); };
+  document.querySelectorAll(".teamOff").forEach(b=>b.onclick=()=>rosterSet(b.dataset.t,"inactive"));
+  document.querySelectorAll(".teamOn").forEach(b=>b.onclick=()=>rosterSet(b.dataset.t,"active"));
 }
 
 checkGate();

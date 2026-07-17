@@ -401,6 +401,7 @@ async function boot(){
   DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
   renderAll();
+  applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
 }
 
 async function tryLiveRefresh(){
@@ -447,6 +448,18 @@ function parseCSV(text){
   return rows;
 }
 
+async function applyTeamRoster(){
+  try{
+    const out=await (await fetch(CONFIG.APPS_SCRIPT_URL+"?action=roster")).json();
+    if(!out.ok||!Array.isArray(out.roster)||!out.roster.length) return;
+    const status={}; out.roster.forEach(x=>status[x.name.toLowerCase()]=x.status);
+    out.roster.filter(x=>x.status==="active").forEach(x=>{
+      if(!ROSTER.some(n=>n.toLowerCase()===x.name.toLowerCase())) ROSTER.push(x.name);
+    });
+    ROSTER=ROSTER.filter(n=>status[n.toLowerCase()]!=="inactive").sort();
+    renderAll();
+  }catch(e){ /* bridge not updated yet — derived roster stands */ }
+}
 function buildRoster(){
   const seenLower=new Map();
   DATA.entries.forEach(e=>{ const k=e.tech.toLowerCase(); if(k && !seenLower.has(k)) seenLower.set(k, e.tech); });

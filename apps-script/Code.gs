@@ -22,8 +22,13 @@ function doPost(e) {
     var body = JSON.parse(e.postData.contents);
     var secret = PropertiesService.getScriptProperties().getProperty("SHARED_SECRET");
     if (secret && body.secret !== secret) throw new Error("bad secret");
-    if (body.action !== "submit") throw new Error("unknown action");
-    out = submitReport(String(body.tech || ""), String(body.date || ""), String(body.text || ""));
+    if (body.action === "submit") {
+      out = submitReport(String(body.tech || ""), String(body.date || ""), String(body.text || ""));
+    } else if (body.action === "rosterSet") {
+      out = rosterSet_(String(body.tech || ""), String(body.status || "active"));
+    } else {
+      throw new Error("unknown action");
+    }
   } catch (err) {
     out = { ok: false, error: String(err && err.message || err) };
   }
@@ -71,7 +76,46 @@ function submitReport(tech, dateISO, text) {
   return { ok: true, appended: !isPlaceholder, row: row, col: col, sheet: sheet.getName() };
 }
 
-/** GET ?action=history returns every tab as JSON (webapp fallback data source). */
+/* ---------- Team roster (a "Roster" tab the bridge creates on demand) ----
+   Lets the Shop Manager add new hires (visible in the report picker before
+   their first report) and deactivate departed technicians (hidden from the
+   roster while their report history stays untouched). */
+function rosterTab_(ss) {
+  var sh = ss.getSheetByName("Roster");
+  if (!sh) {
+    sh = ss.insertSheet("Roster");
+    sh.getRange(1, 1, 1, 3).setValues([["Name", "Status", "Updated"]]);
+  }
+  return sh;
+}
+
+function rosterList_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName("Roster");
+  if (!sh) return [];
+  return sh.getDataRange().getDisplayValues().slice(1)
+    .filter(function (r) { return String(r[0]).trim(); })
+    .map(function (r) { return { name: String(r[0]).trim(),
+                                 status: /inactive/i.test(r[1]) ? "inactive" : "active" }; });
+}
+
+function rosterSet_(tech, status) {
+  if (!tech) throw new Error("missing tech");
+  status = /inactive/i.test(status) ? "inactive" : "active";
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = rosterTab_(ss);
+  var rows = sh.getDataRange().getDisplayValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).trim().toLowerCase() === tech.trim().toLowerCase()) {
+      sh.getRange(i + 1, 2, 1, 2).setValues([[status, new Date().toISOString().slice(0, 10)]]);
+      return { ok: true, tech: tech, status: status, updated: true };
+    }
+  }
+  sh.appendRow([tech.trim(), status, new Date().toISOString().slice(0, 10)]);
+  return { ok: true, tech: tech.trim(), status: status, added: true };
+}
+
+/** GET ?action=history returns every tab as JSON; ?action=roster returns the team roster. */
 function doGet(e) {
   var action = e && e.parameter && e.parameter.action;
   var out;
@@ -80,6 +124,8 @@ function doGet(e) {
     out = ss.getSheets().map(function (sh) {
       return { name: sh.getName(), gid: sh.getSheetId(), values: sh.getDataRange().getDisplayValues() };
     });
+  } else if (action === "roster") {
+    out = { ok: true, roster: rosterList_() };
   } else {
     out = { ok: true, service: "blp-shop-reports", time: new Date().toISOString() };
   }
