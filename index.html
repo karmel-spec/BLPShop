@@ -298,9 +298,16 @@
       <section class="view" id="view-pianos">
         <div class="row1">
           <div>
-            <h2 class="page">Pianos mentioned in reports</h2>
+            <h2 class="page">Current Shopwork (mentioned in reports)</h2>
             <div class="sub">Auto-detected make + serial mentions with logged hours. “History” shows every report on that piano; “Piano Log ↗” opens the inventory record.</div>
           </div>
+          <select id="pianoSort" style="border:1px solid var(--line);border-radius:5px;padding:9px 12px;font:inherit;font-size:14px;background:#fff;align-self:center">
+            <option value="alpha">Sort: A–Z</option>
+            <option value="hours">Sort: Hours logged</option>
+            <option value="stage">Sort: Work stage</option>
+            <option value="mentions">Sort: Most mentions</option>
+            <option value="recent">Sort: Recently worked</option>
+          </select>
         </div>
         <div class="pgrid" id="pianoGrid"></div>
       </section>
@@ -358,6 +365,9 @@ let ROSTER = [], ALL_TECHS = [];
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+// Technician cells occasionally carry pasted text after the name (e.g. a
+// summary typed into the name cell) — keep just the name line.
+const cleanTech = (s) => String(s||"").split("\n")[0].trim().slice(0, 24);
 
 /* ---------- dates ---------- */
 function thisFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()+((5-x.getDay()+7)%7)); return x; }
@@ -371,6 +381,7 @@ async function boot(){
   try{ DATA = await (await fetch("./data/report-history.json")).json(); }
   catch(e){ $("#topBar").textContent="Could not load data/report-history.json."; return; }
   await tryLiveRefresh();
+  DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
   renderAll();
 }
@@ -420,7 +431,9 @@ function parseCSV(text){
 }
 
 function buildRoster(){
-  ALL_TECHS=[...new Set(DATA.entries.map(e=>e.tech))].sort();
+  const seenLower=new Map();
+  DATA.entries.forEach(e=>{ const k=e.tech.toLowerCase(); if(k && !seenLower.has(k)) seenLower.set(k, e.tech); });
+  ALL_TECHS=[...seenLower.values()].sort((a,b)=>a.localeCompare(b));
   const cutoff=new Date(thisFriday()); cutoff.setDate(cutoff.getDate()-CONFIG.ACTIVE_WEEKS*7);
   const active=new Set(DATA.entries.filter(e=>e.date&&e.date>=iso(cutoff)).map(e=>e.tech));
   DATA.entries.filter(e=>e.year===new Date().getFullYear()).forEach(e=>active.add(e.tech));
@@ -813,7 +826,7 @@ function runSearch(){
   const qRaw=$("#q").value.trim(), q=qRaw.toLowerCase();
   const tech=$("#fTech").value, year=$("#fYear").value;
   let hits=DATA.entries;
-  if(tech) hits=hits.filter(e=>e.tech===tech);
+  if(tech) hits=hits.filter(e=>e.tech.toLowerCase()===tech.toLowerCase());
   if(year) hits=hits.filter(e=>String(e.year)===year);
   const terms=q?q.split(/\s+/).filter(Boolean):[];
   if(terms.length) hits=hits.filter(e=>{ const t=e.text.toLowerCase(); return terms.every(w=>t.includes(w)||e.tech.toLowerCase().includes(w)); });
@@ -866,28 +879,52 @@ function extractPianos(text){
   return found;
 }
 
+const STAGES=[["TEARDOWN","Teardown"],["PRSB","Belly (PRSB)"],["CAP","Action (CAP)"],["REFINISH","Refinishing"],["ASSEMBLY","Assembly"],["DHRT","DHRT"],["TUNING","Tuning"],["QC","QC"],["OTHER","—"]];
+function stageOf(snip){
+  const p=String(snip||"").toLowerCase();
+  if(/teardown|tear down/.test(p)) return "TEARDOWN";
+  if(/restring|soundboard|bridge|pinblock|plate|chip/.test(p)) return "PRSB";
+  if(/refinish|lacquer|stain|sanding|sprayed|filler|buff/.test(p)) return "REFINISH";
+  if(/assembl/.test(p)) return "ASSEMBLY";
+  if(/regulat|voic|damper|dhrt|trapwork/.test(p)) return "DHRT";
+  if(/quality|qc/.test(p)) return "QC";
+  if(/tun(ed|e|ing)/.test(p)) return "TUNING";
+  if(/action|hammer|felts|keytop|keys|clean/.test(p)) return "CAP";
+  return "OTHER";
+}
 function renderPianos(){
   const map=new Map();
   DATA.entries.forEach(e=>extractPianos(e.text).forEach(p=>{
     if(!p.serial) return;
     const k=p.label.toLowerCase();
-    const rec=map.get(k)||{...p,count:0,techs:new Set(),hrs:0,first:e.date||String(e.year),last:e.date||String(e.year)};
+    const rec=map.get(k)||{...p,count:0,techs:new Set(),hrs:0,first:e.date||String(e.year),last:e.date||String(e.year),snip:""};
     rec.count++; rec.techs.add(e.tech); rec.hrs+=pianoHours(e.text,p.serial);
-    if(e.date){ if(!rec.first||e.date<rec.first) rec.first=e.date; if(!rec.last||e.date>rec.last) rec.last=e.date; }
+    if(e.date){ if(!rec.first||e.date<rec.first) rec.first=e.date;
+      if(!rec.last||e.date>=rec.last){ rec.last=e.date;
+        const i=e.text.indexOf(String(p.serial)); rec.snip=i>=0?e.text.slice(i,i+180):e.text.slice(0,180); } }
     map.set(k,rec);
   }));
-  const pianos=[...map.values()].sort((a,b)=>b.count-a.count).slice(0,60);
+  const mode=($("#pianoSort")||{}).value||"alpha";
+  let pianos=[...map.values()].sort((a,b)=>b.count-a.count).slice(0,60);
+  pianos.forEach(p=>p.stage=stageOf(p.snip));
+  const stageIdx=s=>STAGES.findIndex(([id])=>id===s);
+  if(mode==="alpha") pianos.sort((a,b)=>a.label.localeCompare(b.label));
+  else if(mode==="hours") pianos.sort((a,b)=>b.hrs-a.hrs);
+  else if(mode==="stage") pianos.sort((a,b)=>stageIdx(a.stage)-stageIdx(b.stage)||a.label.localeCompare(b.label));
+  else if(mode==="recent") pianos.sort((a,b)=>String(b.last).localeCompare(String(a.last)));
   $("#pianoGrid").innerHTML=pianos.map(p=>`
     <div class="pcard">
       <h5>${esc(p.label)}</h5>
       <div class="pm num">${p.count} report mention${p.count===1?"":"s"} · ${p.techs.size} technician${p.techs.size===1?"":"s"}</div>
       <div class="pt num">${fmtShort(p.first)} → ${fmtShort(p.last)}</div>
+      ${p.stage!=="OTHER"?`<div class="pm" style="margin-top:3px"><span style="display:inline-block;background:#eee9e0;color:#57524b;border-radius:99px;font-size:11px;font-weight:700;padding:2px 9px">${esc(STAGES[stageIdx(p.stage)][1])}</span></div>`:""}
       ${p.hrs?`<div class="hrs num">${p.hrs.toFixed(1)} hrs logged</div>`:""}
       <div class="plinks">
         <button data-q="${esc(p.serial)}">History</button>
         <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial)}" target="_blank" rel="noreferrer">Piano Log ↗</a>
       </div>
     </div>`).join("")||`<div class="sub">No serialized pianos detected.</div>`;
+  const sortSel=$("#pianoSort"); if(sortSel && !sortSel.dataset.wired){ sortSel.dataset.wired="1"; sortSel.onchange=renderPianos; }
   document.querySelectorAll(".pcard button[data-q]").forEach(b=>b.onclick=()=>{
     $("#q").value=b.dataset.q; $("#fTech").value=""; $("#fYear").value="";
     showView("history"); runSearch();
