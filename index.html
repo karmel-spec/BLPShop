@@ -451,7 +451,7 @@ function matchTech(user){
     return n===given || local===n || local.startsWith(n) || given.startsWith(n);
   })||"";
 }
-const isOwner=()=>!!USER&&OWNERS.includes((USER.email||"").toLowerCase());
+const isOwner=()=>!!USER&&(OWNERS.includes((USER.email||"").toLowerCase())||(USER.email||"").toLowerCase().endsWith("@brighamlarsonpianos.com"));
 
 function rosterSelectHTML(label){
   return `<label for="whoSelect">${label}</label>
@@ -513,6 +513,7 @@ function signOut(){
 
 /* ---------- navigation ---------- */
 function showView(name){
+  if(name==="history"&&!isOwner()) name="dashboard";   // History is management-only
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="view-"+name));
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===name));
 }
@@ -520,6 +521,8 @@ $("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(
 
 function renderAll(){
   renderWho();
+  const histBtn=document.querySelector('#tabs button[data-view="history"]');
+  if(histBtn) histBtn.style.display=isOwner()?"":"none";
   renderDashboard(); renderPlanner(); renderMyWeek(); renderReportForm();
   renderHistoryControls(); runSearch(); renderPianos(); renderCalReport();
   $("#dataStamp").textContent=`${DATA.entries.length.toLocaleString()} entries · 2017–${new Date().getFullYear()}`+(DATA.live?" · live from sheet":` · snapshot ${DATA.generated||""}`);
@@ -931,7 +934,7 @@ function renderPianos(){
       <div class="pt num">${fmtShort(p.first)} → ${fmtShort(p.last)}</div>
       ${p.hrs?`<div class="hrs num">${p.hrs.toFixed(1)} hrs logged</div>`:""}
       <div class="plinks">
-        <button data-q="${esc(p.serial)}">History</button>
+        ${isOwner()?`<button data-q="${esc(p.serial)}">History</button>`:""}
         <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial)}" target="_blank" rel="noreferrer">Piano Log ↗</a>
       </div>
     </div>`;
