@@ -20,15 +20,12 @@
   .num{font-variant-numeric:tabular-nums}
 
   .shell{display:grid;grid-template-columns:212px 1fr;min-height:100vh}
-  @media (max-width:840px){.shell{grid-template-columns:1fr}.side{position:static;flex-direction:row;overflow-x:auto}.side nav{flex-direction:row}.side .keys,.side .badge{display:none}}
+  @media (max-width:840px){.shell{grid-template-columns:1fr}.side{position:static;flex-direction:row;overflow-x:auto}.side nav{flex-direction:row}.side .badge{display:none}}
 
   /* ---- sidebar (Option 2 side tabs, showroom-black) ---- */
   .side{background:linear-gradient(180deg,#17171b,var(--side));color:#c9c3ba;display:flex;flex-direction:column;padding:18px 0;position:sticky;top:0;height:100vh}
   .badge{align-self:center;padding:0 16px}
   .badge img{width:100%;max-width:180px;display:block;height:auto}
-  .keys{display:flex;height:22px;margin:16px 0;border-top:1px solid #26262c;border-bottom:1px solid #26262c;background:#f4efe6;position:relative;overflow:hidden}
-  .keys span{flex:1;border-right:1px solid #c9c2b4}
-  .keys i{position:absolute;top:0;width:4.2%;height:60%;background:#0c0c0f;border-radius:0 0 2px 2px}
   .side nav{display:flex;flex-direction:column;font-size:14px}
   .side nav button{background:none;border:0;color:#a49d90;padding:10px 20px;text-align:left;display:flex;gap:10px;align-items:center;border-left:3px solid transparent}
   .side nav button.on{color:#fff;background:rgba(180,51,51,.16);border-left-color:var(--red);font-weight:600}
@@ -180,7 +177,6 @@
     <div class="badge">
       <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
     </div>
-    <div class="keys" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><i style="left:9%"></i><i style="left:23%"></i><i style="left:51%"></i><i style="left:65%"></i><i style="left:79%"></i></div>
     <nav id="tabs">
       <button data-view="dashboard" class="on"><span class="dot"></span>Shop Dashboard</button>
       <button data-view="planner"><span class="dot"></span>Assignment Planner</button>
