@@ -881,7 +881,11 @@ function extractPianos(text){
   return found;
 }
 
-const STAGES=[["TEARDOWN","Teardown"],["PRSB","Belly (PRSB)"],["CAP","Action (CAP)"],["REFINISH","Refinishing"],["ASSEMBLY","Assembly"],["DHRT","DHRT"],["TUNING","Tuning"],["QC","QC"],["OTHER","—"]];
+const STAGES=[["INTAKE","Intake"],["ASSESS","Assessment"],["TEARDOWN","Teardown"],["PRSB","Belly (PRSB)"],["CAP","Action (CAP)"],["REFINISH","Refinishing"],["ASSEMBLY","Assembly"],["DHRT","DHRT"],["TUNING","Tuning"],["QC","QC"],["READY","Ready / Exit"],["OTHER","—"]];
+// Manual stage corrections — shared key with the Shop Manager pipeline, so a
+// fix made here moves the piano's kanban card there too (per device).
+const stageOverrides=()=>{ try{ return JSON.parse(localStorage.getItem("blpmgr.phase"))||{}; }catch(e){ return {}; } };
+const setStageOverride=(digits,stage)=>{ const o=stageOverrides(); o[digits]=stage; localStorage.setItem("blpmgr.phase",JSON.stringify(o)); };
 function stageOf(snip){
   const p=String(snip||"").toLowerCase();
   if(/teardown|tear down/.test(p)) return "TEARDOWN";
@@ -908,7 +912,8 @@ function renderPianos(){
   }));
   const mode=($("#pianoSort")||{}).value||"alpha";
   let pianos=[...map.values()].sort((a,b)=>b.count-a.count).slice(0,60);
-  pianos.forEach(p=>p.stage=stageOf(p.snip));
+  const ov=stageOverrides();
+  pianos.forEach(p=>{ p.digits=String(p.serial).replace(/\D/g,""); p.stage=ov[p.digits]||stageOf(p.snip); });
   const stageIdx=s=>STAGES.findIndex(([id])=>id===s);
   if(mode==="alpha") pianos.sort((a,b)=>a.label.localeCompare(b.label));
   else if(mode==="hours") pianos.sort((a,b)=>b.hrs-a.hrs);
@@ -916,10 +921,14 @@ function renderPianos(){
   else if(mode==="recent") pianos.sort((a,b)=>String(b.last).localeCompare(String(a.last)));
   const cardHTML=p=>`
     <div class="pcard">
-      <h5>${esc(p.label)}</h5>
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+        <h5 style="margin:0">${esc(p.label)}</h5>
+        <select class="stageSel" data-d="${esc(p.digits)}" title="Work stage" style="border:1px solid var(--line);border-radius:5px;font-size:11px;font-weight:700;color:#57524b;background:#faf8f4;padding:3px 4px;max-width:118px;flex:none">
+          ${STAGES.map(([id,nm])=>`<option value="${id}" ${p.stage===id?"selected":""}>${esc(id==="OTHER"?"— stage —":nm)}</option>`).join("")}
+        </select>
+      </div>
       <div class="pm num">${p.count} report mention${p.count===1?"":"s"} · ${p.techs.size} technician${p.techs.size===1?"":"s"}</div>
       <div class="pt num">${fmtShort(p.first)} → ${fmtShort(p.last)}</div>
-      ${p.stage!=="OTHER"&&mode!=="stage"?`<div class="pm" style="margin-top:3px"><span style="display:inline-block;background:#eee9e0;color:#57524b;border-radius:99px;font-size:11px;font-weight:700;padding:2px 9px">${esc(STAGES[stageIdx(p.stage)][1])}</span></div>`:""}
       ${p.hrs?`<div class="hrs num">${p.hrs.toFixed(1)} hrs logged</div>`:""}
       <div class="plinks">
         <button data-q="${esc(p.serial)}">History</button>
@@ -943,6 +952,10 @@ function renderPianos(){
   document.querySelectorAll(".pcard button[data-q]").forEach(b=>b.onclick=()=>{
     $("#q").value=b.dataset.q; $("#fTech").value=""; $("#fYear").value="";
     showView("history"); runSearch();
+  });
+  document.querySelectorAll(".stageSel").forEach(sel=>sel.onchange=()=>{
+    setStageOverride(sel.dataset.d, sel.value);
+    const y=window.scrollY; renderPianos(); window.scrollTo(0,y);
   });
 }
 
