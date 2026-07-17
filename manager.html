@@ -170,6 +170,7 @@
     <section class="view" id="view-sequence"></section>
     <section class="view" id="view-pipeline"></section>
     <section class="view" id="view-qc"></section>
+    <section class="view" id="view-client"></section>
   </main>
 </div>
 
@@ -183,6 +184,8 @@ const CONFIG = {
   SCHED_SHEET:  "1k9ToAeueEg5WOtaY91xXzL-a0l_AJsSZWw23tcAWECU",
   SEQ_GID: "0", NOTES_GID: "1448465358",
   REFINISH_SHEET: "1bfF4pmuGv7TefVlDG4lo_04gRjiX9QYerK4o9qih6kc",
+  PIANOLOG_SHEET: "1ZunbPKygpQlcXfTyPowDHdUE9spJ3uV1XA4iX1eoKRc",
+  DRAFT_FN: "/.netlify/functions/draft-client-update",
   PIANOLOG_URL: "https://pianologapp.netlify.app/",
   HANDBOOK_URL: "https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit",
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
@@ -255,6 +258,28 @@ const I18N = {
   qc_fixes_open:["fix items still open","arreglos pendientes"],
   qc_records:["QC records","Registros de CC"], qc_print:["Print record","Imprimir registro"],
   qc_by:["Checked by","Revisado por"], view_doc:["View original doc","Ver documento original"],
+
+  /* client reports */
+  nav_client:["Client Reports","Reportes a clientes"],
+  cli_title:["Client Reports","Reportes a clientes"],
+  cli_sub:["Monthly progress emails, drafted from the technicians' own reports in Brigham's voice. Review, edit, attach photos in Gmail, and send — nothing goes out without your approval.","Correos mensuales de avance, redactados desde los reportes de los técnicos con la voz de Brigham. Revisa, edita, adjunta fotos en Gmail y envía — nada sale sin tu aprobación."],
+  cli_due:["Due for an update","Pendientes de actualización"],
+  cli_rest:["Other client pianos","Otros pianos de clientes"],
+  cli_last:["Last update","Última actualización"],
+  cli_never:["never","nunca"],
+  cli_include:["Monthly updates","Actualizaciones mensuales"],
+  cli_generate:["Generate draft","Generar borrador"],
+  cli_generating:["Drafting…","Redactando…"],
+  cli_template_note:["AI drafting isn't configured yet (ANTHROPIC_API_KEY in Netlify) — this is a template draft. It still uses the real shop evidence below.","La redacción con IA aún no está configurada (ANTHROPIC_API_KEY en Netlify) — este es un borrador de plantilla. Aun así usa la evidencia real del taller."],
+  cli_evidence:["Shop evidence this period","Evidencia del taller en este periodo"],
+  cli_phase_log:["Phase sign-offs (piano log)","Fases firmadas (registro de pianos)"],
+  cli_subject:["Subject","Asunto"],
+  cli_copy:["Copy email","Copiar correo"],
+  cli_gmail:["Open in Gmail","Abrir en Gmail"],
+  cli_sent:["Mark sent","Marcar enviado"],
+  cli_sent_done:["Sent ✓","Enviado ✓"],
+  cli_no_evidence:["No report mentions since the last update — the draft will be a brief check-in.","Sin menciones en reportes desde la última actualización — el borrador será un saludo breve."],
+  cli_signin_needed:["Sign in again (session token expired) and retry.","Vuelve a iniciar sesión (el token expiró) e inténtalo de nuevo."],
 };
 const t = (k, ...args) => {
   let s = (I18N[k] || [k,k])[LANG === "es" ? 1 : 0];
@@ -274,8 +299,9 @@ function parseCSV(text){
   if(cur!==""||row.length){row.push(cur);rows.push(row);}
   return rows;
 }
-async function gviz(sheetId, gid){
-  const r = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&headers=0&gid=${gid}`);
+async function gviz(sheetId, gidOrName){
+  const sel = /^\d+$/.test(String(gidOrName)) ? `gid=${gidOrName}` : `sheet=${encodeURIComponent(gidOrName)}`;
+  const r = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&headers=0&${sel}`);
   return parseCSV(await r.text());
 }
 function thisFriday(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()+((5-x.getDay()+7)%7));return x;}
@@ -306,6 +332,7 @@ function checkGate(){
         const p=JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
         USER={email:(p.email||"").toLowerCase(),name:p.name||"",given:p.given_name||"",picture:p.picture||""};
         localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
+        sessionStorage.setItem("blpmgr.idtok", resp.credential);  // for the drafting function
         if(isAdmin(USER)) enter();
         else $("#gateMsg").textContent = `${USER.email} — ${LANG==="es"?"no tiene acceso de administración.":"does not have management access."}`;
       }catch(e){ $("#gateMsg").textContent="Sign-in failed."; }
@@ -316,20 +343,22 @@ function checkGate(){
 }
 
 /* ================= DATA ================= */
-let REPORTS={entries:[]}, SEQ=[], NOTES=[], REFINISH=[], ROSTER=[];
+let REPORTS={entries:[]}, SEQ=[], NOTES=[], REFINISH=[], PLOG=[], ROSTER=[];
 let PIANOS=new Map();   // serialKey -> {serial, label, spot, level, progress, lastDate, techs:Set}
+const SERIAL_DATES=new Map();  // any serial token -> latest report date (brand-independent)
 const YEAR = new Date().getFullYear();
 
 async function boot(){
   renderShell();
   document.querySelectorAll(".view").forEach(v=>v.innerHTML=`<div style="color:var(--mut);padding:30px 0">${t("loading")}</div>`);
-  const [hist, seq, notes, refin] = await Promise.all([
+  const [hist, seq, notes, refin, plog] = await Promise.all([
     fetch("data/report-history.json").then(r=>r.json()).catch(()=>({entries:[],tabs:{}})),
     gviz(CONFIG.SCHED_SHEET, CONFIG.SEQ_GID).catch(()=>[]),
     gviz(CONFIG.SCHED_SHEET, CONFIG.NOTES_GID).catch(()=>[]),
     gviz(CONFIG.REFINISH_SHEET, "0").catch(()=>[]),
+    gviz(CONFIG.PIANOLOG_SHEET, "Piano Log").catch(()=>[]),
   ]);
-  REPORTS = hist; SEQ = seq; NOTES = notes; REFINISH = refin;
+  REPORTS = hist; SEQ = seq; NOTES = notes; REFINISH = refin; PLOG = plog;
   // live refresh of current-year reports
   try{
     const gid = Object.keys(hist.tabs||{}).find(g=>hist.tabs[g].year===YEAR);
@@ -401,6 +430,8 @@ function buildPianoIndex(){
   });
   // report mentions: latest date + progress %
   const sorted=[...REPORTS.entries].filter(e=>e.date).sort((a,b)=>a.date.localeCompare(b.date));
+  SERIAL_DATES.clear();
+  sorted.forEach(e=>{ (e.text.match(/\d{4,8}/g)||[]).forEach(tok=>SERIAL_DATES.set(tok, e.date)); });
   sorted.forEach(e=>{
     BRAND_RE.lastIndex=0; let m;
     while((m=BRAND_RE.exec(e.text))){
@@ -462,7 +493,7 @@ const store = {
 const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_KEY="blpmgr.qc", PH_KEY="blpmgr.phase";
 
 /* ================= SHELL ================= */
-const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"]];
+const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"]];
 let ACTIVE = location.hash.slice(1) || "review";
 function renderShell(){
   $("#langEn").classList.toggle("on",LANG==="en"); $("#langEs").classList.toggle("on",LANG==="es");
@@ -477,7 +508,7 @@ function renderShell(){
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC();
+  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -934,6 +965,161 @@ function wireQcSheet(){
   const rd=$("#qcReady"); if(rd) rd.onclick=()=>{
     const recs=qcRecords(); recs[QC_OPEN].ready=true; recs[QC_OPEN].date=new Date().toLocaleDateString(); store.set(QC_KEY,recs); renderQC();
   };
+}
+
+/* ================= CLIENT REPORTS ================= */
+const PHASE_COLS={KEYWORK:51,CAP:52,"SOUNDBOARD / BRIDGE":53,RESTRINGING:54,DHRT:55,REFINISHING:56,PLATING:57,QC:58};
+const CLI_LOG="blpmgr.clientlog", CLI_FLAG="blpmgr.cliflag";
+let CLI_OPEN=null; const CLI_DRAFTS={};
+
+function clientPianos(){
+  const flags=store.get(CLI_FLAG,{}), log=store.get(CLI_LOG,{});
+  const recentCut=new Date(); recentCut.setDate(recentCut.getDate()-120);
+  const out=[];
+  PLOG.slice(2).forEach(r=>{
+    if(r.length<20) return;
+    const owner=(r[1]||"").trim(), serial=(r[2]||"").trim();
+    if(!owner||!serial||/blp\s*owned/i.test(owner)) return;
+    const key=skey(serial)||serial.toLowerCase();
+    const lines=owner.split("\n").map(s=>s.trim()).filter(Boolean);
+    const ownerName=(lines.find(l=>!l.includes("@")&&!/\d{3}/.test(l))||lines[0]||"").slice(0,60);
+    const ownerEmail=(lines.find(l=>l.includes("@"))||"").split(/\s/).find(w=>w.includes("@"))||"";
+    const phases={};
+    Object.entries(PHASE_COLS).forEach(([k,i])=>{ const v=(r[i]||"").trim(); if(v) phases[k]=v; });
+    const emailUpd=(r[59]||"").trim();
+    const dm=/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/.exec(emailUpd);
+    const sheetSent=dm?`${dm[3].length===2?"20"+dm[3]:dm[3]}-${String(dm[1]).padStart(2,"0")}-${String(dm[2]).padStart(2,"0")}`:null;
+    const lastSent=(log[key]&&log[key].sentAt)||sheetSent;
+    const rec=PIANOS.get(key);
+    const lastMention=SERIAL_DATES.get(key)||null;
+    const activity=!!(lastMention&&lastMention>=iso(recentCut));
+    const include=key in flags ? flags[key] : activity;
+    out.push({key, serial, owner, ownerName, ownerEmail,
+      summary:(r[3]||"").trim()||`${(r[5]||"").trim()} ${serial}`,
+      make:(r[5]||"").trim(), model:(r[6]||"").trim(), status:(r[18]||"").trim(),
+      photosFolder:(r[37]||"").trim(), phases, emailUpd, lastSent, include, activity});
+  });
+  return out;
+}
+function cliEvidence(c){
+  const since=c.lastSent||iso(new Date(Date.now()-60*86400e3));
+  return REPORTS.entries
+    .filter(e=>e.date&&e.date>since&&(e.text.match(/\d{4,8}/g)||[]).includes(skey(c.serial)))
+    .sort((a,b)=>a.date.localeCompare(b.date))
+    .map(e=>{
+      const i=e.text.indexOf(String(c.serial));
+      const snip=i>=0?e.text.slice(Math.max(0,i-60), i+240):e.text.slice(0,240);
+      return {date:fmtShort(e.date), tech:e.tech, text:snip.trim()};
+    }).slice(-12);
+}
+function localTemplate(c, evid){
+  const first=(c.ownerName||"there").split(/\s+/)[0];
+  const done=Object.entries(c.phases).filter(([,v])=>/✓|done|complete/i.test(v)).map(([k])=>k.toLowerCase());
+  const lines=evid.slice(-4).map(e=>`• ${e.date} — ${e.tech}: ${e.text.slice(0,140)}`);
+  const body=
+`Hi ${first},
+
+I wanted to give you an update on your ${[c.make,c.model].filter(Boolean).join(" ")||"piano"} (serial ${c.serial}) — it's been getting real attention in the shop.
+
+${lines.length?`Here's some of what the team has been working on recently:
+${lines.join("\n")}`:`Work is queued and moving — I'll have more specifics for you in the next update.`}
+${done.length?`
+Completed stages so far: ${done.join(", ")}.`:""}
+
+I'll keep you posted as it moves through the next phase. If you have any questions at all, just reply to this email — I'm happy to talk pianos any time.
+
+Warmly,
+Brigham Larson
+Brigham Larson Pianos`;
+  return {subject:`Progress update on your ${[c.make,c.model].filter(Boolean).join(" ")||"piano"}`, body};
+}
+async function generateDraft(c){
+  const evid=cliEvidence(c);
+  CLI_DRAFTS[c.key]={loading:true}; renderClients();
+  const idToken=sessionStorage.getItem("blpmgr.idtok")||"";
+  try{
+    const r=await fetch(CONFIG.DRAFT_FN,{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({idToken, piano:{serial:c.serial, summary:c.summary, ownerName:c.ownerName, label:c.summary},
+        evidence:evid, phases:c.phases, lastUpdate:c.lastSent?fmtShort(c.lastSent):null})});
+    if(r.status===503){ CLI_DRAFTS[c.key]={...localTemplate(c,evid), note:t("cli_template_note")}; }
+    else if(r.status===401){ CLI_DRAFTS[c.key]={...localTemplate(c,evid), note:t("cli_signin_needed")}; }
+    else{
+      const out=await r.json();
+      CLI_DRAFTS[c.key]= out.ok ? {subject:out.subject, body:out.body}
+                                : {...localTemplate(c,evid), note:out.error||"error"};
+    }
+  }catch(e){ CLI_DRAFTS[c.key]={...localTemplate(c,evid), note:t("cli_template_note")}; }
+  renderClients();
+}
+function cliCard(c){
+  const open=CLI_OPEN===c.key;
+  const log=store.get(CLI_LOG,{})[c.key];
+  return `
+  <div class="rev-row" data-cli="${esc(c.key)}">
+    <span class="tech">${esc(c.summary)} <span style="font-weight:400;color:var(--mut2)">· ${esc(c.ownerName)}</span></span>
+    <span class="num" style="font-size:12px;color:var(--mut2)">${t("cli_last")}: ${c.lastSent?fmtShort(c.lastSent):t("cli_never")}</span>
+    <label class="ck" onclick="event.stopPropagation()"><input type="checkbox" class="cliFlag" data-k="${esc(c.key)}" ${c.include?"checked":""}> ${t("cli_include")}</label>
+    <span>${log?`<span class="pill ok">${t("cli_sent_done")}</span>`:""}</span>
+    <span style="color:var(--mut2)">${open?"▲":"▼"}</span>
+  </div>
+  ${open?cliPanel(c):""}`;
+}
+function cliPanel(c){
+  const evid=cliEvidence(c);
+  const d=CLI_DRAFTS[c.key];
+  return `<div class="revpanel">
+    <div>
+      <h5>${t("cli_subject")}</h5>
+      ${d&&!d.loading?`
+        ${d.note?`<div class="item" style="border-left:3px solid var(--warn)">${esc(d.note)}</div>`:""}
+        <input id="cliSubj" style="width:100%;border:1px solid var(--line);border-radius:6px;padding:9px 12px;font:inherit;font-size:14px" value="${esc(d.subject||"")}">
+        <h5 style="margin-top:10px">Email</h5>
+        <textarea id="cliBody" style="width:100%;min-height:280px;border:1px solid var(--line);border-radius:6px;padding:11px 13px;font:inherit;font-size:13.5px;line-height:1.55;resize:vertical">${esc(d.body||"")}</textarea>
+        <div class="rev-actions">
+          <button class="btn2" id="cliCopy">${t("cli_copy")}</button>
+          <a class="btn" style="text-decoration:none" target="_blank" rel="noreferrer" id="cliGmail">${t("cli_gmail")} ↗</a>
+          <button class="btn3" id="cliSent">${t("cli_sent")}</button>
+        </div>`
+      :`<button class="btn" id="cliGen" ${d&&d.loading?"disabled":""}>${d&&d.loading?t("cli_generating"):t("cli_generate")}</button>`}
+    </div>
+    <div>
+      <h5>${t("cli_evidence")}</h5>
+      ${evid.length?evid.map(e=>`<div class="item"><span class="src">${esc(e.date)} · ${esc(e.tech)}</span><br>${esc(e.text)}</div>`).join("")
+        :`<div class="item" style="color:var(--mut2)">${t("cli_no_evidence")}</div>`}
+      ${Object.keys(c.phases).length?`<h5 style="margin-top:12px">${t("cli_phase_log")}</h5>
+        ${Object.entries(c.phases).map(([k,v])=>`<div class="item"><span class="src">${esc(k)}</span> ${esc(v)}</div>`).join("")}`:""}
+      ${c.ownerEmail?`<div class="item" style="margin-top:12px"><span class="src">Email</span> ${esc(c.ownerEmail)}</div>`:""}
+    </div>
+  </div>`;
+}
+function renderClients(){
+  const el=$("#view-client"); if(!el) return;
+  const all=clientPianos();
+  const cut=new Date(); cut.setDate(cut.getDate()-25);
+  const due=all.filter(c=>c.include&&(!c.lastSent||c.lastSent<iso(cut)));
+  const rest=all.filter(c=>!due.includes(c)&&(c.include||c.activity));
+  el.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("cli_title")}</h2><div class="sub">${t("cli_sub")}</div></div></div>
+    <h5 style="font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#57524b;margin:0 0 8px">${t("cli_due")} <span class="num">(${due.length})</span></h5>
+    <div class="card">${due.map(cliCard).join("")||`<div style="padding:14px;color:var(--mut)">—</div>`}</div>
+    ${rest.length?`<details style="margin-top:16px"><summary style="cursor:pointer;color:var(--mut);font-size:13.5px">${t("cli_rest")} (${rest.length})</summary>
+      <div class="card" style="margin-top:10px">${rest.map(cliCard).join("")}</div></details>`:""}`;
+  document.querySelectorAll("[data-cli]").forEach(r=>r.onclick=()=>{CLI_OPEN=CLI_OPEN===r.dataset.cli?null:r.dataset.cli;renderClients();});
+  document.querySelectorAll(".cliFlag").forEach(cb=>cb.onchange=()=>{
+    const f=store.get(CLI_FLAG,{}); f[cb.dataset.k]=cb.checked; store.set(CLI_FLAG,f); renderClients();
+  });
+  if(CLI_OPEN){
+    const c=all.find(x=>x.key===CLI_OPEN); if(!c) return;
+    const gen=$("#cliGen"); if(gen) gen.onclick=(e)=>{e.stopPropagation();generateDraft(c);};
+    const cp=$("#cliCopy"); if(cp) cp.onclick=async(e)=>{e.stopPropagation();
+      await navigator.clipboard.writeText(`Subject: ${$("#cliSubj").value}\n\n${$("#cliBody").value}`);
+      cp.textContent=t("copied"); setTimeout(()=>cp.textContent=t("cli_copy"),1400);};
+    const gm=$("#cliGmail"); if(gm){ gm.onclick=(e)=>{e.stopPropagation();
+      gm.href=`https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(c.ownerEmail)}&su=${encodeURIComponent($("#cliSubj").value)}&body=${encodeURIComponent($("#cliBody").value)}`;};}
+    const ms=$("#cliSent"); if(ms) ms.onclick=(e)=>{e.stopPropagation();
+      const log=store.get(CLI_LOG,{}); log[c.key]={sentAt:iso(new Date()),by:USER?.email||""}; store.set(CLI_LOG,log);
+      CLI_OPEN=null; renderClients();};
+  }
 }
 
 checkGate();
