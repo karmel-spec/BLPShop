@@ -912,18 +912,31 @@ function renderPianos(){
   else if(mode==="hours") pianos.sort((a,b)=>b.hrs-a.hrs);
   else if(mode==="stage") pianos.sort((a,b)=>stageIdx(a.stage)-stageIdx(b.stage)||a.label.localeCompare(b.label));
   else if(mode==="recent") pianos.sort((a,b)=>String(b.last).localeCompare(String(a.last)));
-  $("#pianoGrid").innerHTML=pianos.map(p=>`
+  const cardHTML=p=>`
     <div class="pcard">
       <h5>${esc(p.label)}</h5>
       <div class="pm num">${p.count} report mention${p.count===1?"":"s"} · ${p.techs.size} technician${p.techs.size===1?"":"s"}</div>
       <div class="pt num">${fmtShort(p.first)} → ${fmtShort(p.last)}</div>
-      ${p.stage!=="OTHER"?`<div class="pm" style="margin-top:3px"><span style="display:inline-block;background:#eee9e0;color:#57524b;border-radius:99px;font-size:11px;font-weight:700;padding:2px 9px">${esc(STAGES[stageIdx(p.stage)][1])}</span></div>`:""}
+      ${p.stage!=="OTHER"&&mode!=="stage"?`<div class="pm" style="margin-top:3px"><span style="display:inline-block;background:#eee9e0;color:#57524b;border-radius:99px;font-size:11px;font-weight:700;padding:2px 9px">${esc(STAGES[stageIdx(p.stage)][1])}</span></div>`:""}
       ${p.hrs?`<div class="hrs num">${p.hrs.toFixed(1)} hrs logged</div>`:""}
       <div class="plinks">
         <button data-q="${esc(p.serial)}">History</button>
         <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial)}" target="_blank" rel="noreferrer">Piano Log ↗</a>
       </div>
-    </div>`).join("")||`<div class="sub">No serialized pianos detected.</div>`;
+    </div>`;
+  if(mode==="stage"){
+    $("#pianoGrid").innerHTML=STAGES.map(([id,name])=>{
+      const group=pianos.filter(p=>p.stage===id);
+      if(!group.length) return "";
+      return `<div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:14px 0 2px">
+          <span style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:#57524b;white-space:nowrap">${esc(id==="OTHER"?"Other / unclassified":name)}</span>
+          <span class="num" style="font-size:11.5px;color:var(--mut2)">${group.length}</span>
+          <span style="flex:1;height:2px;background:linear-gradient(90deg,var(--red) 0 44px,var(--line) 44px)"></span>
+        </div>` + group.map(cardHTML).join("");
+    }).join("")||`<div class="sub">No serialized pianos detected.</div>`;
+  }else{
+    $("#pianoGrid").innerHTML=pianos.map(cardHTML).join("")||`<div class="sub">No serialized pianos detected.</div>`;
+  }
   const sortSel=$("#pianoSort"); if(sortSel && !sortSel.dataset.wired){ sortSel.dataset.wired="1"; sortSel.onchange=renderPianos; }
   document.querySelectorAll(".pcard button[data-q]").forEach(b=>b.onclick=()=>{
     $("#q").value=b.dataset.q; $("#fTech").value=""; $("#fYear").value="";
