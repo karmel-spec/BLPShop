@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Reports — Brigham Larson Pianos</title>
+<style>
+  :root{
+    --ink:#1c1c1c; --paper:#ffffff; --red:#B43333; --red-deep:#9E2020;
+    --line:#e6e1d9; --line-soft:#f0ece5; --mut:#6f6a63; --mut2:#8a847b;
+    --good:#2e7d4f; --good-bg:#e7f2ea; --warn:#c9a13a; --warn-bg:#fdf6e6; --bad-bg:#f9e9e9;
+    --side:#121212;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--paper);color:var(--ink);font-family:Assistant,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  button{font:inherit;cursor:pointer}
+  input,select,textarea{font:inherit}
+  .num{font-variant-numeric:tabular-nums}
+
+  .shell{display:grid;grid-template-columns:212px 1fr;min-height:100vh}
+  @media (max-width:840px){.shell{grid-template-columns:1fr}.side{position:static;flex-direction:row;overflow-x:auto}.side nav{flex-direction:row}.side .keys,.side .badge{display:none}}
+
+  /* ---- sidebar (Option 2 side tabs, showroom-black) ---- */
+  .side{background:linear-gradient(180deg,#17171b,var(--side));color:#c9c3ba;display:flex;flex-direction:column;padding:18px 0;position:sticky;top:0;height:100vh}
+  .badge{align-self:center;padding:0 16px}
+  .badge img{width:100%;max-width:180px;display:block;height:auto}
+  .keys{display:flex;height:22px;margin:16px 0;border-top:1px solid #26262c;border-bottom:1px solid #26262c;background:#f4efe6;position:relative;overflow:hidden}
+  .keys span{flex:1;border-right:1px solid #c9c2b4}
+  .keys i{position:absolute;top:0;width:4.2%;height:60%;background:#0c0c0f;border-radius:0 0 2px 2px}
+  .side nav{display:flex;flex-direction:column;font-size:14px}
+  .side nav button{background:none;border:0;color:#a49d90;padding:10px 20px;text-align:left;display:flex;gap:10px;align-items:center;border-left:3px solid transparent}
+  .side nav button.on{color:#fff;background:rgba(180,51,51,.16);border-left-color:var(--red);font-weight:600}
+  .side nav button .dot{width:7px;height:7px;border-radius:50%;background:#3a3a42;flex:none}
+  .side nav button.on .dot{background:var(--red)}
+  .side .who{margin-top:auto;padding:14px 20px;border-top:1px solid #26262c;font-size:12.5px;display:flex;flex-direction:column;gap:8px}
+  .side .who select{background:#242424;color:#eee;border:1px solid #3a3a3a;border-radius:4px;padding:6px 8px;font-size:13px;width:100%}
+  .side .who .uchip{display:flex;align-items:center;gap:9px}
+  .side .who .uchip img{width:32px;height:32px;border-radius:50%;flex:none}
+  .side .who .uchip .avatar{width:32px;height:32px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:700;font-size:12px;flex:none}
+  .side .who .uchip .un{color:#fff;font-weight:700;font-size:13px;line-height:1.2}
+  .side .who .uchip .ur{color:#a49d90;font-size:11.5px}
+  .side .who .signout{background:none;border:1px solid #3a3a3a;color:#a49d90;border-radius:4px;padding:5px 10px;font-size:12px;align-self:flex-start}
+  .side .who .hint{color:#7d7669;font-size:11px;line-height:1.45}
+
+  /* ---- content ---- */
+  .content{min-width:0}
+  .bar{background:var(--red);color:#fff;text-align:center;font-size:13px;padding:6px 12px;letter-spacing:.05em}
+  main{max-width:1120px;margin:0 auto;padding:24px 22px 60px}
+  h2.page{font-family:Georgia,serif;font-size:25px;margin:0;font-weight:700}
+  .sub{color:var(--mut);font-size:14px;margin-top:3px;line-height:1.5}
+  .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap}
+  .btn{background:var(--red);color:#fff;border:0;border-radius:4px;padding:10px 18px;font-weight:700;font-size:14px}
+  .btn:hover{background:var(--red-deep)}
+  .btn[disabled]{background:#cbb;cursor:not-allowed}
+  .btn2{background:#fff;color:var(--ink);border:1px solid var(--ink);border-radius:4px;padding:9px 16px;font-weight:700;font-size:13.5px}
+  .btn3{background:none;border:0;color:var(--red);font-weight:700;font-size:13px;padding:4px 6px}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
+  .stat{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:#fff}
+  .stat .k{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut2);font-weight:700}
+  .stat .v{font-family:Georgia,serif;font-size:28px;margin-top:5px;font-weight:700}
+  .stat .v small{font-size:16px;color:var(--mut2)}
+  .stat .d{font-size:12.5px;margin-top:4px;color:var(--mut)}
+  .stat .d.good{color:var(--good)} .stat .d.warn{color:var(--red)}
+
+  .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;margin-top:18px}
+  @media (max-width:980px){.cols{grid-template-columns:1fr}}
+  .card{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+  .card>h4{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#57524b;display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:10px}
+  .card>h4 .lite{font-weight:400;letter-spacing:0;text-transform:none;color:var(--mut2);font-size:12px}
+  table.list{width:100%;border-collapse:collapse;font-size:13.5px}
+  table.list td{padding:10px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.5}
+  table.list tr:last-child td{border-bottom:0}
+  .pill{display:inline-block;border-radius:99px;font-size:11.5px;font-weight:700;padding:3px 10px;white-space:nowrap}
+  .pill.in{background:var(--good-bg);color:var(--good)} .pill.out{background:var(--bad-bg);color:var(--red-deep)} .pill.mid{background:var(--warn-bg);color:#8a6d1d}
+  .excerpt{color:#3d3a35}
+  .tech-name{font-weight:700;white-space:nowrap}
+  .date-cell{color:var(--mut2);font-size:12px;white-space:nowrap;font-family:ui-monospace,Menlo,monospace}
+
+  .brow{display:grid;grid-template-columns:84px 1fr 44px;align-items:center;gap:10px;font-size:12.5px;padding:4px 16px}
+  .btrack{background:var(--line-soft);border-radius:3px;height:12px;position:relative}
+  .bfill{position:absolute;inset:0 auto 0 0;background:#191919;border-radius:3px}
+  .bfill.hot{background:var(--red)}
+  .brow b{text-align:right}
+
+  /* ---- my week cards (Option 3 workbench) ---- */
+  .wgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;margin-top:18px}
+  .job{background:#fff;border:1px solid var(--line);border-radius:10px;padding:15px 17px;box-shadow:0 2px 0 var(--line-soft)}
+  .job .src{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut2);font-weight:700}
+  .job h5{margin:6px 0 4px;font-size:16px;font-family:Georgia,serif}
+  .job p{margin:0;font-size:13px;color:var(--mut);line-height:1.5;word-break:break-word}
+  .job .jfoot{display:flex;justify-content:space-between;align-items:center;margin-top:12px;gap:8px;flex-wrap:wrap}
+  .job select{border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:12.5px;background:#fff}
+
+  /* ---- friday report portal ---- */
+  .panel{border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:18px}
+  .panel .ph{padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#57524b;font-weight:700;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .chips{display:flex;gap:8px;flex-wrap:wrap;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:99px;padding:6px 12px;font-size:13px;color:#57524b;background:#fff}
+  .chip button{background:none;border:0;padding:0;font-weight:700;color:var(--red);font-size:13px}
+  .chip a{color:var(--mut2);text-decoration:none;font-size:11.5px}
+  .chip a:hover{color:var(--red)}
+  .chip.add{border-style:dashed;color:var(--red);font-weight:700}
+  .chip input{border:0;outline:none;width:150px;font-size:13px}
+
+  .item{display:grid;grid-template-columns:minmax(150px,1fr) 86px 176px minmax(200px,1.6fr) 30px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)}
+  @media (max-width:900px){.item{grid-template-columns:1fr 1fr;row-gap:8px}}
+  .item .plabel{font-weight:700;font-size:13.5px;font-family:Georgia,serif}
+  .item input[type=number]{border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:80px;font-size:13px}
+  .item input[type=text]{border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%;font-size:13px}
+  .item .del{background:none;border:0;color:var(--mut2);font-size:15px}
+  .seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
+  .seg button{background:#fff;border:0;padding:6px 11px;font-size:12px;font-weight:700;color:var(--mut)}
+  .seg button.done.on{background:var(--good);color:#fff}
+  .seg button.carry.on{background:var(--warn);color:#fff}
+  textarea.extra{display:block;width:calc(100% - 32px);margin:12px 16px 14px;border:1px solid #cfc9bf;border-radius:6px;padding:12px 14px;font-size:14px;line-height:1.6;min-height:90px;resize:vertical}
+  textarea.extra:focus{outline:2px solid var(--red);outline-offset:1px}
+  .preview{margin:0 16px 14px;background:#faf8f4;border:1px dashed var(--line);border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#3d3a35}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 16px;border-top:1px solid var(--line);flex-wrap:wrap}
+  .save{color:var(--mut2);font-size:12.5px}
+  .notice{margin-top:14px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:6px;padding:12px 15px;font-size:13.5px;color:#57524b;line-height:1.55;background:#fffdf7}
+  .notice.err{border-left-color:var(--red);background:#fdf7f7}
+  .notice.ok{border-left-color:var(--good);background:#f7fbf8}
+  .notice code{background:var(--line-soft);border-radius:3px;padding:1px 5px;font-size:12px}
+  .lastweek{margin-top:16px;font-size:13.5px;color:var(--mut);line-height:1.55}
+  .lastweek b{color:var(--ink)}
+
+  /* ---- history (Option 4 ledger layout) ---- */
+  .hwrap{display:grid;grid-template-columns:1.5fr 1fr;gap:18px;margin-top:16px}
+  @media (max-width:980px){.hwrap{grid-template-columns:1fr}}
+  .searchbar{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+  .searchbar input[type=search]{flex:1;min-width:230px;border:1.5px solid var(--ink);border-radius:5px;padding:11px 14px;font-size:15px}
+  .searchbar select{border:1px solid var(--line);border-radius:5px;padding:10px 12px;font-size:14px;background:#fff}
+  .hits{margin:12px 2px;color:var(--mut);font-size:13.5px}
+  .result{border:1px solid var(--line);border-radius:6px;padding:13px 16px;margin-bottom:10px;background:#fff}
+  .result .meta{display:flex;gap:12px;align-items:baseline;font-size:12.5px;color:var(--mut2);margin-bottom:5px;flex-wrap:wrap}
+  .result .meta .tech-name{font-size:14px;color:var(--ink)}
+  .result .body{font-size:14px;line-height:1.55;white-space:pre-wrap;word-break:break-word}
+  mark{background:#f6dede;color:var(--red-deep);font-weight:700;padding:0 2px;border-radius:2px}
+  .approx{color:var(--warn);font-size:11px;font-weight:700}
+  .pianoMeta{border:1px solid var(--line);border-radius:6px;background:#fff;padding:14px 16px;margin-bottom:16px}
+  .pianoMeta h3{font-family:Georgia,serif;margin:0 0 4px;font-size:19px}
+  .pianoMeta .pm{font-size:13px;color:var(--mut);line-height:1.6}
+  .pianoMeta .pm b{color:var(--red)}
+
+  /* ---- pianos ---- */
+  .pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(245px,1fr));gap:13px;margin-top:18px}
+  .pcard{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:#fff;text-align:left}
+  .pcard:hover{border-color:var(--red)}
+  .pcard h5{margin:0;font-family:Georgia,serif;font-size:16px}
+  .pcard .pm{color:var(--mut);font-size:12.5px;margin-top:5px}
+  .pcard .pt{color:var(--mut2);font-size:12px;margin-top:2px}
+  .pcard .hrs{color:var(--red);font-weight:700;font-size:12.5px;margin-top:4px}
+  .pcard .plinks{margin-top:8px;display:flex;gap:12px;font-size:12.5px}
+  .pcard .plinks a,.pcard .plinks button{color:var(--red);font-weight:700;background:none;border:0;padding:0;text-decoration:none;font-size:12.5px}
+
+  /* ---- planner ---- */
+  .tcard{border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:14px;overflow:hidden}
+  .tcard h4{margin:0;padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:10px}
+  .tcard h4 .st{font-size:11.5px}
+  .tcard ul{margin:0;padding:8px 16px 12px 32px;font-size:13.5px;line-height:1.7;color:#3d3a35}
+  .tcard .none{padding:10px 16px;color:var(--mut2);font-size:13px}
+
+  /* ---- calendars ---- */
+  .ev{display:grid;grid-template-columns:100px 1fr auto;gap:12px;padding:9px 16px;border-bottom:1px solid var(--line-soft);font-size:13.5px;align-items:baseline}
+  .ev:last-child{border-bottom:0}
+  .ev .t{color:var(--mut2);font-family:ui-monospace,Menlo,monospace;font-size:12px}
+
+  .view{display:none}
+  .view.on{display:block}
+  footer{border-top:1px solid var(--line);color:var(--mut2);font-size:12.5px;padding:14px 22px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <aside class="side">
+    <div class="badge">
+      <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
+    </div>
+    <div class="keys" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><i style="left:9%"></i><i style="left:23%"></i><i style="left:51%"></i><i style="left:65%"></i><i style="left:79%"></i></div>
+    <nav id="tabs">
+      <button data-view="dashboard" class="on"><span class="dot"></span>Shop Dashboard</button>
+      <button data-view="planner"><span class="dot"></span>Assignment Planner</button>
+      <button data-view="myweek"><span class="dot"></span>My Week</button>
+      <button data-view="report"><span class="dot"></span>My Friday Report</button>
+      <button data-view="history"><span class="dot"></span>History</button>
+      <button data-view="pianos"><span class="dot"></span>Pianos</button>
+      <button data-view="calendars"><span class="dot"></span>Calendars</button>
+    </nav>
+    <div class="who" id="whoArea"></div>
+  </aside>
+
+  <div class="content">
+    <div class="bar" id="topBar">Loading shop reports…</div>
+    <main>
+
+      <!-- ============ DASHBOARD ============ -->
+      <section class="view on" id="view-dashboard">
+        <div class="row1">
+          <div><h2 class="page" id="dashTitle">Week ending —</h2><div class="sub" id="dashSub">Shop overview</div></div>
+          <button class="btn" onclick="showView('report')">+ My Friday report</button>
+        </div>
+        <div class="stats" id="dashStats"></div>
+        <div class="cols">
+          <div class="card">
+            <h4>This week's reports <span class="lite" id="weekLabel"></span></h4>
+            <table class="list"><tbody id="weekRows"></tbody></table>
+          </div>
+          <div>
+            <div class="card">
+              <h4>Reports submitted <span class="lite">last 12 weeks</span></h4>
+              <div id="compliance" style="padding:8px 0"></div>
+            </div>
+            <div class="card" style="margin-top:18px">
+              <h4>Latest activity</h4>
+              <table class="list"><tbody id="recentRows"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PLANNER ============ -->
+      <section class="view" id="view-planner">
+        <div class="row1">
+          <div>
+            <h2 class="page">Monday assignment planner</h2>
+            <div class="sub">Carry-overs and unfinished work from this week's reports, grouped per technician — draft material for next week's calendar assignments.</div>
+          </div>
+          <button class="btn2" id="copyPlanBtn">Copy full plan</button>
+        </div>
+        <div id="plannerStatus"></div>
+        <div id="plannerCards"></div>
+      </section>
+
+      <!-- ============ MY WEEK ============ -->
+      <section class="view" id="view-myweek">
+        <div class="row1">
+          <div>
+            <h2 class="page" id="mwTitle">My week</h2>
+            <div class="sub">Your work items this week — carried over from last Friday's report, pulled from your calendar, or added by hand. They flow straight into your Friday report.</div>
+          </div>
+          <button class="btn" onclick="showView('report')">Open Friday report →</button>
+        </div>
+        <div class="wgrid" id="weekCards"></div>
+      </section>
+
+      <!-- ============ FRIDAY REPORT ============ -->
+      <section class="view" id="view-report">
+        <div class="row1">
+          <div><h2 class="page" id="reportTitle">Friday report</h2><div class="sub" id="reportSub"></div></div>
+        </div>
+        <div class="panel">
+          <div class="ph"><span>Which pianos did you work on this week?</span><span>click ↗ to open in the Piano Log</span></div>
+          <div class="chips" id="pianoChips"></div>
+          <div class="ph"><span>Work items — mark each Completed or Carry over, add notes &amp; hours</span><span id="itemCount"></span></div>
+          <div id="workItems"></div>
+          <div class="ph" style="border-top:1px solid var(--line)"><span>Anything else? (general notes)</span><span id="charCount"></span></div>
+          <textarea class="extra" id="extraNotes" placeholder="Anything not tied to one piano — shop help, blockers, parts to order…"></textarea>
+          <div class="ph" style="border-top:1px solid var(--line)"><span>This is what goes on the sheet</span></div>
+          <div class="preview" id="composePreview">—</div>
+          <div class="foot">
+            <span class="save" id="draftStatus">Draft saves automatically on this device.</span>
+            <span style="display:flex;gap:10px">
+              <button class="btn2" id="copyBtn">Copy for spreadsheet</button>
+              <button class="btn" id="submitBtn">Submit Friday report</button>
+            </span>
+          </div>
+        </div>
+        <div id="submitNotice"></div>
+        <div class="lastweek" id="lastWeekBox"></div>
+      </section>
+
+      <!-- ============ HISTORY ============ -->
+      <section class="view" id="view-history">
+        <div class="row1">
+          <div><h2 class="page">Shop history</h2><div class="sub" id="histSub">Every Friday report ever submitted, searchable.</div></div>
+        </div>
+        <div class="searchbar">
+          <input type="search" id="q" placeholder="Search pianos, serials, technicians, work — e.g. “Cable-Nelson 139681” or “restringing”">
+          <select id="fTech"><option value="">All technicians</option></select>
+          <select id="fYear"><option value="">All years</option></select>
+        </div>
+        <div class="hwrap">
+          <div>
+            <div class="hits" id="hits"></div>
+            <div id="results"></div>
+          </div>
+          <div>
+            <div id="pianoMetaBox"></div>
+            <div class="card">
+              <h4>Reports submitted <span class="lite">last 12 weeks</span></h4>
+              <div id="compliance2" style="padding:8px 0"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ PIANOS ============ -->
+      <section class="view" id="view-pianos">
+        <div class="row1">
+          <div>
+            <h2 class="page">Pianos mentioned in reports</h2>
+            <div class="sub">Auto-detected make + serial mentions with logged hours. “History” shows every report on that piano; “Piano Log ↗” opens the inventory record.</div>
+          </div>
+        </div>
+        <div class="pgrid" id="pianoGrid"></div>
+      </section>
+
+      <!-- ============ CALENDARS ============ -->
+      <section class="view" id="view-calendars">
+        <div class="row1">
+          <div>
+            <h2 class="page">Assigned vs. reported</h2>
+            <div class="sub">Google Calendar assignments next to what was reported finished. Sign in as <b>brighamlarson@gmail.com</b> or <b>walter@brighamlarsonpianos.com</b> (which have all technician calendars connected) to see the whole team; technicians see their own.</div>
+          </div>
+          <button class="btn" id="calConnect">Connect Google Calendar</button>
+        </div>
+        <div id="calNotice"></div>
+        <div id="calBody" class="cols" style="margin-top:18px">
+          <div class="card">
+            <h4 id="calEvHead">This week on my calendar</h4>
+            <div id="calEvents"><div style="padding:14px 16px;color:var(--mut);font-size:13.5px">Not connected yet.</div></div>
+          </div>
+          <div class="card">
+            <h4>My report this week</h4>
+            <div id="calReport" style="font-size:13.5px;line-height:1.55;color:var(--mut);padding:14px 16px">Select your name in the sidebar.</div>
+          </div>
+        </div>
+        <div id="calTeam"></div>
+      </section>
+
+    </main>
+    <footer>
+      <span>Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).</span>
+      <span id="dataStamp"></span>
+    </footer>
+  </div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+const CONFIG = {
+  SHEET_ID: "11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I",
+  APPS_SCRIPT_URL: "",       // deploy shop-reports-apps-script.gs → paste /exec URL
+  GOOGLE_CLIENT_ID: "",      // OAuth web client → enables Google sign-in + Calendars
+  PIANOLOG_URL: "https://pianologapp.netlify.app/",
+  ACTIVE_WEEKS: 8,
+  SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit"
+};
+
+let DATA = { entries: [], tabs: {} };
+let ME = localStorage.getItem("blp-shop-reports.me") || "";
+let USER = null;   // Google identity {email,name,given,picture} once signed in
+try{ USER = JSON.parse(localStorage.getItem("blp-shop-reports.user")||"null"); }catch(e){}
+const OWNERS = ["brighamlarson@gmail.com","brigham@brighamlarsonpianos.com",
+                "walter@brighamlarsonpianos.com","karmel@brighamlarsonpianos.com"];
+let calToken = null;
+let ROSTER = [], ALL_TECHS = [];
+
+const $ = (s) => document.querySelector(s);
+const esc = (s) => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+/* ---------- dates ---------- */
+function thisFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()+((5-x.getDay()+7)%7)); return x; }
+const iso = (d) => d.toISOString().slice(0,10);
+function fmtLong(d){ return d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
+function fmtShort(s){ if(!s) return "—"; const [y,m,d]=String(s).split("-"); return d?`${+m}/${+d}/${String(y).slice(2)}`:s; }
+function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return m; }
+
+/* ---------- boot ---------- */
+async function boot(){
+  try{ DATA = await (await fetch("./data/report-history.json")).json(); }
+  catch(e){ $("#topBar").textContent="Could not load data/report-history.json."; return; }
+  await tryLiveRefresh();
+  buildRoster();
+  renderAll();
+}
+
+async function tryLiveRefresh(){
+  const year = new Date().getFullYear();
+  const tabGid = Object.keys(DATA.tabs||{}).find(g=>DATA.tabs[g].year===year);
+  if(!tabGid) return;
+  try{
+    const text = await (await fetch(`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${tabGid}`)).text();
+    const rows = parseCSV(text);
+    if(rows.length<2) return;
+    const dates = rows[0].slice(1);
+    const fresh = [];
+    for(const row of rows.slice(1)){
+      const tech=(row[0]||"").trim(); if(!tech) continue;
+      row.slice(1).forEach((cell,i)=>{
+        cell=(cell||"").trim();
+        if(!cell || /^n\/?a$/i.test(cell)) return;
+        const m=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec((dates[i]||"").trim());
+        const isoD = m?`${m[3].length===2?"20"+m[3]:m[3]}-${String(m[1]).padStart(2,"0")}-${String(m[2]).padStart(2,"0")}`:null;
+        fresh.push({tech,date:isoD,week:dates[i]||null,year,gid:tabGid,text:cell});
+      });
+    }
+    if(fresh.length){
+      DATA.entries = DATA.entries.filter(e=>e.year!==year).concat(fresh)
+        .sort((a,b)=>(a.date||"").localeCompare(b.date||"")||a.tech.localeCompare(b.tech));
+      DATA.live = true;
+    }
+  }catch(e){}
+}
+
+function parseCSV(text){
+  const rows=[]; let row=[],cur="",inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; } else cur+=c; }
+    else{
+      if(c==='"') inQ=true;
+      else if(c===","){ row.push(cur); cur=""; }
+      else if(c==="\n"){ row.push(cur); rows.push(row); row=[]; cur=""; }
+      else if(c!=="\r") cur+=c;
+    }
+  }
+  if(cur!==""||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+
+function buildRoster(){
+  ALL_TECHS=[...new Set(DATA.entries.map(e=>e.tech))].sort();
+  const cutoff=new Date(thisFriday()); cutoff.setDate(cutoff.getDate()-CONFIG.ACTIVE_WEEKS*7);
+  const active=new Set(DATA.entries.filter(e=>e.date&&e.date>=iso(cutoff)).map(e=>e.tech));
+  DATA.entries.filter(e=>e.year===new Date().getFullYear()).forEach(e=>active.add(e.tech));
+  ROSTER=[...active].sort();
+}
+
+/* ---------- sign-in (Google when configured, roster picker as fallback) ---------- */
+function matchTech(user){
+  const given=(user.given||user.name||"").split(/\s+/)[0].toLowerCase();
+  const local=(user.email||"").split("@")[0].toLowerCase();
+  return ROSTER.find(t=>{
+    const n=t.toLowerCase();
+    return n===given || local===n || local.startsWith(n) || given.startsWith(n);
+  })||"";
+}
+const isOwner=()=>!!USER&&OWNERS.includes((USER.email||"").toLowerCase());
+
+function rosterSelectHTML(label){
+  return `<label for="whoSelect">${label}</label>
+    <select id="whoSelect"><option value="">— select your name —</option>
+    ${ROSTER.map(t=>`<option${t===ME?" selected":""}>${esc(t)}</option>`).join("")}</select>`;
+}
+function renderWho(){
+  const area=$("#whoArea");
+  if(USER){
+    const tech=matchTech(USER);
+    if(tech&&!isOwner()) ME=tech;
+    area.innerHTML=`
+      <div class="uchip">
+        ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
+        <span><span class="un">${esc(USER.name||USER.email)}</span><br>
+        <span class="ur">${isOwner()?"Owner":tech?"Technician — "+esc(tech):"No technician match"}</span></span>
+      </div>
+      ${isOwner()||!tech?rosterSelectHTML(isOwner()?"Acting as technician":"Which technician are you?"):""}
+      <button class="signout" id="signOutBtn">Sign out</button>`;
+    $("#signOutBtn").onclick=signOut;
+  }else if(CONFIG.GOOGLE_CLIENT_ID){
+    area.innerHTML=`<div id="gsiBtn"></div><span class="hint">Sign in with your Google account — you'll be matched to your technician row automatically.</span>`;
+    initGsi();
+  }else{
+    area.innerHTML=rosterSelectHTML("Signed in as")+`<span class="hint">Google login activates once an admin sets <b>GOOGLE_CLIENT_ID</b> (docs/shop-reports-setup.md).</span>`;
+  }
+  const sel=$("#whoSelect");
+  if(sel) sel.onchange=()=>{ ME=sel.value; localStorage.setItem("blp-shop-reports.me",ME); renderAll(); };
+}
+
+let gsiReady=false;
+function initGsi(){
+  if(!window.google||!google.accounts){ setTimeout(initGsi,300); return; }
+  if(!gsiReady){
+    google.accounts.id.initialize({ client_id:CONFIG.GOOGLE_CLIENT_ID, callback:onCredential, auto_select:true });
+    gsiReady=true;
+  }
+  const el=$("#gsiBtn");
+  if(el) google.accounts.id.renderButton(el,{theme:"filled_black",size:"medium",shape:"pill",text:"signin_with"});
+}
+function onCredential(resp){
+  try{
+    const p=JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    USER={email:(p.email||"").toLowerCase(),name:p.name||"",given:p.given_name||"",picture:p.picture||""};
+    localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
+    const tech=matchTech(USER);
+    if(tech&&!isOwner()){ ME=tech; localStorage.setItem("blp-shop-reports.me",ME); }
+    renderAll();
+  }catch(e){ console.error("sign-in failed",e); }
+}
+function signOut(){
+  if(window.google&&google.accounts) google.accounts.id.disableAutoSelect();
+  USER=null; ME="";
+  localStorage.removeItem("blp-shop-reports.user");
+  localStorage.removeItem("blp-shop-reports.me");
+  renderAll();
+}
+
+/* ---------- navigation ---------- */
+function showView(name){
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="view-"+name));
+  document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===name));
+}
+$("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&b.dataset.view) showView(b.dataset.view); });
+
+function renderAll(){
+  renderWho();
+  renderDashboard(); renderPlanner(); renderMyWeek(); renderReportForm();
+  renderHistoryControls(); runSearch(); renderPianos(); renderCalReport();
+  $("#dataStamp").textContent=`${DATA.entries.length.toLocaleString()} entries · 2017–${new Date().getFullYear()}`+(DATA.live?" · live from sheet":` · snapshot ${DATA.generated||""}`);
+}
+
+const weekEntries=(fISO)=>DATA.entries.filter(e=>e.date===fISO);
+
+/* ---------- dashboard ---------- */
+function renderDashboard(){
+  const fri=thisFriday(), friISO=iso(fri);
+  $("#dashTitle").textContent="Week ending "+fmtLong(fri);
+  const wk=weekEntries(friISO), inSet=new Set(wk.map(e=>e.tech));
+  const missing=ROSTER.filter(t=>!inSet.has(t));
+  $("#dashSub").textContent=`Shop overview · ${ROSTER.length} active technicians · ${DATA.entries.length.toLocaleString()} reports on file since 2017`;
+  $("#topBar").innerHTML=missing.length
+    ? `FRIDAY REPORTS — <b>${inSet.size} of ${ROSTER.length}</b> submitted for ${fmtShort(friISO)} · waiting on ${esc(missing.slice(0,5).join(", "))}${missing.length>5?"…":""}`
+    : `FRIDAY REPORTS — all <b>${ROSTER.length}</b> in for ${fmtShort(friISO)} 🎉`;
+
+  const year=new Date().getFullYear();
+  const yearEntries=DATA.entries.filter(e=>e.year===year);
+  const prevFri=new Date(fri); prevFri.setDate(prevFri.getDate()-7);
+  const prevCount=weekEntries(iso(prevFri)).length;
+  const monthAgo=new Date(fri); monthAgo.setDate(monthAgo.getDate()-28);
+  const pianosMo=new Set();
+  DATA.entries.filter(e=>e.date&&e.date>=iso(monthAgo)).forEach(e=>extractPianos(e.text).forEach(p=>pianosMo.add(p.serial||p.label)));
+  const hrsMo=DATA.entries.filter(e=>e.date&&e.date>=iso(monthAgo)).reduce((s,e)=>s+sumHours(e.text),0);
+  $("#dashStats").innerHTML=`
+    <div class="stat"><div class="k">Reports in</div><div class="v num">${inSet.size}<small>/${ROSTER.length}</small></div>
+      <div class="d ${missing.length?"warn":"good"}">${missing.length?esc(missing.slice(0,4).join(", "))+(missing.length>4?` +${missing.length-4} more`:"")+" pending":"everyone reported"}</div></div>
+    <div class="stat"><div class="k">Last week</div><div class="v num">${prevCount}</div><div class="d">reports for ${fmtShort(iso(prevFri))}</div></div>
+    <div class="stat"><div class="k">Pianos mentioned</div><div class="v num">${pianosMo.size}</div><div class="d">distinct pianos, last 4 weeks</div></div>
+    <div class="stat"><div class="k">Hours logged</div><div class="v num">${hrsMo?hrsMo.toFixed(0):"—"}</div><div class="d">parsed from reports, last 4 weeks</div></div>
+    <div class="stat"><div class="k">Reports in ${year}</div><div class="v num">${yearEntries.length}</div><div class="d">${new Set(yearEntries.map(e=>e.tech)).size} technicians</div></div>`;
+
+  $("#weekLabel").textContent=fmtShort(friISO);
+  $("#weekRows").innerHTML=ROSTER.map(t=>{
+    const e=wk.find(x=>x.tech===t);
+    return e
+      ? `<tr><td class="tech-name">${esc(t)}</td><td class="excerpt">${esc(e.text.slice(0,160))}${e.text.length>160?"…":""}</td><td><span class="pill in">Submitted</span></td></tr>`
+      : `<tr><td class="tech-name">${esc(t)}</td><td class="excerpt" style="color:var(--mut2)">—</td><td><span class="pill out">Missing</span></td></tr>`;
+  }).join("");
+
+  $("#compliance").innerHTML = complianceHTML();
+  const recent=[...DATA.entries].filter(e=>e.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  $("#recentRows").innerHTML=recent.map(e=>`
+    <tr><td class="date-cell">${fmtShort(e.date)}</td><td><span class="tech-name">${esc(e.tech)}</span>
+    <div class="excerpt" style="font-size:12.5px;color:var(--mut)">${esc(e.text.slice(0,90))}${e.text.length>90?"…":""}</div></td></tr>`).join("");
+}
+
+function complianceHTML(){
+  const fri=thisFriday();
+  const weeks=[]; for(let i=0;i<12;i++){ const d=new Date(fri); d.setDate(d.getDate()-7*i); weeks.push(iso(d)); }
+  return ROSTER.map(t=>({t,n:weeks.filter(w=>DATA.entries.some(e=>e.tech===t&&e.date===w)).length}))
+    .sort((a,b)=>b.n-a.n)
+    .map(c=>`<div class="brow"><span>${esc(c.t)}</span><div class="btrack"><i class="bfill ${c.n<6?"hot":""}" style="width:${Math.round(c.n/12*100)}%"></i></div><b class="num">${c.n}/12</b></div>`).join("");
+}
+
+/* ---------- carry-over + hours parsing ---------- */
+const CARRY_RE=/carry\s*over|carried\s*over|next week|didn'?t (get|finish)|not (done|finished|complete)|waiting (on|for)|still (need|working)|unfinished|in progress/i;
+function carryLines(text){
+  return text.split(/\n+|(?<=\.)\s{2,}/).map(s=>s.trim()).filter(s=>s.length>8 && CARRY_RE.test(s));
+}
+function sumHours(text){
+  let s=0,m; const re=/(\d+(?:\.\d+)?)\s*(?:hrs?\b|hours?\b)/gi;
+  while((m=re.exec(text))){ const v=parseFloat(m[1]); if(v>0&&v<200) s+=v; }
+  return s;
+}
+function pianoHours(text,label){
+  // hours on lines that mention this piano
+  return text.split(/\n+/).filter(l=>l.toLowerCase().includes(label.toLowerCase())).reduce((s,l)=>s+sumHours(l),0);
+}
+
+/* ---------- work items store (My Week + Friday report share this) ---------- */
+function itemsKey(){ return `blp-shop-reports.items.${ME||"anon"}.${iso(thisFriday())}`; }
+function extraKey(){ return `blp-shop-reports.extra.${ME||"anon"}.${iso(thisFriday())}`; }
+function getItems(){ try{ return JSON.parse(localStorage.getItem(itemsKey()))||[]; }catch(e){ return []; } }
+function setItems(items){ localStorage.setItem(itemsKey(),JSON.stringify(items)); markSaved(); renderMyWeek(); renderWorkItems(); }
+function markSaved(){ $("#draftStatus").textContent="Draft saved "+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+" (this device)."; }
+
+function seedItems(){
+  // seed from last week's carry-overs, once per week per tech
+  if(!ME) return;
+  const seededKey=itemsKey()+".seeded";
+  if(localStorage.getItem(seededKey)) return;
+  const prev=new Date(thisFriday()); prev.setDate(prev.getDate()-7);
+  const last=DATA.entries.find(e=>e.tech===ME&&e.date===iso(prev));
+  const items=getItems();
+  if(last){
+    carryLines(last.text).slice(0,6).forEach(line=>{
+      const p=extractPianos(line)[0];
+      items.push({id:Date.now()+Math.random(),piano:p?p.label:"General",notes:line.slice(0,160),hours:"",status:"carry",src:"carried from last week"});
+    });
+  }
+  localStorage.setItem(seededKey,"1");
+  if(items.length) setItems(items);
+}
+
+/* ---------- my week (workbench cards) ---------- */
+function renderMyWeek(){
+  $("#mwTitle").textContent=ME?`${ME}'s week`:"My week";
+  const items=getItems();
+  const cards=items.map(it=>`
+    <div class="job" data-id="${it.id}">
+      <div class="src">${esc(it.src||"added this week")}</div>
+      <h5>${esc(it.piano)}</h5>
+      <p>${esc(it.notes||"")}</p>
+      <div class="jfoot">
+        <select data-act="status">
+          <option value="todo"${it.status==="todo"?" selected":""}>Not started</option>
+          <option value="part"${it.status==="part"?" selected":""}>Partly done</option>
+          <option value="done"${it.status==="done"?" selected":""}>Done</option>
+          <option value="carry"${it.status==="carry"?" selected":""}>Carry over</option>
+        </select>
+        <span class="pill ${it.status==="done"?"in":it.status==="carry"?"mid":"out"}">${{todo:"Not started",part:"Partly done",done:"Done",carry:"Carry over"}[it.status]||"Not started"}</span>
+      </div>
+    </div>`).join("");
+  $("#weekCards").innerHTML=(cards||`<div class="sub">${ME?"No work items yet — add pianos on the Friday Report tab, or connect your calendar.":"Select your name in the sidebar to see your week."}</div>`)
+    + (ME?`<button class="job" style="border-style:dashed;color:var(--red);font-weight:700;font-size:14px" onclick="addItemPrompt()">+ Add a work item</button>`:"");
+  document.querySelectorAll('#weekCards .job select[data-act=status]').forEach(sel=>{
+    sel.onchange=()=>{
+      const id=sel.closest(".job").dataset.id;
+      const items=getItems(); const it=items.find(x=>String(x.id)===id);
+      if(it){ it.status=sel.value; setItems(items); }
+    };
+  });
+}
+function addItemPrompt(){
+  const piano=prompt("Piano (make + serial), or a task name:");
+  if(!piano) return;
+  const items=getItems();
+  items.push({id:Date.now()+Math.random(),piano:piano.trim(),notes:"",hours:"",status:"todo",src:"added by hand"});
+  setItems(items);
+}
+
+/* ---------- friday report portal ---------- */
+function renderReportForm(){
+  const fri=thisFriday();
+  seedItems();
+  $("#reportTitle").textContent=ME?`Good ${new Date().getHours()<12?"morning":"afternoon"}, ${ME}`:"Friday report";
+  $("#reportSub").innerHTML=`Week of ${mondayOf(fri).toLocaleDateString("en-US",{month:"long",day:"numeric"})} – ${fmtLong(fri)} · goes into the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">report spreadsheet</a>`;
+  $("#extraNotes").value=localStorage.getItem(extraKey())||"";
+
+  // piano chips: recent pianos + currently-used ones
+  const mine=DATA.entries.filter(e=>e.tech===ME&&e.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
+  const seen=new Map();
+  mine.forEach(e=>extractPianos(e.text).forEach(p=>{ if(p.serial&&!seen.has(p.label)) seen.set(p.label,p); }));
+  const items=getItems();
+  const inItems=new Set(items.map(i=>i.piano));
+  const chips=[...seen.values()].slice(0,8);
+  $("#pianoChips").innerHTML=(ME?chips.map(p=>`
+      <span class="chip${inItems.has(p.label)?" on":""}">
+        <button data-piano="${esc(p.label)}" title="Add to this week's work items">${inItems.has(p.label)?"✓ ":"+ "}${esc(p.label)}</button>
+        <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial||p.label)}" target="_blank" rel="noreferrer" title="Open in Piano Log">↗</a>
+      </span>`).join(""):`<span style="color:var(--mut);font-size:13px">Select your name in the sidebar first.</span>`)
+    + (ME?`<span class="chip add"><input id="newPiano" placeholder="+ add piano (make + serial)"><button onclick="addPianoFromInput()">Add</button></span>`:"");
+  document.querySelectorAll("#pianoChips button[data-piano]").forEach(b=>{
+    b.onclick=()=>{
+      const label=b.dataset.piano; const items=getItems();
+      if(!items.some(i=>i.piano===label)){
+        items.push({id:Date.now()+Math.random(),piano:label,notes:"",hours:"",status:"todo",src:"from recent reports"});
+        setItems(items); renderReportForm();
+      }
+    };
+  });
+  const np=$("#newPiano");
+  if(np) np.addEventListener("keydown",e=>{ if(e.key==="Enter") addPianoFromInput(); });
+
+  renderWorkItems();
+
+  const prev=new Date(fri); prev.setDate(prev.getDate()-7);
+  const last=DATA.entries.find(e=>e.tech===ME&&e.date===iso(prev));
+  $("#lastWeekBox").innerHTML=last
+    ? `<b>Your report last week (${fmtShort(last.date)}):</b> “${esc(last.text.slice(0,400))}${last.text.length>400?"…":""}”`
+    : (ME?`<b>No report on file for you last week (${fmtShort(iso(prev))}).</b>`:"");
+
+  const already=DATA.entries.find(e=>e.tech===ME&&e.date===iso(fri));
+  $("#submitNotice").innerHTML=already
+    ? `<div class="notice ok">A report from you is already on the sheet for ${fmtShort(iso(fri))}. Submitting again will <b>append</b>, not overwrite.</div>`
+    : (CONFIG.APPS_SCRIPT_URL?"":`<div class="notice">Direct submission isn't wired up yet — an admin deploys <code>shop-reports-apps-script.gs</code> and pastes its URL into <code>CONFIG.APPS_SCRIPT_URL</code> (see <code>docs/shop-reports-setup.md</code>). Until then use <b>Copy for spreadsheet</b>.</div>`);
+}
+function addPianoFromInput(){
+  const v=($("#newPiano").value||"").trim();
+  if(!v) return;
+  const items=getItems();
+  items.push({id:Date.now()+Math.random(),piano:v,notes:"",hours:"",status:"todo",src:"added by hand"});
+  setItems(items); renderReportForm();
+}
+
+function renderWorkItems(){
+  const items=getItems();
+  $("#itemCount").textContent=items.length?`${items.length} item${items.length===1?"":"s"} · ${items.reduce((s,i)=>s+(parseFloat(i.hours)||0),0)} hrs total`:"";
+  $("#workItems").innerHTML=items.length?items.map(it=>`
+    <div class="item" data-id="${it.id}">
+      <span class="plabel">${esc(it.piano)}</span>
+      <input type="number" min="0" step="0.5" placeholder="hrs" value="${esc(it.hours||"")}" data-act="hours" aria-label="hours on ${esc(it.piano)}">
+      <span class="seg">
+        <button class="done${it.status==="done"?" on":""}" data-act="done">✓ Completed</button>
+        <button class="carry${it.status!=="done"?" on":""}" data-act="carry">⟳ Carry over</button>
+      </span>
+      <input type="text" placeholder="notes — what happened, what's left…" value="${esc(it.notes||"")}" data-act="notes">
+      <button class="del" data-act="del" title="Remove">✕</button>
+    </div>`).join("")
+    : `<div style="padding:13px 16px;color:var(--mut);font-size:13.5px">No work items yet — click a piano chip above or “+ add piano”.</div>`;
+  document.querySelectorAll("#workItems .item").forEach(rowEl=>{
+    const id=rowEl.dataset.id;
+    const update=(fn)=>{ const items=getItems(); const it=items.find(x=>String(x.id)===id); if(it){ fn(it); localStorage.setItem(itemsKey(),JSON.stringify(items)); markSaved(); renderMyWeek(); updatePreview(); } };
+    rowEl.querySelector('[data-act=hours]').oninput=(e)=>update(it=>it.hours=e.target.value);
+    rowEl.querySelector('[data-act=notes]').oninput=(e)=>update(it=>it.notes=e.target.value);
+    rowEl.querySelector('[data-act=done]').onclick=()=>{ update(it=>it.status="done"); renderWorkItems(); };
+    rowEl.querySelector('[data-act=carry]').onclick=()=>{ update(it=>it.status="carry"); renderWorkItems(); };
+    rowEl.querySelector('[data-act=del]').onclick=()=>{ const items=getItems().filter(x=>String(x.id)!==id); setItems(items); renderReportForm(); };
+  });
+  updatePreview();
+}
+
+function composeText(){
+  const items=getItems();
+  const lines=items.map(it=>{
+    const hrs=parseFloat(it.hours)?` — ${parseFloat(it.hours)} hrs`:"";
+    const st=it.status==="done"?"DONE":it.status==="part"?"PARTLY DONE":it.status==="carry"?"CARRY OVER to next week":"NOT STARTED";
+    return `${it.piano}${hrs} — ${st}${it.notes?` — ${it.notes}`:""}`;
+  });
+  const extra=($("#extraNotes").value||"").trim();
+  return [lines.join("\n"),extra].filter(Boolean).join("\n\n");
+}
+function updatePreview(){
+  const t=composeText();
+  $("#composePreview").textContent=t||"—";
+  $("#charCount").textContent=t?`${t.length.toLocaleString()} characters`:"";
+}
+$("#extraNotes").addEventListener("input",()=>{ localStorage.setItem(extraKey(),$("#extraNotes").value); markSaved(); updatePreview(); });
+
+$("#copyBtn").onclick=async()=>{
+  await navigator.clipboard.writeText(composeText());
+  $("#copyBtn").textContent="Copied ✓";
+  setTimeout(()=>$("#copyBtn").textContent="Copy for spreadsheet",1600);
+};
+$("#submitBtn").onclick=async()=>{
+  const text=composeText().trim();
+  if(!ME){ $("#submitNotice").innerHTML=`<div class="notice err">Pick your name in the sidebar first.</div>`; return; }
+  if(!text){ $("#submitNotice").innerHTML=`<div class="notice err">Add at least one work item or a note first.</div>`; return; }
+  if(!CONFIG.APPS_SCRIPT_URL){
+    $("#submitNotice").innerHTML=`<div class="notice">Submission endpoint not configured yet — use <b>Copy for spreadsheet</b> and paste into your ${fmtShort(iso(thisFriday()))} cell on the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">sheet</a>.</div>`;
+    return;
+  }
+  const btn=$("#submitBtn"); btn.disabled=true; btn.textContent="Submitting…";
+  try{
+    const r=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"submit",tech:ME,date:iso(thisFriday()),text})});
+    const out=await r.json();
+    if(!out.ok) throw new Error(out.error||"unknown error");
+    $("#submitNotice").innerHTML=`<div class="notice ok"><b>Submitted.</b> Your report is on the sheet in the ${fmtShort(iso(thisFriday()))} column.</div>`;
+    DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
+    renderDashboard(); renderPlanner();
+  }catch(e){
+    $("#submitNotice").innerHTML=`<div class="notice err">Submission failed (${esc(String(e.message||e))}). Your draft is safe on this device — use <b>Copy for spreadsheet</b> as a fallback.</div>`;
+  }
+  btn.disabled=false; btn.textContent="Submit Friday report";
+};
+
+/* ---------- planner ---------- */
+function renderPlanner(){
+  const fri=thisFriday(), friISO=iso(fri);
+  const wk=weekEntries(friISO);
+  const prevISO=iso(new Date(fri.getTime()-7*864e5));
+  const inCount=new Set(wk.map(e=>e.tech)).size;
+  $("#plannerStatus").innerHTML=`<div class="notice ${inCount>=Math.ceil(ROSTER.length*0.6)?"ok":""}">
+    <b>${inCount} of ${ROSTER.length}</b> reports in for ${fmtShort(friISO)}. ${inCount>=Math.ceil(ROSTER.length*0.6)?"Most reports are in — good time to plan next week.":"The plan fills in as Friday reports arrive; technicians without a report this week fall back to last week's."}</div>`;
+  $("#plannerCards").innerHTML=ROSTER.map(t=>{
+    const cur=wk.find(e=>e.tech===t) || DATA.entries.find(e=>e.tech===t&&e.date===prevISO);
+    if(!cur) return `<div class="tcard"><h4>${esc(t)} <span class="pill out st">No recent report</span></h4><div class="none">Nothing to carry over — assign fresh work.</div></div>`;
+    const carries=carryLines(cur.text);
+    const pianos=[...new Set(extractPianos(cur.text).filter(p=>p.serial).map(p=>p.label))];
+    return `<div class="tcard">
+      <h4>${esc(t)} <span class="lite" style="font-weight:400;color:var(--mut2)">from ${fmtShort(cur.date)}</span>
+        <span style="margin-left:auto" class="pill ${carries.length?"mid":"in"} st">${carries.length?carries.length+" carry-over"+(carries.length===1?"":"s"):"nothing flagged"}</span></h4>
+      ${carries.length?`<ul>${carries.map(c=>`<li>${esc(c.slice(0,220))}</li>`).join("")}</ul>`:`<div class="none">No carry-over language found — likely finished assignments${pianos.length?` (pianos in flight: ${esc(pianos.join(", "))})`:""}.</div>`}
+    </div>`;
+  }).join("");
+}
+$("#copyPlanBtn").onclick=async()=>{
+  const fri=thisFriday(), wk=weekEntries(iso(fri));
+  const prevISO=iso(new Date(fri.getTime()-7*864e5));
+  const txt=ROSTER.map(t=>{
+    const cur=wk.find(e=>e.tech===t)||DATA.entries.find(e=>e.tech===t&&e.date===prevISO);
+    const carries=cur?carryLines(cur.text):[];
+    return `${t}:\n${carries.length?carries.map(c=>"  • "+c).join("\n"):"  • (no carry-overs — assign fresh work)"}`;
+  }).join("\n\n");
+  await navigator.clipboard.writeText(`BLP next-week assignment draft — from reports of ${fmtShort(iso(fri))}\n\n${txt}`);
+  $("#copyPlanBtn").textContent="Copied ✓";
+  setTimeout(()=>$("#copyPlanBtn").textContent="Copy full plan",1600);
+};
+
+/* ---------- history ---------- */
+function renderHistoryControls(){
+  const years=[...new Set(DATA.entries.map(e=>e.year))].sort((a,b)=>b-a);
+  $("#fYear").innerHTML=`<option value="">All years</option>`+years.map(y=>`<option>${y}</option>`).join("");
+  $("#fTech").innerHTML=`<option value="">All technicians</option>`+ALL_TECHS.map(t=>`<option>${esc(t)}</option>`).join("");
+  $("#histSub").textContent=`${DATA.entries.length.toLocaleString()} Friday reports from ${ALL_TECHS.length} technicians, ${Math.min(...years)}–${Math.max(...years)}.`;
+  $("#compliance2").innerHTML=complianceHTML();
+}
+let searchT;
+["q","fTech","fYear"].forEach(id=>$("#"+id).addEventListener("input",()=>{ clearTimeout(searchT); searchT=setTimeout(runSearch,120); }));
+
+function runSearch(){
+  const qRaw=$("#q").value.trim(), q=qRaw.toLowerCase();
+  const tech=$("#fTech").value, year=$("#fYear").value;
+  let hits=DATA.entries;
+  if(tech) hits=hits.filter(e=>e.tech===tech);
+  if(year) hits=hits.filter(e=>String(e.year)===year);
+  const terms=q?q.split(/\s+/).filter(Boolean):[];
+  if(terms.length) hits=hits.filter(e=>{ const t=e.text.toLowerCase(); return terms.every(w=>t.includes(w)||e.tech.toLowerCase().includes(w)); });
+  hits=[...hits].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
+  $("#hits").textContent=`${hits.length.toLocaleString()} report${hits.length===1?"":"s"}`+(q?` matching “${qRaw}”`:"");
+  $("#results").innerHTML=hits.slice(0,120).map(e=>`
+    <div class="result">
+      <div class="meta"><span class="tech-name">${esc(e.tech)}</span>
+        <span class="date-cell">${e.date?fmtShort(e.date):e.year}${e.approx?` <span class="approx">approx. week</span>`:""}</span></div>
+      <div class="body">${highlight(esc(e.text),terms)}</div>
+    </div>`).join("")+(hits.length>120?`<div class="hits">Showing first 120 — narrow the search to see the rest.</div>`:"");
+
+  // ledger-style piano meta box when the query includes a serial
+  const serialM=/(\d{4,7})/.exec(qRaw);
+  if(serialM && hits.length){
+    const serial=serialM[1];
+    const rel=hits.filter(e=>e.text.includes(serial));
+    if(rel.length){
+      const techs=new Set(rel.map(e=>e.tech));
+      const dates=rel.map(e=>e.date).filter(Boolean).sort();
+      const hrs=rel.reduce((s,e)=>s+pianoHours(e.text,serial),0);
+      const brand=(extractPianos(rel[0].text).find(p=>p.serial===serial)||{}).brand||"";
+      $("#pianoMetaBox").innerHTML=`<div class="pianoMeta">
+        <h3>${esc(brand?brand+" ":"")}${esc(serial)}</h3>
+        <div class="pm num"><b>${rel.length}</b> report mentions · <b>${techs.size}</b> technician${techs.size===1?"":"s"} (${esc([...techs].join(", "))})<br>
+        ${dates.length?`first ${fmtShort(dates[0])} → last ${fmtShort(dates[dates.length-1])}<br>`:""}
+        ${hrs?`<b>${hrs.toFixed(1)} hrs</b> logged on lines mentioning it · `:""}<a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(serial)}" target="_blank" rel="noreferrer" style="color:var(--red);font-weight:700">Open in Piano Log ↗</a></div>
+      </div>`;
+      return;
+    }
+  }
+  $("#pianoMetaBox").innerHTML="";
+}
+function highlight(html,terms){
+  let out=html;
+  terms.forEach(t=>{ if(t.length<2) return; out=out.replace(new RegExp("("+t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+")","gi"),"<mark>$1</mark>"); });
+  return out;
+}
+
+/* ---------- piano extraction ---------- */
+const BRANDS=["Steinway","Yamaha","Kawai","Baldwin","Knabe","Chickering","Mason & Hamlin","Mason","Wurlitzer","Kimball","Cable-Nelson","Cable","Weber","Bosendorfer","Bösendorfer","Story & Clark","Everett","Sohmer","Petrof","Samick","Young Chang","Schimmel","Bechstein","Bluthner","Blüthner","Heintzman","Grinnell","Hailun","Kohler & Campbell","Kohler","Gulbransen","Hamilton","Acrosonic","Hardman","Ivers & Pond","Lester","Winter","Currier","Janssen","Estey","Emerson","Vose","Steck","Stieff","Schafer","Brambach","Cristofori","Pearl River","Ritmuller","Essex","Boston","Charles Walter","Walter","Fazioli","Seiler","Ludwig","Steinert","Starr","Werner","Whitney","Wellington","Zwicki","Stritch","Decker","Kranich Bach","Kranich","Ellington"];
+const BRAND_RE=new RegExp("\\b("+BRANDS.map(b=>b.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")\\b[ #:]*([0-9]{4,7})?","gi");
+function extractPianos(text){
+  const found=[]; let m; BRAND_RE.lastIndex=0;
+  while((m=BRAND_RE.exec(text))){
+    const brand=m[1].replace(/\s+/g," ");
+    const serial=m[2]||null;
+    found.push({brand,serial,label:serial?`${brand} ${serial}`:brand});
+  }
+  return found;
+}
+
+function renderPianos(){
+  const map=new Map();
+  DATA.entries.forEach(e=>extractPianos(e.text).forEach(p=>{
+    if(!p.serial) return;
+    const k=p.label.toLowerCase();
+    const rec=map.get(k)||{...p,count:0,techs:new Set(),hrs:0,first:e.date||String(e.year),last:e.date||String(e.year)};
+    rec.count++; rec.techs.add(e.tech); rec.hrs+=pianoHours(e.text,p.serial);
+    if(e.date){ if(!rec.first||e.date<rec.first) rec.first=e.date; if(!rec.last||e.date>rec.last) rec.last=e.date; }
+    map.set(k,rec);
+  }));
+  const pianos=[...map.values()].sort((a,b)=>b.count-a.count).slice(0,60);
+  $("#pianoGrid").innerHTML=pianos.map(p=>`
+    <div class="pcard">
+      <h5>${esc(p.label)}</h5>
+      <div class="pm num">${p.count} report mention${p.count===1?"":"s"} · ${p.techs.size} technician${p.techs.size===1?"":"s"}</div>
+      <div class="pt num">${fmtShort(p.first)} → ${fmtShort(p.last)}</div>
+      ${p.hrs?`<div class="hrs num">${p.hrs.toFixed(1)} hrs logged</div>`:""}
+      <div class="plinks">
+        <button data-q="${esc(p.serial)}">History</button>
+        <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial)}" target="_blank" rel="noreferrer">Piano Log ↗</a>
+      </div>
+    </div>`).join("")||`<div class="sub">No serialized pianos detected.</div>`;
+  document.querySelectorAll(".pcard button[data-q]").forEach(b=>b.onclick=()=>{
+    $("#q").value=b.dataset.q; $("#fTech").value=""; $("#fYear").value="";
+    showView("history"); runSearch();
+  });
+}
+
+/* ---------- calendars ---------- */
+$("#calConnect").onclick=()=>{
+  if(!CONFIG.GOOGLE_CLIENT_ID){
+    $("#calNotice").innerHTML=`<div class="notice">Calendar sync needs a Google OAuth client ID in <code>CONFIG.GOOGLE_CLIENT_ID</code> — a one-time admin step (see <code>docs/shop-reports-setup.md</code>). Once it's in, sign in with <b>brighamlarson@gmail.com</b> or <b>walter@brighamlarsonpianos.com</b> to see every technician's calendar (they're already connected on those accounts), or as a technician to see your own.</div>`;
+    return;
+  }
+  const tc=google.accounts.oauth2.initTokenClient({
+    client_id:CONFIG.GOOGLE_CLIENT_ID,
+    scope:"https://www.googleapis.com/auth/calendar.readonly",
+    callback:async(resp)=>{ calToken=resp.access_token; await loadCalendars(); }
+  });
+  tc.requestAccessToken();
+};
+
+async function gcal(path){
+  const r=await fetch("https://www.googleapis.com/calendar/v3/"+path,{headers:{Authorization:"Bearer "+calToken}});
+  return r.json();
+}
+async function loadCalendars(){
+  const fri=thisFriday(), mon=mondayOf(fri);
+  const timeMin=mon.toISOString(), timeMax=new Date(fri.getTime()+864e5).toISOString();
+  // find technician calendars visible to this account
+  const list=await gcal("users/me/calendarList?maxResults=250");
+  const cals=(list.items||[]);
+  const techCals=ROSTER.map(t=>({tech:t,cal:cals.find(c=>(c.summary||"").toLowerCase().includes(t.toLowerCase()))})).filter(x=>x.cal);
+  if(techCals.length>=2){
+    // owner view: every technician
+    $("#calBody").style.display="none";
+    const friISO=iso(fri);
+    const blocks=await Promise.all(techCals.map(async({tech,cal})=>{
+      const out=await gcal(`calendars/${encodeURIComponent(cal.id)}/events?singleEvents=true&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}`);
+      const evs=(out.items||[]).filter(e=>e.status!=="cancelled");
+      const rep=(DATA.entries.find(x=>x.tech===tech&&x.date===friISO)||{}).text||"";
+      return `<div class="card" style="margin-top:14px">
+        <h4>${esc(tech)} <span class="lite">${evs.length} assignment${evs.length===1?"":"s"} · ${rep?"report in":"no report yet"}</span></h4>
+        ${evs.length?evs.map(e=>evRow(e,rep)).join(""):`<div style="padding:12px 16px;color:var(--mut2);font-size:13px">Nothing on the calendar this week.</div>`}
+      </div>`;
+    }));
+    $("#calTeam").innerHTML=blocks.join("");
+    $("#calNotice").innerHTML=`<div class="notice ok">Connected — showing ${techCals.length} technician calendars (Mon–Fri this week) against their reports.</div>`;
+  }else{
+    // personal view
+    $("#calBody").style.display="";
+    const out=await gcal(`calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}`);
+    const evs=(out.items||[]).filter(e=>e.status!=="cancelled");
+    const myText=(DATA.entries.find(e=>e.tech===ME&&e.date===iso(fri))||{}).text||composeText();
+    $("#calEvents").innerHTML=evs.length?evs.map(e=>evRow(e,myText)).join(""):`<div style="padding:14px 16px;color:var(--mut);font-size:13.5px">No events on your calendar this week.</div>`;
+    $("#calNotice").innerHTML=`<div class="notice ok">Connected — showing your primary calendar. (Owner accounts with technician calendars shared see the whole team here.)</div>`;
+  }
+}
+function evRow(e,reportText){
+  const start=e.start&&e.start.dateTime?new Date(e.start.dateTime):null;
+  const label=start?start.toLocaleDateString("en-US",{weekday:"short"})+" "+start.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"}):(e.start&&e.start.date||"");
+  const words=(e.summary||"").split(/\s+/).filter(w=>w.length>3);
+  const mentioned=reportText&&words.some(w=>reportText.toLowerCase().includes(w.toLowerCase()));
+  return `<div class="ev"><span class="t">${esc(label)}</span><span>${esc(e.summary||"(no title)")}</span>
+    <span class="pill ${mentioned?"in":"out"}">${mentioned?"In report":"Not in report"}</span></div>`;
+}
+function renderCalReport(){
+  const fri=thisFriday();
+  const mine=DATA.entries.find(e=>e.tech===ME&&e.date===iso(fri));
+  $("#calReport").textContent=mine?mine.text:(ME?(composeText()?"Draft: "+composeText():"No report yet for this week."):"Select your name in the sidebar.");
+}
+
+if(CONFIG.GOOGLE_CLIENT_ID){
+  const s=document.createElement("script");
+  s.src="https://accounts.google.com/gsi/client"; s.async=true;
+  document.head.appendChild(s);
+}
+
+boot();
+</script>
+</body>
+</html>
