@@ -1040,38 +1040,121 @@ function clientPianos(){
   });
   return out;
 }
+// Extract ONLY the clauses that belong to this piano's serial. Reports pack
+// several pianos into one cell ("Marxophone: Done! M&W 75866: wind chest...
+// Hallet Davis 39363: hammers"); we key off each "Brand ... serial:" label
+// and keep the text between this piano's label and the next piano's label —
+// so a neighboring project can never bleed into this client's update.
+const LABEL_RE = /([A-Z][A-Za-z.&'’()\/\- ]{1,30}?\s(\d{3,8}))\s*[:\-–]/g;
+function pianoClauses(text, serial){
+  const sk = skey(serial); const out = [];
+  const marks = []; let m; LABEL_RE.lastIndex = 0;
+  while((m = LABEL_RE.exec(text))){ marks.push({start: LABEL_RE.lastIndex, at: m.index, serial: skey(m[2])}); }
+  for(let i=0;i<marks.length;i++){
+    if(marks[i].serial !== sk) continue;
+    const stop = (i+1<marks.length) ? marks[i+1].at : text.length;
+    let clause = text.slice(marks[i].start, stop).trim().replace(/\s+/g," ");
+    if(clause) out.push(clause);
+  }
+  // Fallback: serial with no clear label — take the sentence around it.
+  if(!out.length && (text.match(/\d{4,8}/g)||[]).includes(sk)){
+    const i = text.search(new RegExp(sk));
+    if(i>=0) out.push(text.slice(i, i+180).replace(/^\d+\D*/,"").split(/(?<=[.!])\s/)[0].trim());
+  }
+  return out;
+}
 function cliEvidence(c){
   const since=c.lastSent||iso(new Date(Date.now()-60*86400e3));
   return REPORTS.entries
     .filter(e=>e.date&&e.date>since&&(e.text.match(/\d{4,8}/g)||[]).includes(skey(c.serial)))
     .sort((a,b)=>a.date.localeCompare(b.date))
-    .map(e=>{
-      const i=e.text.indexOf(String(c.serial));
-      const snip=i>=0?e.text.slice(Math.max(0,i-60), i+240):e.text.slice(0,240);
-      return {date:fmtShort(e.date), tech:e.tech, text:snip.trim()};
-    }).slice(-12);
+    .flatMap(e=>pianoClauses(e.text, c.serial).map(text=>({date:fmtShort(e.date), tech:e.tech, text})))
+    .filter(x=>x.text.length>3)
+    .slice(-14);
+}
+// Client-friendly phase names for the "completed so far" line.
+const PHASE_LABELS={
+  "KEYWORK":["keywork","el trabajo de teclado"],
+  "CAP":["cleaning and action prep","la limpieza y preparación del mecanismo"],
+  "SOUNDBOARD / BRIDGE":["soundboard and bridge work","la tabla armónica y los puentes"],
+  "RESTRINGING":["restringing","el encordado"],
+  "DHRT":["dampers, hammers and regulation","apagadores, martillos y regulación"],
+  "REFINISHING":["refinishing","el acabado"],
+  "PLATING":["hardware plating","el cromado de herrajes"],
+  "QC":["the final quality check","la revisión final de calidad"],
+};
+// Drop sentences that aren't really about the client's piano or read like
+// internal shop chatter, then convert first-person tech phrasing to "we".
+const ASIDE_RE=/^(all other|other showroom|showroom items|still a work in progress|in progress|still in progress|can'?t wait|i('?ll| will) (be taking|take)|taking \w+ off|the \w+ qc is|update:?)\b/i;
+function toSentences(s){ return s.split(/(?<=[.!?])\s+/).map(x=>x.trim()).filter(Boolean); }
+function cleanClause(s){
+  const kept=toSentences(s)
+    .filter(sen=>!ASIDE_RE.test(sen))
+    .map(sen=>sen
+      .replace(/\bI['’]?m\b/gi,"we're").replace(/\bI am\b/gi,"we are")
+      .replace(/\bI['’]ll\b/gi,"we'll").replace(/\bI will\b/gi,"we will")
+      .replace(/\bI['’]ve\b/gi,"we've").replace(/\bI have\b/gi,"we have")
+      .replace(/\bI\b/g,"we").replace(/\bmy\b/gi,"our")
+      .replace(/give me (another|a) week[^.!]*/gi,"")
+      .replace(/if all(owed)?[^.!]*/gi,"")
+      .replace(/\bupper stack\b/gi,"upper stack").replace(/\bup$/,"upright"))
+    .map(sen=>sen.replace(/\s+/g," ").replace(/\s+([.,!?])/g,"$1").trim())
+    .filter(sen=>sen.length>6)
+    // require real prose: at least 3 word-ish tokens once %/parentheticals are
+    // stripped — drops status fragments like "0% (without color)".
+    .filter(sen=>sen.replace(/\d+\s*%|\([^)]*\)/g,"").split(/\s+/).filter(w=>/[a-z]{3,}/i.test(w)).length>=3)
+    .map(sen=>sen.charAt(0).toUpperCase()+sen.slice(1));
+  return kept.join(" ");
 }
 function localTemplate(c, evid){
   const first=(c.ownerName||"there").split(/\s+/)[0];
-  const done=Object.entries(c.phases).filter(([,v])=>/✓|done|complete/i.test(v)).map(([k])=>k.toLowerCase());
-  const lines=evid.slice(-4).map(e=>`• ${e.date} — ${e.tech}: ${e.text.slice(0,140)}`);
-  const body=
-`Hi ${first},
+  const es = LANG==="es";
+  const pianoName=[c.year,c.make,c.model].filter(Boolean).join(" ")||(es?"piano":"piano");
+  const done=Object.keys(c.phases)
+    .filter(k=>/✓|done|complete|100/i.test(c.phases[k]||""))
+    .map(k=>(PHASE_LABELS[k]||[k.toLowerCase(),k.toLowerCase()])[es?1:0]);
+  // The two most recent substantive clauses about THIS piano, cleaned.
+  const clauses=[...new Set(evid.map(e=>cleanClause(e.text)).filter(x=>x.length>6))];
+  // The most recent substantive clause is the current status; add the one
+  // before it only if the latest is very short (keeps it current, not contradictory).
+  const latest = clauses.length
+    ? (clauses[clauses.length-1].length<48 ? clauses.slice(-2) : clauses.slice(-1))
+    : [];
+  const doneLine = done.length
+    ? (es?`Hasta ahora hemos completado ${listEs(done)}.`:`So far we've completed ${listEn(done)}.`)
+    : "";
+  const workPara = latest.length
+    ? (es?`Nuestro equipo ha estado enfocado en su instrumento. ${latest.join(" ")}`
+         :`Our team has been giving it real, careful attention. ${latest.join(" ")}`)
+    : (es?`Su piano está en cola y avanzando — le tendré más detalles en la próxima actualización.`
+         :`It's queued and moving through the shop — I'll have more specifics for you in the next update.`);
+  const body = es
+? `Hola ${first},
 
-I wanted to give you an update on your ${[c.make,c.model].filter(Boolean).join(" ")||"piano"} (serial ${c.serial}) — it's been getting real attention in the shop.
+Quería contarle cómo va su ${pianoName} — está avanzando muy bien con nosotros.
 
-${lines.length?`Here's some of what the team has been working on recently:
-${lines.join("\n")}`:`Work is queued and moving — I'll have more specifics for you in the next update.`}
-${done.length?`
-Completed stages so far: ${done.join(", ")}.`:""}
+${workPara}
+${doneLine?"\n"+doneLine+"\n":""}
+Le seguiré informando a medida que pase a la siguiente fase. Si tiene cualquier pregunta, solo responda a este correo — con gusto hablo de pianos cuando quiera.
 
-I'll keep you posted as it moves through the next phase. If you have any questions at all, just reply to this email — I'm happy to talk pianos any time.
+Un cordial saludo,
+Brigham Larson
+Brigham Larson Pianos`
+: `Hi ${first},
+
+I wanted to share where things stand with your ${pianoName} — it's coming along beautifully here in our shop.
+
+${workPara}
+${doneLine?"\n"+doneLine+"\n":""}
+I'll keep you posted as it moves into the next phase. If you have any questions at all, just reply to this email — I'm always happy to talk pianos.
 
 Warmly,
 Brigham Larson
 Brigham Larson Pianos`;
-  return {subject:`Progress update on your ${[c.make,c.model].filter(Boolean).join(" ")||"piano"}`, body};
+  return {subject: es?`Novedades de su ${pianoName}`:`An update on your ${pianoName}`, body};
 }
+function listEn(a){ return a.length<2?a[0]||"":a.length===2?a.join(" and "):a.slice(0,-1).join(", ")+", and "+a[a.length-1]; }
+function listEs(a){ return a.length<2?a[0]||"":a.length===2?a.join(" y "):a.slice(0,-1).join(", ")+" y "+a[a.length-1]; }
 async function generateDraft(c){
   const evid=cliEvidence(c);
   CLI_DRAFTS[c.key]={loading:true}; renderClients();

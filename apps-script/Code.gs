@@ -26,6 +26,8 @@ function doPost(e) {
       out = submitReport(String(body.tech || ""), String(body.date || ""), String(body.text || ""));
     } else if (body.action === "rosterSet") {
       out = rosterSet_(String(body.tech || ""), String(body.status || "active"));
+    } else if (body.action === "clientLogSet") {
+      out = clientLogSet_(body);
     } else {
       throw new Error("unknown action");
     }
@@ -115,7 +117,41 @@ function rosterSet_(tech, status) {
   return { ok: true, tech: tech.trim(), status: status, added: true };
 }
 
-/** GET ?action=history returns every tab as JSON; ?action=roster returns the team roster. */
+/* ---------- Client updates log (a "Client Updates" tab, shared) ----------
+   Records every approved/sent client email so "last update" dates are the
+   same on every device and auditable in the sheet itself. */
+function clientLogTab_(ss) {
+  var sh = ss.getSheetByName("Client Updates");
+  if (!sh) {
+    sh = ss.insertSheet("Client Updates");
+    sh.getRange(1, 1, 1, 5).setValues([["Serial", "Piano", "Client", "Sent", "By"]]);
+  }
+  return sh;
+}
+
+function clientLogSet_(body) {
+  var serial = String(body.serial || "").trim();
+  if (!serial) throw new Error("missing serial");
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = clientLogTab_(ss);
+  sh.appendRow([serial, String(body.piano || ""), String(body.client || ""),
+                String(body.sent || new Date().toISOString().slice(0, 10)),
+                String(body.by || "")]);
+  return { ok: true, serial: serial };
+}
+
+function clientLogList_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sh = ss.getSheetByName("Client Updates");
+  if (!sh) return [];
+  return sh.getDataRange().getDisplayValues().slice(1)
+    .filter(function (r) { return String(r[0]).trim(); })
+    .map(function (r) { return { serial: String(r[0]).trim(), piano: String(r[1]),
+                                 client: String(r[2]), sent: String(r[3]), by: String(r[4]) }; });
+}
+
+/** GET ?action=history returns every tab as JSON; ?action=roster the team roster;
+ *  ?action=clientlog the client-updates log. */
 function doGet(e) {
   var action = e && e.parameter && e.parameter.action;
   var out;
@@ -126,6 +162,8 @@ function doGet(e) {
     });
   } else if (action === "roster") {
     out = { ok: true, roster: rosterList_() };
+  } else if (action === "clientlog") {
+    out = { ok: true, log: clientLogList_() };
   } else {
     out = { ok: true, service: "blp-shop-reports", time: new Date().toISOString() };
   }
