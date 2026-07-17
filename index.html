@@ -27,7 +27,8 @@
   .badge{align-self:center;padding:0 16px}
   .badge img{width:100%;max-width:180px;display:block;height:auto}
   .side nav{display:flex;flex-direction:column;font-size:14px}
-  .side nav button{background:none;border:0;color:#a49d90;padding:10px 20px;text-align:left;display:flex;gap:10px;align-items:center;border-left:3px solid transparent}
+  .side nav button,.side nav a.ext{background:none;border:0;color:#a49d90;padding:10px 20px;text-align:left;display:flex;gap:10px;align-items:center;border-left:3px solid transparent;font:inherit;text-decoration:none;cursor:pointer}
+  .side nav a.ext:hover{color:#fff}
   .side nav button.on{color:#fff;background:rgba(180,51,51,.16);border-left-color:var(--red);font-weight:600}
   .side nav button .dot{width:7px;height:7px;border-radius:50%;background:#3a3a42;flex:none}
   .side nav button.on .dot{background:var(--red)}
@@ -185,6 +186,7 @@
       <button data-view="history"><span class="dot"></span>History</button>
       <button data-view="pianos"><span class="dot"></span>Pianos</button>
       <button data-view="calendars"><span class="dot"></span>Calendars</button>
+      <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
     </nav>
     <div class="who" id="whoArea"></div>
   </aside>
@@ -928,10 +930,10 @@ function renderPianos(){
     $("#pianoGrid").innerHTML=STAGES.map(([id,name])=>{
       const group=pianos.filter(p=>p.stage===id);
       if(!group.length) return "";
-      return `<div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:14px 0 2px">
-          <span style="font-size:12px;letter-spacing:.16em;text-transform:uppercase;font-weight:700;color:#57524b;white-space:nowrap">${esc(id==="OTHER"?"Other / unclassified":name)}</span>
-          <span class="num" style="font-size:11.5px;color:var(--mut2)">${group.length}</span>
-          <span style="flex:1;height:2px;background:linear-gradient(90deg,var(--red) 0 44px,var(--line) 44px)"></span>
+      return `<div style="grid-column:1/-1;display:flex;align-items:center;gap:12px;margin:22px 0 4px;padding:10px 14px;background:#f2efe8;border-left:4px solid var(--red);border-radius:5px">
+          <span style="font-family:Georgia,serif;font-size:16px;font-weight:700;letter-spacing:.06em;color:var(--ink);white-space:nowrap">${esc(id==="OTHER"?"Other / Unclassified":name)}</span>
+          <span class="num" style="background:var(--red);color:#fff;border-radius:99px;font-size:12px;font-weight:700;padding:2px 11px">${group.length}</span>
+          <span style="flex:1;height:2px;background:var(--line)"></span>
         </div>` + group.map(cardHTML).join("");
     }).join("")||`<div class="sub">No serialized pianos detected.</div>`;
   }else{
