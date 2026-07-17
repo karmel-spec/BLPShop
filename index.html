@@ -459,6 +459,7 @@ function renderWho(){
         <span class="ur">${isOwner()?"Owner":tech?"Technician — "+esc(tech):"No technician match"}</span></span>
       </div>
       ${isOwner()||!tech?rosterSelectHTML(isOwner()?"Acting as technician":"Which technician are you?"):""}
+      ${isOwner()?`<a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>`:""}
       <button class="signout" id="signOutBtn">Sign out</button>`;
     $("#signOutBtn").onclick=signOut;
   }else if(CONFIG.GOOGLE_CLIENT_ID){

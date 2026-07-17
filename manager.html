@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shop Manager — Brigham Larson Pianos</title>
+<style>
+  :root{
+    --ink:#1c1c1c; --paper:#ffffff; --red:#B43333; --red-deep:#9E2020;
+    --line:#e6e1d9; --line-soft:#f0ece5; --mut:#6f6a63; --mut2:#8a847b;
+    --good:#2e7d4f; --good-bg:#e7f2ea; --warn:#c9a13a; --warn-bg:#fdf6e3;
+    --bad-bg:#f9e9e9; --side:#101013; --side2:#17171b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{background:#f7f5f1;color:var(--ink);font-family:Assistant,'Helvetica Neue',Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  button{font:inherit;cursor:pointer}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* ---------- shell ---------- */
+  .shell{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+  @media(max-width:900px){div.shell{grid-template-columns:1fr}aside.side{position:fixed;z-index:50;height:auto!important;bottom:auto;width:100%;flex-direction:row!important;align-items:center;padding:6px 10px!important;overflow-x:auto}
+    aside.side .badge{display:none}aside.side .keys{display:none}aside.side .lang{margin:0 8px 0 0!important;flex:none}aside.side nav{flex-direction:row!important;flex:1;margin-top:0!important}aside.side nav button{padding:8px 10px!important;font-size:12.5px!important;border-left:none!important;border-bottom:3px solid transparent;white-space:nowrap}
+    aside.side nav button.on{border-bottom-color:var(--red)}aside.side .who{margin:0 0 0 auto!important;padding:0 6px!important;border:none!important;white-space:nowrap}
+    main{padding-top:74px!important}}
+  .side{background:linear-gradient(180deg,var(--side2),var(--side));color:#c9c3ba;display:flex;flex-direction:column;padding:16px 0;position:sticky;top:0;height:100vh}
+  .badge{align-self:center;padding:0 16px}
+  .badge img{width:100%;max-width:170px;display:block;height:auto}
+  .keys{display:flex;height:20px;margin:14px 0;border-top:1px solid #26262c;border-bottom:1px solid #26262c;background:#f4efe6;position:relative;overflow:hidden}
+  .keys span{flex:1;border-right:1px solid #c9c2b4}
+  .keys i{position:absolute;top:0;width:4.2%;height:60%;background:#0c0c0f;border-radius:0 0 2px 2px}
+  .side nav{display:flex;flex-direction:column;font-size:14px}
+  .side nav button{background:none;border:0;color:#a49d90;text-align:left;padding:10px 20px;display:flex;gap:9px;align-items:center;border-left:3px solid transparent}
+  .side nav button.on{color:#fff;background:rgba(180,51,51,.14);border-left-color:var(--red);font-weight:600}
+  .side .lang{margin:10px 20px 0;display:flex;border:1px solid #34343c;border-radius:99px;overflow:hidden;align-self:flex-start}
+  .side .lang button{background:none;border:0;color:#a49d90;padding:5px 14px;font-size:12.5px;font-weight:700;letter-spacing:.06em}
+  .side .lang button.on{background:var(--red);color:#fff}
+  .side .who{margin-top:auto;padding:12px 20px;border-top:1px solid #26262c;font-size:12px;color:#a49d90;line-height:1.5}
+  .side .who b{color:#fff}
+  .side .who a{color:#c9c3ba;text-decoration:underline;text-underline-offset:2px}
+
+  main{padding:24px 26px 70px;max-width:1220px}
+  h2.page{font-family:Georgia,serif;font-size:24px;margin:0;font-weight:700}
+  .sub{color:var(--mut);font-size:13.5px;margin-top:3px;max-width:76ch;line-height:1.5}
+  .row1{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+  .btn{background:var(--red);color:#fff;border:0;border-radius:5px;padding:9px 16px;font-weight:700;font-size:13.5px}
+  .btn:hover{background:var(--red-deep)}
+  .btn2{background:#fff;color:var(--ink);border:1px solid var(--ink);border-radius:5px;padding:8px 14px;font-weight:700;font-size:13px}
+  .btn3{background:none;border:1px solid var(--line);border-radius:5px;padding:6px 12px;font-size:12.5px;color:#57524b}
+  .pill{display:inline-block;border-radius:99px;font-size:11px;font-weight:700;padding:2px 9px;white-space:nowrap}
+  .pill.ok{background:var(--good-bg);color:var(--good)} .pill.miss{background:var(--bad-bg);color:var(--red-deep)}
+  .pill.wait{background:var(--warn-bg);color:#8a6d1a} .pill.lvl{background:#eee9e0;color:#57524b}
+  .card{background:#fff;border:1px solid var(--line);border-radius:7px}
+  .banner{background:var(--red);color:#fff;border-radius:7px;padding:10px 16px;font-size:14px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .banner b{font-weight:700}
+  .view{display:none}.view.on{display:block}
+
+  /* ---------- gate ---------- */
+  #gate{min-height:100vh;display:grid;place-items:center;background:var(--side)}
+  #gate .card{max-width:400px;width:92%;text-align:center;padding:34px 30px;border:none}
+  #gate img{max-width:220px}
+  #gate .rule{display:flex;align-items:center;margin:18px 0}
+  #gate .rule i{flex:1;height:2px;background:var(--red-deep)}
+  #gate .rule s{width:7px;height:7px;border-radius:50%;background:var(--red-deep);margin:0 5px}
+  #gate h1{font-size:13px;letter-spacing:.24em;margin:0 0 14px;color:#4a4a4a;font-weight:600}
+  #gate .msg{color:var(--mut);font-size:13.5px;line-height:1.55;margin-top:14px}
+  #gsiBtn{display:flex;justify-content:center;min-height:44px}
+
+  /* ---------- weekly review ---------- */
+  .rev-row{display:grid;grid-template-columns:1fr auto auto auto auto;gap:10px;align-items:center;padding:11px 16px;border-bottom:1px solid var(--line-soft);cursor:pointer}
+  .rev-row:hover{background:#fbfaf7}
+  .rev-row:last-child{border-bottom:0}
+  .rev-row .tech{font-weight:700;font-size:14.5px}
+  .ck{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--mut2)}
+  .ck .dot{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font-size:11px;border:1.5px solid var(--line);color:transparent}
+  .ck.yes .dot{background:var(--good);border-color:var(--good);color:#fff}
+  .ck.no .dot{background:var(--bad-bg);border-color:var(--red-deep)}
+  .revpanel{border-top:2px solid var(--ink);background:#fbfaf7;padding:16px;display:grid;grid-template-columns:1.2fr 1fr;gap:16px}
+  @media(max-width:900px){.revpanel{grid-template-columns:1fr}}
+  .revpanel h5{margin:0 0 8px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#57524b}
+  .revpanel .reptext{font-size:13.5px;line-height:1.55;white-space:pre-wrap;background:#fff;border:1px solid var(--line);border-radius:6px;padding:12px 14px;max-height:300px;overflow-y:auto}
+  .revpanel .item{background:#fff;border:1px solid var(--line);border-radius:6px;padding:9px 12px;font-size:13px;margin-bottom:7px;line-height:1.45}
+  .revpanel .item .src{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut2);font-weight:700}
+  .rev-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+
+  /* ---------- walk-around ---------- */
+  .cats{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}
+  .cat{border:1px solid var(--line);border-radius:99px;background:#fff;padding:8px 15px;font-size:13.5px;color:#57524b}
+  .cat.on{background:var(--ink);border-color:var(--ink);color:#fff;font-weight:700}
+  .wa-form{display:flex;flex-direction:column;gap:10px;padding:16px}
+  .wa-form input,.wa-form textarea{border:1px solid #cfc9bf;border-radius:6px;padding:11px 13px;font:inherit;font-size:15px}
+  .wa-form textarea{min-height:84px;resize:vertical}
+  .wa-form input:focus,.wa-form textarea:focus{outline:2px solid var(--red);border-color:var(--red)}
+  .suggest{position:relative}
+  .suggest .list{position:absolute;left:0;right:0;top:100%;background:#fff;border:1px solid var(--line);border-radius:0 0 6px 6px;z-index:20;max-height:210px;overflow-y:auto;box-shadow:0 10px 24px rgba(0,0,0,.12)}
+  .suggest .list div{padding:9px 13px;font-size:13.5px;cursor:pointer}
+  .suggest .list div:hover{background:var(--line-soft)}
+  .wa-note{display:grid;grid-template-columns:auto 1fr auto;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line-soft);font-size:13.5px;align-items:baseline}
+  .wa-note:last-child{border-bottom:0}
+  .wa-note .cat-tag{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;color:var(--red-deep);white-space:nowrap}
+  .wa-note button{background:none;border:0;color:var(--mut2);font-size:15px}
+
+  /* ---------- boards ---------- */
+  .lanes{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:13px;align-items:start}
+  .lane{background:#efece6;border-radius:8px;padding:10px}
+  .lane h4{margin:2px 4px 9px;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:#57524b;display:flex;justify-content:space-between}
+  .lane h4 .n{color:var(--mut2)}
+  .job{background:#fff;border:1px solid var(--line);border-radius:6px;padding:9px 11px;font-size:13px;margin-bottom:7px;line-height:1.45}
+  .job .serial-link{color:var(--red);font-weight:700;text-decoration:none}
+  .job .serial-link:hover{text-decoration:underline}
+  .job .meta{margin-top:5px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .prog{flex:1;min-width:60px;height:7px;background:var(--line-soft);border-radius:4px;position:relative}
+  .prog i{position:absolute;inset:0 auto 0 0;background:var(--good);border-radius:4px}
+
+  /* ---------- pipeline ---------- */
+  .pipe{display:flex;gap:11px;overflow-x:auto;padding-bottom:14px;align-items:flex-start}
+  .pcol{min-width:215px;background:#efece6;border-radius:8px;padding:10px;flex:none}
+  .pcol h4{margin:2px 4px 4px;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;color:#57524b;display:flex;justify-content:space-between;align-items:center;gap:6px}
+  .pcol .code{font-size:10px;color:var(--mut2);letter-spacing:.06em;margin:0 4px 8px;min-height:13px}
+  .pcol .hb{background:none;border:1px solid #d8d2c6;border-radius:50%;width:20px;height:20px;font-size:11px;color:#57524b;flex:none;line-height:1}
+  .pcard2{background:#fff;border:1px solid var(--line);border-radius:6px;padding:9px 11px;font-size:13px;margin-bottom:7px}
+  .pcard2 select{margin-top:6px;width:100%;border:1px solid var(--line);border-radius:4px;font-size:11.5px;padding:3px;color:var(--mut);background:#fff}
+  .hbpop{position:fixed;inset:0;background:rgba(18,18,18,.5);z-index:60;display:none;place-items:center}
+  .hbpop.on{display:grid}
+  .hbpop .box{background:#fff;border-radius:8px;max-width:430px;width:92%;padding:22px 24px}
+  .hbpop h3{font-family:Georgia,serif;margin:0 0 4px;font-size:19px}
+  .hbpop ul{margin:10px 0;padding-left:20px;font-size:13.5px;line-height:1.7;color:#3d3a35}
+
+  /* ---------- QC ---------- */
+  .qc-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .qc-sec{border:1px solid var(--line);border-radius:7px;background:#fff;margin-bottom:12px;overflow:hidden}
+  .qc-sec h4{margin:0;padding:11px 15px;background:#faf8f4;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:#57524b;display:flex;justify-content:space-between}
+  .qc-item{display:grid;grid-template-columns:1fr auto;gap:10px;padding:11px 15px;border-bottom:1px solid var(--line-soft);font-size:13.5px;line-height:1.5;align-items:center}
+  .qc-item:last-child{border-bottom:0}
+  .qc-item.fix{background:var(--bad-bg)}
+  .qc-item.pass .qtext{color:var(--mut2)}
+  .qc-btns{display:flex;gap:6px}
+  .qc-btns button{border:1px solid var(--line);background:#fff;border-radius:5px;padding:5px 11px;font-size:12px;font-weight:700;color:#57524b}
+  .qc-btns .p.on{background:var(--good);border-color:var(--good);color:#fff}
+  .qc-btns .f.on{background:var(--red-deep);border-color:var(--red-deep);color:#fff}
+  .qc-item input{grid-column:1/-1;border:1px solid var(--line);border-radius:5px;padding:7px 10px;font:inherit;font-size:13px}
+  .qc-final{border:2px solid var(--good);border-radius:7px;background:var(--good-bg);padding:16px;text-align:center;margin-top:6px}
+  .qc-final .btn{background:var(--good)}
+  @media print{.side,#topbar,.qc-head,.qc-btns,nav{display:none!important}main{padding:0}}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="card">
+    <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
+    <div class="rule"><i></i><s></s><i></i></div>
+    <h1>SHOP MANAGER</h1>
+    <div id="gsiBtn"></div>
+    <div class="msg" id="gateMsg">Management access only. Sign in with your BLP Google account.</div>
+  </div>
+</div>
+
+<div class="shell" id="app" style="display:none">
+  <aside class="side">
+    <div class="badge"><img src="assets/blp-logo.png" alt="Brigham Larson Pianos"></div>
+    <div class="keys"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><i style="left:9%"></i><i style="left:23%"></i><i style="left:51%"></i><i style="left:65%"></i><i style="left:79%"></i></div>
+    <div class="lang"><button id="langEn" onclick="setLang('en')">EN</button><button id="langEs" onclick="setLang('es')">ES</button></div>
+    <nav id="nav" style="margin-top:12px"></nav>
+    <div class="who" id="whoBox"></div>
+  </aside>
+  <main>
+    <div class="banner" id="topbar"></div>
+
+    <section class="view" id="view-review"></section>
+    <section class="view" id="view-walk"></section>
+    <section class="view" id="view-week"></section>
+    <section class="view" id="view-sequence"></section>
+    <section class="view" id="view-pipeline"></section>
+    <section class="view" id="view-qc"></section>
+  </main>
+</div>
+
+<div class="hbpop" id="hbpop" onclick="if(event.target===this)this.classList.remove('on')"><div class="box" id="hbbox"></div></div>
+
+<script>
+/* ================= CONFIG ================= */
+const CONFIG = {
+  GOOGLE_CLIENT_ID: "118454775893-17u7t3glh8eu4kffhe7b42jl71apre4f.apps.googleusercontent.com",
+  REPORT_SHEET: "11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I",
+  SCHED_SHEET:  "1k9ToAeueEg5WOtaY91xXzL-a0l_AJsSZWw23tcAWECU",
+  SEQ_GID: "0", NOTES_GID: "1448465358",
+  REFINISH_SHEET: "1bfF4pmuGv7TefVlDG4lo_04gRjiX9QYerK4o9qih6kc",
+  PIANOLOG_URL: "https://pianologapp.netlify.app/",
+  HANDBOOK_URL: "https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit",
+  QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
+  ADMINS: ["brighamlarson@gmail.com","brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"],
+  ADMIN_DOMAIN: "brighamlarsonpianos.com",
+};
+
+/* ================= I18N ================= */
+let LANG = localStorage.getItem("blpmgr.lang") || "en";
+const I18N = {
+  /* navigation + shell */
+  nav_review:["Weekly Review","Revisión semanal"], nav_walk:["Walk-Around","Recorrido"],
+  nav_week:["Week Board","Tablero semanal"], nav_sequence:["Sequence","Secuencia"],
+  nav_pipeline:["Pipeline","Flujo de pianos"], nav_qc:["Quality Control","Control de calidad"],
+  sign_out:["Sign out","Cerrar sesión"], open_app:["Open Shop Reports","Abrir Reportes del Taller"],
+  loading:["Loading shop data…","Cargando datos del taller…"],
+  wk_ending:["Week ending","Semana que termina"],
+  connect_cal:["Connect Google Calendar","Conectar Google Calendar"],
+  cal_connected:["Calendar connected","Calendario conectado"],
+
+  /* weekly review */
+  review_title:["Weekly Review","Revisión semanal"],
+  review_sub:["Go technician by technician: read the Friday report, review the work, make sure next week is assigned. Nothing gets forgotten — the list stays red until everyone is done.","Técnico por técnico: lee el reporte del viernes, revisa el trabajo y asegúrate de asignar la próxima semana. Nada se olvida: la lista sigue en rojo hasta terminar con todos."],
+  review_progress:["Weekly review: %1 of %2 technicians complete","Revisión semanal: %1 de %2 técnicos completados"],
+  ck_report:["Report in","Reporte recibido"], ck_reviewed:["Reviewed","Revisado"], ck_assigned:["Week assigned","Semana asignada"],
+  mark_reviewed:["Mark reviewed ✓","Marcar revisado ✓"], unmark:["Un-mark","Desmarcar"],
+  this_week_report:["This week's report","Reporte de esta semana"], no_report:["No report submitted yet.","Aún no hay reporte."],
+  carryovers:["Carry-overs & waiting items","Pendientes y en espera"],
+  walk_notes_for:["Your walk-around notes on their pianos","Tus notas del recorrido sobre sus pianos"],
+  next_up:["Next up in their sequence","Siguiente en su secuencia"],
+  bump_title:["Not reported complete last week","No reportado como terminado la semana pasada"],
+  bump:["Bump to next week","Pasar a la próxima semana"], bumped:["Bumped ✓","Pasado ✓"],
+  bump_hint:["Connect the calendar to see last week's events and bump unfinished ones forward with one click.","Conecta el calendario para ver los eventos de la semana pasada y pasar los no terminados con un clic."],
+  assigned_evts:["events on next week's calendar","eventos en el calendario de la próxima semana"],
+  mark_assigned:["Mark assigned ✓","Marcar asignado ✓"],
+
+  /* walk-around */
+  walk_title:["Saturday Walk-Around","Recorrido del sábado"],
+  walk_sub:["Capture notes as you walk the shop. Pick a category, name the piano (serial or spot number), write the note. Everything lands on the Week Board.","Captura notas mientras recorres el taller. Elige una categoría, identifica el piano (serie o número de lugar) y escribe la nota. Todo aparece en el Tablero semanal."],
+  piano_ph:["Piano — type serial or spot number (optional)","Piano — escribe la serie o número de lugar (opcional)"],
+  note_ph:["What needs to happen? / ¿Qué se necesita hacer?","¿Qué se necesita hacer?"],
+  add_note:["Add note","Agregar nota"],
+  notes_this_week:["This week's walk-around notes","Notas del recorrido de esta semana"],
+  copy_column:["Copy for spreadsheet column","Copiar para la columna de la hoja"], copied:["Copied ✓","Copiado ✓"],
+  no_notes:["No notes yet this week.","Aún no hay notas esta semana."],
+
+  /* boards */
+  week_title:["Week Board","Tablero semanal"],
+  week_sub:["This week's plan by department — live from the scheduling sheet, plus your walk-around notes (marked ●).","El plan de esta semana por departamento — en vivo desde la hoja de programación, más tus notas del recorrido (marcadas ●)."],
+  seq_title:["Sequence by Technician","Secuencia por técnico"],
+  seq_sub:["Each technician's ordered pipeline of jobs, live from the sequence tab, enriched with the latest reported progress.","La lista ordenada de trabajos de cada técnico, en vivo desde la hoja de secuencia, con el último avance reportado."],
+  empty_lane:["nothing listed","sin trabajos"],
+
+  /* pipeline */
+  pipe_title:["Piano Pipeline","Flujo de pianos"],
+  pipe_sub:["Every piano in play, by phase — inferred from the sequence, refinishing queue and reports. Use the selector on a card to correct its phase.","Cada piano en proceso, por fase — inferido de la secuencia, la cola de acabados y los reportes. Usa el selector en una tarjeta para corregir su fase."],
+  handbook:["Handbook","Manual"], open_handbook:["Open the BLP Handbook →","Abrir el Manual BLP →"],
+  hb_sections:["Relevant handbook sections","Secciones relevantes del manual"],
+
+  /* QC */
+  qc_title:["Quality Control","Control de calidad"],
+  qc_sub:["The QC checklist, digital: pick the piano, work down the list, and every ‘needs fix’ is recorded with a note. The paper binder becomes an archive.","La lista de control de calidad, digital: elige el piano, recorre la lista y cada ‘necesita arreglo’ queda registrado con una nota. La carpeta de papel pasa a ser archivo."],
+  qc_piano_ph:["Piano being checked — serial or name","Piano a revisar — serie o nombre"],
+  qc_start:["Start / resume QC","Iniciar / continuar CC"],
+  pass:["Pass","Bien"], fix:["Needs fix","Arreglar"],
+  fix_note_ph:["What needs fixing?","¿Qué hay que arreglar?"],
+  qc_done_n:["%1 of %2 items checked","%1 de %2 puntos revisados"],
+  qc_ready:["READY FOR AFTER PHOTOS & VIDEO 🎉","LISTO PARA FOTOS Y VIDEO FINALES 🎉"],
+  qc_mark_ready:["Mark ready for after photos & video","Marcar listo para fotos y video finales"],
+  qc_fixes_open:["fix items still open","arreglos pendientes"],
+  qc_records:["QC records","Registros de CC"], qc_print:["Print record","Imprimir registro"],
+  qc_by:["Checked by","Revisado por"], view_doc:["View original doc","Ver documento original"],
+};
+const t = (k, ...args) => {
+  let s = (I18N[k] || [k,k])[LANG === "es" ? 1 : 0];
+  args.forEach((a,i)=>{ s = s.replace("%"+(i+1), a); });
+  return s;
+};
+function setLang(l){ LANG=l; localStorage.setItem("blpmgr.lang", l); renderAll(); }
+
+/* ================= HELPERS ================= */
+const $ = s => document.querySelector(s);
+const esc = s => String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function parseCSV(text){
+  const rows=[];let row=[],cur="",q=false;
+  for(let i=0;i<text.length;i++){const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=c; }
+    else{ if(c==='"')q=true; else if(c===","){row.push(cur);cur="";} else if(c==="\n"){row.push(cur);rows.push(row);row=[];cur="";} else if(c!=="\r")cur+=c; } }
+  if(cur!==""||row.length){row.push(cur);rows.push(row);}
+  return rows;
+}
+async function gviz(sheetId, gid){
+  const r = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&headers=0&gid=${gid}`);
+  return parseCSV(await r.text());
+}
+function thisFriday(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()+((5-x.getDay()+7)%7));return x;}
+const iso = d => d.toISOString().slice(0,10);
+function fmtShort(s){ if(!s)return "—"; const [y,m,d]=String(s).split("-"); return `${+m}/${+d}/${String(y).slice(2)}`; }
+function mondayOf(f){const m=new Date(f);m.setDate(m.getDate()-4);return m;}
+
+/* ================= AUTH GATE ================= */
+let USER=null;
+try{ USER = JSON.parse(localStorage.getItem("blp-shop-reports.user")||"null"); }catch(e){}
+const isAdmin = u => !!u && (CONFIG.ADMINS.includes((u.email||"").toLowerCase()) || (u.email||"").toLowerCase().endsWith("@"+CONFIG.ADMIN_DOMAIN));
+const isLocal = ["localhost","127.0.0.1"].includes(location.hostname);
+
+function enter(){
+  $("#gate").style.display="none"; $("#app").style.display="grid";
+  boot();
+}
+function checkGate(){
+  if(isLocal && new URLSearchParams(location.search).get("dev")==="1"){
+    USER = USER || {email:"brighamlarson@gmail.com", name:"Dev Preview"};
+    enter(); return;
+  }
+  if(isAdmin(USER)){ enter(); return; }
+  if(USER){ $("#gateMsg").textContent = `${USER.email} — ${LANG==="es"?"esta sección es solo para administración.":"this section is management-only."}`; }
+  const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true;
+  s.onload=()=>{ google.accounts.id.initialize({client_id:CONFIG.GOOGLE_CLIENT_ID, callback:(resp)=>{
+      try{
+        const p=JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+        USER={email:(p.email||"").toLowerCase(),name:p.name||"",given:p.given_name||"",picture:p.picture||""};
+        localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
+        if(isAdmin(USER)) enter();
+        else $("#gateMsg").textContent = `${USER.email} — ${LANG==="es"?"no tiene acceso de administración.":"does not have management access."}`;
+      }catch(e){ $("#gateMsg").textContent="Sign-in failed."; }
+    }});
+    google.accounts.id.renderButton($("#gsiBtn"),{theme:"filled_black",size:"large",shape:"pill"});
+  };
+  document.head.appendChild(s);
+}
+
+/* ================= DATA ================= */
+let REPORTS={entries:[]}, SEQ=[], NOTES=[], REFINISH=[], ROSTER=[];
+let PIANOS=new Map();   // serialKey -> {serial, label, spot, level, progress, lastDate, techs:Set}
+const YEAR = new Date().getFullYear();
+
+async function boot(){
+  renderShell();
+  document.querySelectorAll(".view").forEach(v=>v.innerHTML=`<div style="color:var(--mut);padding:30px 0">${t("loading")}</div>`);
+  const [hist, seq, notes, refin] = await Promise.all([
+    fetch("data/report-history.json").then(r=>r.json()).catch(()=>({entries:[],tabs:{}})),
+    gviz(CONFIG.SCHED_SHEET, CONFIG.SEQ_GID).catch(()=>[]),
+    gviz(CONFIG.SCHED_SHEET, CONFIG.NOTES_GID).catch(()=>[]),
+    gviz(CONFIG.REFINISH_SHEET, "0").catch(()=>[]),
+  ]);
+  REPORTS = hist; SEQ = seq; NOTES = notes; REFINISH = refin;
+  // live refresh of current-year reports
+  try{
+    const gid = Object.keys(hist.tabs||{}).find(g=>hist.tabs[g].year===YEAR);
+    if(gid){
+      const rows = await gviz(CONFIG.REPORT_SHEET, gid);
+      const dates = rows[0].slice(1);
+      const fresh=[];
+      rows.slice(1).forEach(r=>{ const tech=(r[0]||"").trim(); if(!tech)return;
+        r.slice(1).forEach((cell,i)=>{ cell=(cell||"").trim(); if(!cell||/^n\/?a$/i.test(cell))return;
+          const m=/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec((dates[i]||"").trim());
+          const isoD = m?`${m[3].length===2?"20"+m[3]:m[3]}-${String(m[1]).padStart(2,"0")}-${String(m[2]).padStart(2,"0")}`:null;
+          fresh.push({tech,date:isoD,year:YEAR,text:cell}); });
+      });
+      if(fresh.length) REPORTS.entries = REPORTS.entries.filter(e=>e.year!==YEAR).concat(fresh);
+    }
+  }catch(e){}
+  buildRoster(); buildPianoIndex();
+  renderAll();
+}
+
+const validTechName = n => /^[A-Za-z][A-Za-z'’.-]+( [A-Za-z'’.-]+)?$/.test(n) && n.length<=22 && !/complete/i.test(n);
+function seqRows(){ return SEQ.filter(r=>validTechName((r[1]||"").trim()) && r.slice(2).some(c=>(c||"").trim())); }
+function buildRoster(){
+  // Weekly Review covers the ACTIVE Friday-report roster (same rule as the
+  // shop app). The sequence tab lists everyone ever — it feeds the Sequence
+  // board, not this roster.
+  const cutoff=new Date(thisFriday()); cutoff.setDate(cutoff.getDate()-8*7);
+  const active=new Set(REPORTS.entries.filter(e=>e.date&&e.date>=iso(cutoff)).map(e=>e.tech));
+  REPORTS.entries.filter(e=>e.year===YEAR).forEach(e=>active.add(e.tech));
+  ROSTER=[...active].sort();
+}
+function seqRowFor(tech){
+  const f=tech.split(/\s+/)[0].toLowerCase();
+  return seqRows().find(r=>(r[1]||"").trim().split(/\s+/)[0].toLowerCase()===f);
+}
+
+const BRANDS=["Steinway","Yamaha","Kawai","Baldwin","Knabe","Chickering","Mason & Hamlin","Wurlitzer","Kimball","Cable-Nelson","Cable Nelson","Weber","Bosendorfer","Bösendorfer","Everett","Sohmer","Petrof","Samick","Young Chang","Schimmel","Bechstein","Heintzman","Hailun","Kohler & Campbell","Gulbransen","Hamilton","Acrosonic","Ivers & Pond","Lester","Winter","Emerson","Vose","Steck","Brambach","Pearl River","Ritmuller","Essex","Boston","Fazioli","Seiler","Ludwig","Ellington","Kranich & Bach","Kranich Bach","Decker","Hallet Davis","Universal","Promberger","Geyer","Mathushek","Sherman Clay","Wing","Walworth","Kreiter","Rudolf","Waterlox","Whitney","Wellington","Story & Clark"];
+const BRAND_RE = new RegExp("\\b("+BRANDS.map(b=>b.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")\\b[ #:]*([0-9]{4,8})?","gi");
+const skey = s => String(s||"").replace(/\D/g,"");
+
+function notePiano(brand, serial, extra){
+  if(!serial) return null;
+  const k=skey(serial); if(k.length<4) return null;
+  const rec = PIANOS.get(k) || {serial:serial, brand:brand||"", label:(brand?brand+" ":"")+serial, spot:"", level:"", progress:null, lastDate:null, techs:new Set(), request:""};
+  if(brand && !rec.brand){ rec.brand=brand; rec.label=brand+" "+serial; }
+  Object.assign(rec, extra||{});
+  PIANOS.set(k, rec);
+  return rec;
+}
+
+function buildPianoIndex(){
+  // refinishing sheet: priority order, level, request, location
+  let pri=0;
+  REFINISH.forEach(r=>{
+    const brand=(r[1]||"").trim(), serial=(r[2]||"").trim(), loc=(r[3]||"").trim(), lvl=(r[4]||"").trim(), req=(r[5]||"").trim();
+    if(!brand||!serial||/^brand$/i.test(brand)) return;
+    pri++;
+    notePiano(brand, serial, {spot:loc, level:lvl, request:req, refinishPri:pri});
+  });
+  // sequence tab: jobs per tech (only active-roster lanes count as "in play")
+  const rosterFirsts=new Set(ROSTER.map(n=>n.split(/\s+/)[0].toLowerCase()));
+  seqRows().forEach(r=>{
+    const tech=(r[1]||"").trim();
+    const activeLane=rosterFirsts.has(tech.split(/\s+/)[0].toLowerCase());
+    r.slice(2).forEach(job=>{ job=(job||"").trim(); if(!job)return;
+      BRAND_RE.lastIndex=0; const m=BRAND_RE.exec(job);
+      if(m&&m[2]){ const rec=notePiano(m[1],m[2],activeLane?{inSeq:true}:{}); if(rec) rec.techs.add(tech); }
+    });
+  });
+  // report mentions: latest date + progress %
+  const sorted=[...REPORTS.entries].filter(e=>e.date).sort((a,b)=>a.date.localeCompare(b.date));
+  sorted.forEach(e=>{
+    BRAND_RE.lastIndex=0; let m;
+    while((m=BRAND_RE.exec(e.text))){
+      if(!m[2]) continue;
+      const rec=notePiano(m[1],m[2],{lastDate:e.date}); if(!rec) continue;
+      rec.techs.add(e.tech);
+      const after=e.text.slice(m.index, m.index+160);
+      rec.snip=after;
+      const pm=/(\d{1,3})\s?%/.exec(after);
+      if(pm && +pm[1]<=100) rec.progress=+pm[1];
+    }
+  });
+}
+
+/* ================= CALENDAR ================= */
+let calToken=null, CAL_MAP={}; // tech -> calendarId
+function connectCalendar(cb){
+  const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true;
+  s.onload=()=>{
+    const tc=google.accounts.oauth2.initTokenClient({
+      client_id:CONFIG.GOOGLE_CLIENT_ID,
+      scope:"https://www.googleapis.com/auth/calendar.readonly https://www.googleapis.com/auth/calendar.events",
+      callback:async(resp)=>{ calToken=resp.access_token; await mapCalendars(); renderAll(); if(cb)cb(); }
+    });
+    tc.requestAccessToken();
+  };
+  document.head.appendChild(s);
+}
+async function gcal(path, opts){
+  const r=await fetch("https://www.googleapis.com/calendar/v3/"+path,{...(opts||{}),headers:{Authorization:"Bearer "+calToken,"Content-Type":"application/json",...((opts||{}).headers||{})}});
+  return r.json();
+}
+async function mapCalendars(){
+  const out=await gcal("users/me/calendarList?maxResults=250");
+  CAL_MAP={};
+  (out.items||[]).forEach(c=>{
+    const s=(c.summary||"").toLowerCase();
+    ROSTER.forEach(tech=>{ if(s.includes(tech.toLowerCase()) && !CAL_MAP[tech]) CAL_MAP[tech]=c.id; });
+  });
+}
+async function eventsFor(tech, from, to){
+  if(!CAL_MAP[tech]) return [];
+  const out=await gcal(`calendars/${encodeURIComponent(CAL_MAP[tech])}/events?singleEvents=true&orderBy=startTime&timeMin=${from.toISOString()}&timeMax=${to.toISOString()}&maxResults=100`);
+  return (out.items||[]).filter(e=>e.status!=="cancelled");
+}
+async function createEvent(tech, summary, dayISO){
+  if(!CAL_MAP[tech]) return null;
+  return gcal(`calendars/${encodeURIComponent(CAL_MAP[tech])}/events`,{method:"POST",
+    body:JSON.stringify({summary, start:{date:dayISO}, end:{date:dayISO}})});
+}
+
+/* ================= STATE (per week) ================= */
+const FRI = thisFriday(), FRI_ISO = iso(FRI);
+const NEXT_FRI = new Date(FRI); NEXT_FRI.setDate(NEXT_FRI.getDate()+7);
+const store = {
+  get(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(e){ return d; } },
+  set(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+};
+const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_KEY="blpmgr.qc", PH_KEY="blpmgr.phase";
+
+/* ================= SHELL ================= */
+const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"]];
+let ACTIVE = location.hash.slice(1) || "review";
+function renderShell(){
+  $("#langEn").classList.toggle("on",LANG==="en"); $("#langEs").classList.toggle("on",LANG==="es");
+  $("#nav").innerHTML = TABS.map(([id,key])=>`<button data-v="${id}" class="${ACTIVE===id?"on":""}">${t(key)}</button>`).join("");
+  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ACTIVE=b.dataset.v;location.hash=ACTIVE;renderAll();});
+  $("#whoBox").innerHTML = `<b>${esc(USER?.name||USER?.email||"")}</b><br>
+    <a href="index.html">${t("open_app")}</a> · <a href="#" id="soLink">${t("sign_out")}</a>`;
+  $("#soLink").onclick=(e)=>{e.preventDefault();localStorage.removeItem("blp-shop-reports.user");location.reload();};
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
+}
+
+function renderAll(){
+  renderShell();
+  renderTopbar();
+  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC();
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
+}
+
+function weekReports(){ return REPORTS.entries.filter(e=>e.date===FRI_ISO); }
+function reviewState(){ return store.get(REV_KEY,{}); }
+
+function renderTopbar(){
+  const st=reviewState();
+  const done=ROSTER.filter(tech=>{
+    const wk=weekReports().some(e=>e.tech===tech);
+    const s=st[tech]||{};
+    return wk && s.reviewed && (s.assigned || s.assignedManual);
+  }).length;
+  $("#topbar").innerHTML = `<span>${t("review_progress",done,ROSTER.length)}</span><span><b>${t("wk_ending")} ${fmtShort(FRI_ISO)}</b></span>`;
+}
+
+/* ================= WEEKLY REVIEW ================= */
+let OPEN_TECH = null, BUMP_CACHE={};
+function carryLines(text){
+  return String(text||"").split(/\n|(?<=\.)\s+/).filter(l=>
+    /carry|next week|didn'?t|did not|not (yet )?(done|finished|complete)|waiting|still needs|unfinished|left off|to do|pendiente|esperando|falta/i.test(l) && l.trim().length>8).slice(0,6);
+}
+function renderReview(){
+  const el=$("#view-review"); if(!el.classList.contains("on") && el.innerHTML && false) return;
+  const st=reviewState();
+  const rows=ROSTER.map(tech=>{
+    const rep=weekReports().find(e=>e.tech===tech);
+    const s=st[tech]||{};
+    const assignedAuto = s.autoEvents!=null ? s.autoEvents>0 : null;
+    const assigned = s.assignedManual || assignedAuto===true;
+    const open = OPEN_TECH===tech;
+    return `
+    <div class="rev-row" data-tech="${esc(tech)}">
+      <span class="tech">${esc(tech)}</span>
+      <span class="ck ${rep?"yes":"no"}"><span class="dot">✓</span>${t("ck_report")}</span>
+      <span class="ck ${s.reviewed?"yes":"no"}"><span class="dot">✓</span>${t("ck_reviewed")}</span>
+      <span class="ck ${assigned?"yes":"no"}"><span class="dot">✓</span>${t("ck_assigned")}${s.autoEvents!=null?` <span class="num">(${s.autoEvents})</span>`:""}</span>
+      <span style="color:var(--mut2)">${open?"▲":"▼"}</span>
+    </div>
+    ${open?revPanel(tech,rep,s):""}`;
+  }).join("");
+  el.innerHTML = `
+    <div class="row1"><div><h2 class="page">${t("review_title")}</h2><div class="sub">${t("review_sub")}</div></div>
+      <button class="btn2" id="calBtn">${calToken?("✓ "+t("cal_connected")):t("connect_cal")}</button></div>
+    <div class="card">${rows}</div>`;
+  $("#calBtn").onclick=()=>{ if(!calToken) connectCalendar(refreshAssignCounts); };
+  document.querySelectorAll(".rev-row").forEach(r=>r.onclick=()=>{ OPEN_TECH = OPEN_TECH===r.dataset.tech?null:r.dataset.tech; renderAll(); if(OPEN_TECH&&calToken) loadBumps(OPEN_TECH); });
+  wireRevPanel();
+}
+function revPanel(tech, rep, s){
+  const carries = rep?carryLines(rep.text):[];
+  const walks = store.get(WALK_KEY,[]).filter(n=>{
+    if(!n.serial) return false;
+    const rec=PIANOS.get(skey(n.serial));
+    return rec && rec.techs.has(tech);
+  });
+  const seqRow = seqRowFor(tech);
+  const nextJobs = seqRow ? seqRow.slice(2).map(s=>s.trim()).filter(Boolean).slice(0,3) : [];
+  const bumps = BUMP_CACHE[tech];
+  return `<div class="revpanel">
+    <div>
+      <h5>${t("this_week_report")} · ${fmtShort(FRI_ISO)}</h5>
+      <div class="reptext">${rep?esc(rep.text):`<span style="color:var(--mut2)">${t("no_report")}</span>`}</div>
+      <div class="rev-actions">
+        <button class="btn" id="rvBtn">${s.reviewed?t("unmark"):t("mark_reviewed")}</button>
+        ${!calToken?`<button class="btn3" id="maBtn">${s.assignedManual?t("unmark"):t("mark_assigned")}</button>`:""}
+      </div>
+    </div>
+    <div>
+      ${calToken?`<h5>${t("bump_title")}</h5>
+        ${bumps===undefined?`<div class="item" style="color:var(--mut2)">…</div>`:
+          bumps.length?bumps.map((b,i)=>`<div class="item"><span class="src">${esc(b.when)}</span><br>${esc(b.summary)}<div class="rev-actions"><button class="btn3 bumpBtn" data-i="${i}" ${b.done?"disabled":""}>${b.done?t("bumped"):t("bump")}</button></div></div>`).join(""):
+          `<div class="item" style="color:var(--good)">✓</div>`}`
+        :`<h5>${t("bump_title")}</h5><div class="item" style="color:var(--mut2)">${t("bump_hint")}</div>`}
+      ${carries.length?`<h5 style="margin-top:12px">${t("carryovers")}</h5>${carries.map(c=>`<div class="item">${esc(c)}</div>`).join("")}`:""}
+      ${walks.length?`<h5 style="margin-top:12px">${t("walk_notes_for")}</h5>${walks.map(w=>`<div class="item"><span class="src">${esc(w.cat)}</span><br>${esc((w.label?w.label+": ":"")+w.text)}</div>`).join("")}`:""}
+      ${nextJobs.length?`<h5 style="margin-top:12px">${t("next_up")}</h5>${nextJobs.map(j=>`<div class="item">${esc(j)}</div>`).join("")}`:""}
+    </div>
+  </div>`;
+}
+function wireRevPanel(){
+  const tech=OPEN_TECH; if(!tech) return;
+  const st=reviewState();
+  const rv=$("#rvBtn"); if(rv) rv.onclick=(e)=>{e.stopPropagation(); st[tech]={...(st[tech]||{}),reviewed:!(st[tech]||{}).reviewed}; store.set(REV_KEY,st); renderAll();};
+  const ma=$("#maBtn"); if(ma) ma.onclick=(e)=>{e.stopPropagation(); st[tech]={...(st[tech]||{}),assignedManual:!(st[tech]||{}).assignedManual}; store.set(REV_KEY,st); renderAll();};
+  document.querySelectorAll(".bumpBtn").forEach(b=>b.onclick=async(e)=>{
+    e.stopPropagation();
+    const item=BUMP_CACHE[tech][+b.dataset.i];
+    const day=iso(new Date(mondayOf(NEXT_FRI)));
+    await createEvent(tech, item.summary, day);
+    item.done=true; refreshAssignCounts(); renderAll();
+  });
+}
+async function loadBumps(tech){
+  if(BUMP_CACHE[tech]) { renderAll(); return; }
+  const mon=mondayOf(FRI), sat=new Date(FRI); sat.setDate(sat.getDate()+1);
+  const evs=await eventsFor(tech, mon, sat);
+  const rep=weekReports().find(e=>e.tech===tech);
+  const reptext=(rep?rep.text:"").toLowerCase();
+  BUMP_CACHE[tech]=evs.filter(e=>{
+    const words=(e.summary||"").toLowerCase().split(/\W+/).filter(w=>w.length>3);
+    const mentioned=words.some(w=>reptext.includes(w));
+    return !mentioned;  // not mentioned in report -> candidate for bump
+  }).map(e=>({summary:e.summary||"(no title)", when:(e.start?.date||e.start?.dateTime||"").slice(0,10), done:false}));
+  renderAll();
+}
+async function refreshAssignCounts(){
+  if(!calToken) return;
+  const st=reviewState();
+  const monN=mondayOf(NEXT_FRI), satN=new Date(NEXT_FRI); satN.setDate(satN.getDate()+1);
+  for(const tech of ROSTER){
+    try{ const evs=await eventsFor(tech, monN, satN); st[tech]={...(st[tech]||{}),autoEvents:evs.length,assigned:evs.length>0}; }
+    catch(e){}
+  }
+  store.set(REV_KEY,st); renderAll();
+}
+
+/* ================= WALK-AROUND ================= */
+const CATS=["tuning","moving","showroom repairs","admin","PRSB","Refurb","Shop","Refinishing","Brigham"];
+let WA_CAT=CATS[0], WA_PIANO=null;
+function renderWalk(){
+  const notes=store.get(WALK_KEY,[]);
+  $("#view-walk").innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("walk_title")}</h2><div class="sub">${t("walk_sub")}</div></div></div>
+    <div class="cats">${CATS.map(c=>`<button class="cat ${WA_CAT===c?"on":""}" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <div class="card wa-form">
+      <div class="suggest"><input id="waPiano" placeholder="${t("piano_ph")}" autocomplete="off" value="${WA_PIANO?esc(WA_PIANO.label):""}"><div class="list" id="waList" style="display:none"></div></div>
+      <textarea id="waText" placeholder="${t("note_ph")}"></textarea>
+      <button class="btn" id="waAdd">${t("add_note")}</button>
+    </div>
+    <div class="row1" style="margin-top:22px"><h2 class="page" style="font-size:19px">${t("notes_this_week")} <span class="num" style="color:var(--mut2)">(${notes.length})</span></h2>
+      <button class="btn2" id="waCopy">${t("copy_column")}</button></div>
+    <div class="card">${notes.length?notes.map((n,i)=>`
+      <div class="wa-note"><span class="cat-tag">${esc(n.cat)}</span>
+        <span>${n.label?`<b>${esc(n.label)}</b>: `:""}${esc(n.text)}</span>
+        <button data-i="${i}" class="waDel">×</button></div>`).join(""):`<div style="padding:16px;color:var(--mut)">${t("no_notes")}</div>`}
+    </div>`;
+  document.querySelectorAll(".cat").forEach(b=>b.onclick=()=>{WA_CAT=b.dataset.c;renderWalk();});
+  const inp=$("#waPiano");
+  inp.oninput=()=>{ WA_PIANO=null; suggest(inp.value); };
+  $("#waAdd").onclick=()=>{
+    const text=$("#waText").value.trim(); if(!text&&!WA_PIANO)return;
+    const notes=store.get(WALK_KEY,[]);
+    notes.push({cat:WA_CAT,text,serial:WA_PIANO?.serial||null,label:WA_PIANO?.label||inp.value.trim()||null,ts:Date.now()});
+    store.set(WALK_KEY,notes); WA_PIANO=null; renderWalk(); $("#waText")?.focus();
+  };
+  document.querySelectorAll(".waDel").forEach(b=>b.onclick=()=>{
+    const notes=store.get(WALK_KEY,[]); notes.splice(+b.dataset.i,1); store.set(WALK_KEY,notes); renderWalk();
+  });
+  $("#waCopy").onclick=async()=>{
+    const notes=store.get(WALK_KEY,[]);
+    const byCat={}; notes.forEach(n=>{(byCat[n.cat]=byCat[n.cat]||[]).push((n.label?n.label+": ":"")+n.text);});
+    const out=CATS.filter(c=>byCat[c]).map(c=>c.toUpperCase()+"\n"+byCat[c].join("\n")).join("\n\n");
+    await navigator.clipboard.writeText(out);
+    $("#waCopy").textContent=t("copied"); setTimeout(renderWalk,1400);
+  };
+}
+function suggest(q){
+  const list=$("#waList"); q=q.trim().toLowerCase();
+  if(q.length<2){ list.style.display="none"; return; }
+  const hits=[...PIANOS.values()].filter(p=>
+    p.label.toLowerCase().includes(q) || skey(p.serial).startsWith(skey(q)) || (p.spot&&p.spot.toLowerCase()===q)
+  ).slice(0,8);
+  list.innerHTML=hits.map(p=>`<div data-k="${skey(p.serial)}">${esc(p.label)}${p.spot?` <span style="color:var(--mut2)">· ${esc(p.spot)}</span>`:""}</div>`).join("");
+  list.style.display=hits.length?"block":"none";
+  list.querySelectorAll("div").forEach(d=>d.onclick=()=>{ WA_PIANO=PIANOS.get(d.dataset.k); $("#waPiano").value=WA_PIANO.label; list.style.display="none"; });
+}
+
+/* ================= WEEK BOARD ================= */
+function currentWeekColumn(){
+  if(!NOTES.length) return {label:null, byCat:{}};
+  const header=NOTES[0];
+  // latest column with any content at or before today; else latest dated column with content
+  let best=-1;
+  for(let c=1;c<header.length;c++){
+    const has=NOTES.slice(1).some(r=>(r[c]||"").trim());
+    if(has) best=c;
+  }
+  if(best<0) return {label:null, byCat:{}};
+  const byCat={}; let cat="";
+  NOTES.slice(1).forEach(r=>{
+    if((r[0]||"").trim()) cat=(r[0]||"").trim();
+    const v=(r[best]||"").trim();
+    if(v) (byCat[cat]=byCat[cat]||[]).push(v);
+  });
+  return {label:header[best], byCat};
+}
+function renderWeek(){
+  const {label,byCat}=currentWeekColumn();
+  const walks=store.get(WALK_KEY,[]);
+  walks.forEach(n=>{ (byCat[n.cat]=byCat[n.cat]||[]).push("● "+(n.label?n.label+": ":"")+n.text); });
+  const cats=Object.keys(byCat);
+  $("#view-week").innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("week_title")} <span style="color:var(--mut2);font-size:16px" class="num">${label?("· "+esc(label)):""}</span></h2>
+      <div class="sub">${t("week_sub")}</div></div></div>
+    <div class="lanes">${cats.map(c=>`
+      <div class="lane"><h4>${esc(c)} <span class="n num">${byCat[c].length}</span></h4>
+        ${byCat[c].map(v=>`<div class="job">${linkSerials(esc(v))}</div>`).join("")}
+      </div>`).join("")||`<div style="color:var(--mut)">—</div>`}
+    </div>`;
+}
+function linkSerials(html){
+  return html.replace(/\b(\d{4,8})\b/g,(m,d)=> PIANOS.has(skey(d))
+    ? `<a class="serial-link" target="_blank" rel="noreferrer" href="${CONFIG.PIANOLOG_URL}?q=${d}">${d}</a>` : m);
+}
+
+/* ================= SEQUENCE BOARD ================= */
+function seqLaneHTML(r){
+  const tech=(r[1]||"").trim();
+  const jobs=r.slice(2).map(s=>s.trim()).filter(Boolean);
+  return `<div class="lane"><h4>${esc(tech)} <span class="n num">${jobs.length}</span></h4>
+    ${jobs.length?jobs.map(j=>{
+      BRAND_RE.lastIndex=0; const m=BRAND_RE.exec(j);
+      const rec = m&&m[2] ? PIANOS.get(skey(m[2])) : null;
+      return `<div class="job">${linkSerials(esc(j))}
+        ${rec&&rec.progress!=null?`<div class="meta"><div class="prog"><i style="width:${rec.progress}%"></i></div><span class="num" style="font-size:11px;color:var(--mut2)">${rec.progress}%</span></div>`:""}
+        ${rec&&rec.lastDate?`<div class="meta" style="font-size:11px;color:var(--mut2)">${t("ck_report")}: ${fmtShort(rec.lastDate)}</div>`:""}
+      </div>`;
+    }).join(""):`<div class="job" style="color:var(--mut2)">${t("empty_lane")}</div>`}
+  </div>`;
+}
+function renderSequence(){
+  const firsts=new Set(ROSTER.map(n=>n.split(/\s+/)[0].toLowerCase()));
+  const active=[], others=[];
+  seqRows().forEach(r=>{
+    (firsts.has((r[1]||"").trim().split(/\s+/)[0].toLowerCase())?active:others).push(r);
+  });
+  $("#view-sequence").innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("seq_title")}</h2><div class="sub">${t("seq_sub")}</div></div></div>
+    <div class="lanes">${active.map(seqLaneHTML).join("")}</div>
+    ${others.length?`<details style="margin-top:18px"><summary style="cursor:pointer;color:var(--mut);font-size:13.5px">+ ${others.length}</summary>
+      <div class="lanes" style="margin-top:12px">${others.map(seqLaneHTML).join("")}</div></details>`:""}`;
+}
+
+/* ================= PIPELINE ================= */
+const PHASES=[
+  {id:"INTAKE",   en:"Intake",          es:"Ingreso",           code:"",     hb:["Storing Cabinetry"]},
+  {id:"ASSESS",   en:"Assessment",      es:"Evaluación",        code:"",     hb:["Tear-down Sheet (§16)"]},
+  {id:"TEARDOWN", en:"Teardown",        es:"Desarmado",         code:"",     hb:["Upright Teardown: Cleaning & Prep","Grand Teardown: Cleaning & Prep","Removing Tuning Pins","Storing Cabinetry (§14)","Tear-down Sheet (§16)"]},
+  {id:"PRSB",     en:"Belly — PRSB",    es:"Caja armónica — PRSB", code:"Perimeter · Ribs · Soundboard · Bridge", hb:["Find Proper Downbearing: Targets","How to Chisel a Bridge","Restringing (§12)"]},
+  {id:"CAP",      en:"Action — CAP",    es:"Mecanismo — CAP",   code:"Cleaning · Action Prep", hb:["Cleaning and Prep","Action Prep","Reshape Hammers","Hammer Prep & Hanging","Keys (§13)"]},
+  {id:"REFINISH", en:"Refinishing",     es:"Acabado",           code:"L1 · L2 · L3", hb:["Buffing Basics","Buffing Casters","Hardware (§3)"]},
+  {id:"ASSEMBLY", en:"Final assembly",  es:"Ensamblaje final",  code:"",     hb:["Storing Cabinetry (§14)","Hardware (§3)"]},
+  {id:"DHRT",     en:"DHRT",            es:"DHRT",              code:"Dampers · Hammers · Regulation · Trapwork", hb:["Upright Regulation","Grand Piano Regulation Theory","Key Leveling","Tricks for Let Off Regulation","Aligning Backchecks","Damper Lift","Damper Spoon Regulation","Spring Strength, Drop, and Dip"]},
+  {id:"TUNING",   en:"Tuning",          es:"Afinación",         code:"",     hb:[]},
+  {id:"QC",       en:"Quality Control", es:"Control de calidad",code:"",     hb:["QC Checklist (doc)"]},
+  {id:"READY",    en:"Ready / Exit",    es:"Listo / Salida",    code:"",     hb:[]},
+];
+const phaseName=p=>LANG==="es"?p.es:p.en;
+function inferPhase(rec){
+  const ov=store.get(PH_KEY,{})[skey(rec.serial)];
+  if(ov) return ov;
+  const qc=store.get(QC_KEY,{})[skey(rec.serial)];
+  if(qc && !qc.ready) return "QC";
+  if(qc && qc.ready) return "READY";
+  // 1) sequence text from ACTIVE roster lanes only (exact serial-token match)
+  let txt="";
+  const mySerial=skey(rec.serial);
+  const firsts=new Set(ROSTER.map(n=>n.split(/\s+/)[0].toLowerCase()));
+  seqRows().forEach(r=>{
+    if(!firsts.has((r[1]||"").trim().split(/\s+/)[0].toLowerCase())) return;
+    r.slice(2).forEach(j=>{ if(j && (j.match(/\d{4,8}/g)||[]).includes(mySerial)) txt+=" "+j; });
+  });
+  const s=txt.toLowerCase();
+  if(s.trim()){
+    if(/dhrt|regulat|voic/.test(s)) return "DHRT";
+    if(/restring|prsb|soundboard|bridge|pinblock|downbearing/.test(s)) return "PRSB";
+    if(/\bcap\b|action prep|clean/.test(s)) return "CAP";
+    if(/teardown|tear down/.test(s)) return "TEARDOWN";
+    if(/tun(e|ing)/.test(s)) return "TUNING";
+    if(/rebuild|restoration|refurb/.test(s)) return "TEARDOWN";
+  }
+  // 2) refinishing queue
+  if(rec.refinishPri) return "REFINISH";
+  // 3) the piano's latest report snippet
+  const p=(rec.snip||"").toLowerCase();
+  if(/refinish|lacquer|stain|sanding|sprayed|filler|buff/.test(p)) return "REFINISH";
+  if(/assembl/.test(p)) return "ASSEMBLY";
+  if(/regulat|voic|damper|dhrt|trapwork/.test(p)) return "DHRT";
+  if(/restring|soundboard|bridge|pinblock|plate|chip/.test(p)) return "PRSB";
+  if(/action|hammer|felts|keytop|keys/.test(p)) return "CAP";
+  if(/teardown|tear down/.test(p)) return "TEARDOWN";
+  if(/tun(ed|e|ing)/.test(p)) return "TUNING";
+  return "ASSESS";
+}
+function renderPipeline(){
+  const cols={}; PHASES.forEach(p=>cols[p.id]=[]);
+  const recentCut=new Date(); recentCut.setDate(recentCut.getDate()-120);
+  [...PIANOS.values()].forEach(rec=>{
+    const inPlay = rec.refinishPri || rec.inSeq ||
+      (rec.lastDate && rec.lastDate >= iso(recentCut)) ||
+      store.get(QC_KEY,{})[skey(rec.serial)];
+    if(!inPlay) return;
+    const ph=inferPhase(rec);
+    (cols[ph]=cols[ph]||[]).push(rec);
+  });
+  $("#view-pipeline").innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("pipe_title")}</h2><div class="sub">${t("pipe_sub")}</div></div>
+      <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" href="${CONFIG.HANDBOOK_URL}">${t("handbook")} ↗</a></div>
+    <div class="pipe">${PHASES.map(p=>`
+      <div class="pcol"><h4>${phaseName(p)} <span style="display:flex;gap:5px;align-items:center"><span class="n num">${cols[p.id].length}</span>${p.hb.length?`<button class="hb" data-p="${p.id}">?</button>`:""}</span></h4>
+        <div class="code">${p.code}</div>
+        ${cols[p.id].map(rec=>`
+          <div class="pcard2"><a class="serial-link" target="_blank" rel="noreferrer" href="${CONFIG.PIANOLOG_URL}?q=${skey(rec.serial)}">${esc(rec.label)}</a>
+            <div class="meta" style="margin-top:4px">
+              ${rec.level?`<span class="pill lvl">L${esc(rec.level)}</span>`:""}
+              ${rec.spot?`<span class="pill lvl">${esc(rec.spot)}</span>`:""}
+              ${rec.progress!=null?`<span class="pill ok num">${rec.progress}%</span>`:""}
+            </div>
+            ${[...rec.techs].length?`<div style="font-size:11px;color:var(--mut2);margin-top:4px">${esc([...rec.techs].join(", "))}</div>`:""}
+            <select data-k="${skey(rec.serial)}"><option value="">${phaseName(p)} ▾</option>${PHASES.map(x=>`<option value="${x.id}">${phaseName(x)}</option>`).join("")}</select>
+          </div>`).join("")}
+      </div>`).join("")}
+    </div>`;
+  document.querySelectorAll(".pcol select").forEach(sel=>sel.onchange=()=>{
+    if(!sel.value) return;
+    const ov=store.get(PH_KEY,{}); ov[sel.dataset.k]=sel.value; store.set(PH_KEY,ov); renderPipeline();
+  });
+  document.querySelectorAll(".pcol .hb").forEach(b=>b.onclick=()=>{
+    const p=PHASES.find(x=>x.id===b.dataset.p);
+    $("#hbbox").innerHTML=`<h3>${phaseName(p)}</h3><div style="color:var(--mut2);font-size:12px">${p.code}</div>
+      <div style="font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-top:12px;color:#57524b">${t("hb_sections")}</div>
+      <ul>${p.hb.map(h=>`<li>${esc(h)}</li>`).join("")}</ul>
+      <a class="btn" style="display:inline-block;text-decoration:none" target="_blank" rel="noreferrer" href="${p.id==="QC"?CONFIG.QC_DOC_URL:CONFIG.HANDBOOK_URL}">${t("open_handbook")}</a>`;
+    $("#hbpop").classList.add("on");
+  });
+}
+
+/* ================= QC ================= */
+const QC = [
+  {id:"tuning", en:"Tuning", es:"Afinación", items:[
+    ["a440","Tuned to A440","Afinado a A440"]]},
+  {id:"pedals", en:"Pedals", es:"Pedales", items:[
+    ["squeak","Squeak-free — try pedals fast, medium and slow (Hailun grands: sustain pedal bushing changed)","Sin rechinidos — prueba los pedales rápido, medio y lento (Hailun de cola: buje del pedal de resonancia cambiado)"],
+    ["dampers","Dampers efficient — sustain down, fingernail along strings, release slowly","Apagadores eficientes — pedal abajo, uña por las cuerdas, suelta lentamente"],
+    ["sustain","Sustain pedal has slight lost motion","El pedal de resonancia tiene un ligero juego"],
+    ["sost","Sostenuto: blade misses tabs down; catches all tabs; none stick","Sostenuto: la lámina no toca las lengüetas abajo; las atrapa todas; ninguna se queda"],
+    ["shift","Shift pedal: no hammers striking neighbors; adjust stop screw if needed","Pedal de corrimiento: ningún martillo golpea al vecino; ajusta el tornillo tope"],
+    ["lube","Trapwork rods lubricated with Teflon powder","Varillas del sistema lubricadas con polvo de teflón"],
+    ["lost","Slight lost motion in all pedals","Ligero juego en todos los pedales"],
+    ["aesthetic","Pedals parallel, even height, evenly spaced, centered","Pedales paralelos, a la misma altura, bien espaciados y centrados"],
+    ["wiggle","No left-right play in pedals","Sin juego lateral en los pedales"]]},
+  {id:"hardware", en:"Hardware", es:"Herrajes", items:[
+    ["plating","Plating & buffing look good","El cromado y pulido se ven bien"],
+    ["screws","All screws tight","Todos los tornillos apretados"]]},
+  {id:"action", en:"Regulation / Action", es:"Regulación / Mecanismo", items:[
+    ["brackets","Action brackets against plate, nose bolts tight","Soportes del mecanismo contra la placa, tornillos apretados"],
+    ["letoff","Let-off checked","Escape revisado"],
+    ["springs","No jack / hammer butt / damper lever springs out of place","Sin resortes fuera de lugar (jack, nuez, palanca de apagador)"],
+    ["aftertouch","Aftertouch consistent — not too much, not too little (weak hand: bobbling; strong hand: blocking → decrease dip)","Aftertouch consistente — ni mucho ni poco (mano suave: rebotes; mano fuerte: bloqueo → reduce la profundidad)"],
+    ["align","Hammer alignment checked","Alineación de martillos revisada"],
+    ["spacing","Hammer spacing checked","Espaciado de martillos revisado"],
+    ["backchecks","Backchecks straight, parallel, evenly spaced, aligned with catchers","Atrapadores rectos, paralelos, bien espaciados y alineados"],
+    ["check23","Hammers check at 2/3 – 3/4 of blow distance","Los martillos atrapan a 2/3 – 3/4 del recorrido"],
+    ["flange","Hammer flange screws tight (if first few loose, tighten all action screws)","Tornillos de las bridas apretados (si los primeros están flojos, aprieta todos)"],
+    ["bridle","Bridle wires parallel, even, slight slack, not clicking neighbors","Alambres de brida paralelos, con leve holgura, sin chocar con vecinos"],
+    ["grands","(Grands) spring strength, jack position, rep lever height correct","(De cola) fuerza de resorte, posición del jack y altura de palanca correctas"]]},
+  {id:"keys", en:"Keys", es:"Teclas", items:[
+    ["level","Keys level, square, evenly spaced","Teclas niveladas, cuadradas y bien espaciadas"],
+    ["bushings","No tight bushings — sustain down, play every note, release slowly; keys return with action weight","Sin bujes apretados — pedal abajo, toca cada nota y suelta despacio; las teclas regresan con el peso del mecanismo"],
+    ["glue","No glue residue / smacks / squeaks in bushings (play very gently)","Sin residuos de pegamento / golpeteos / rechinidos en los bujes (toca muy suave)"],
+    ["keyslip","Key slip can't be pushed into keys (shim or adjust capstans; shift pedal still returns)","El listón frontal no toca las teclas al empujarlo (calza o ajusta; el pedal de corrimiento aún regresa)"],
+    ["upstop","Up-stop rail not touching (lift each key slightly)","La regleta superior no toca (levanta cada tecla un poco)"]]},
+  {id:"bench", en:"Bench", es:"Banca", items:[
+    ["bench","Tightened & squeak-free","Apretada y sin rechinidos"]]},
+  {id:"cabinet", en:"Cabinetry", es:"Mueble", items:[
+    ["moving","All moving cabinetry parts move freely, squeak-free","Todas las partes móviles del mueble se mueven libres y sin rechinar"],
+    ["bumpers","No missing rubber bumpers","Sin topes de goma faltantes"]]},
+  {id:"cleaning", en:"Cleaning", es:"Limpieza", items:[
+    ["dust","Dust & fingerprint free","Sin polvo ni huellas"]]},
+  {id:"finish", en:"Finish", es:"Acabado", items:[
+    ["blemish","Scratches / refinishing blemishes reported to the refinishing shop","Rayones / defectos de acabado reportados al taller de acabados"]]},
+  {id:"final", en:"Final Check", es:"Revisión final", items:[
+    ["play5","Played for 5+ minutes — no squeaks, rattles, knocks, clicks, buzzes or touch issues","Tocado 5+ minutos — sin rechinidos, vibraciones, golpeteos, zumbidos ni problemas de tacto"]]},
+];
+const QC_TOTAL = QC.reduce((n,s)=>n+s.items.length,0);
+let QC_OPEN=null, QC_PIANO_INPUT=null;
+function qcRecords(){ return store.get(QC_KEY,{}); }
+function renderQC(){
+  const recs=qcRecords();
+  const rec = QC_OPEN ? recs[QC_OPEN] : null;
+  $("#view-qc").innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("qc_title")}</h2><div class="sub">${t("qc_sub")}</div></div>
+      <a class="btn3" style="text-decoration:none" target="_blank" rel="noreferrer" href="${CONFIG.QC_DOC_URL}">${t("view_doc")} ↗</a></div>
+    <div class="qc-head card" style="padding:14px">
+      <div class="suggest" style="flex:1;min-width:230px"><input id="qcPiano" placeholder="${t("qc_piano_ph")}" autocomplete="off" value="${esc(QC_PIANO_INPUT||"")}"><div class="list" id="qcList" style="display:none"></div></div>
+      <button class="btn" id="qcStart">${t("qc_start")}</button>
+    </div>
+    ${rec?qcSheet(rec):""}
+    ${Object.keys(recs).length?`<h2 class="page" style="font-size:19px;margin-top:26px">${t("qc_records")}</h2>
+      <div class="card">${Object.entries(recs).map(([k,r])=>`
+        <div class="rev-row" data-qk="${k}"><span class="tech">${esc(r.label)}</span>
+          <span class="num" style="color:var(--mut2);font-size:12px">${esc(r.date||"")}</span>
+          <span class="ck ${Object.keys(r.items||{}).length>=QC_TOTAL?"yes":"no"}"><span class="dot">✓</span><span class="num">${Object.keys(r.items||{}).length}/${QC_TOTAL}</span></span>
+          <span>${r.ready?`<span class="pill ok">READY</span>`:(Object.values(r.items||{}).some(i=>i.s==="fix")?`<span class="pill miss">${Object.values(r.items).filter(i=>i.s==="fix").length} fix</span>`:"")}</span>
+          <span style="color:var(--mut2)">→</span></div>`).join("")}
+      </div>`:""}`;
+  const inp=$("#qcPiano");
+  inp.oninput=()=>{ QC_PIANO_INPUT=inp.value; qcSuggest(inp.value); };
+  $("#qcStart").onclick=()=>{
+    const q=inp.value.trim(); if(!q) return;
+    BRAND_RE.lastIndex=0; const m=BRAND_RE.exec(q);
+    const key=skey(m&&m[2]?m[2]:q)||q.toLowerCase().replace(/\W+/g,"-");
+    const recs=qcRecords();
+    if(!recs[key]) recs[key]={label:q, items:{}, date:new Date().toLocaleDateString(), by:USER?.name||USER?.email||"", ready:false};
+    store.set(QC_KEY,recs); QC_OPEN=key; renderQC();
+  };
+  document.querySelectorAll("[data-qk]").forEach(r=>r.onclick=()=>{QC_OPEN=r.dataset.qk;QC_PIANO_INPUT=qcRecords()[r.dataset.qk].label;renderQC();window.scrollTo({top:0});});
+  wireQcSheet();
+}
+function qcSuggest(q){
+  const list=$("#qcList"); q=q.trim().toLowerCase();
+  if(q.length<2){ list.style.display="none"; return; }
+  const hits=[...PIANOS.values()].filter(p=>p.label.toLowerCase().includes(q)||skey(p.serial).startsWith(skey(q))).slice(0,8);
+  list.innerHTML=hits.map(p=>`<div>${esc(p.label)}</div>`).join("");
+  list.style.display=hits.length?"block":"none";
+  list.querySelectorAll("div").forEach(d=>d.onclick=()=>{ $("#qcPiano").value=d.textContent; QC_PIANO_INPUT=d.textContent; list.style.display="none"; });
+}
+function qcSheet(rec){
+  const done=Object.keys(rec.items||{}).length;
+  const fixes=Object.values(rec.items||{}).filter(i=>i.s==="fix").length;
+  return `
+    <div class="banner" style="background:var(--ink)"><span><b>${esc(rec.label)}</b> · ${t("qc_done_n",done,QC_TOTAL)}${fixes?` · <b>${fixes}</b> ${t("qc_fixes_open")}`:""}</span>
+      <span><button class="btn3" style="color:#fff;border-color:#555" onclick="window.print()">${t("qc_print")}</button></span></div>
+    ${QC.map(sec=>`
+      <div class="qc-sec"><h4>${LANG==="es"?sec.es:sec.en}<span class="num" style="color:var(--mut2)">${sec.items.filter(([id])=>rec.items[sec.id+"."+id]).length}/${sec.items.length}</span></h4>
+        ${sec.items.map(([id,en,es])=>{
+          const key=sec.id+"."+id, st=rec.items[key];
+          return `<div class="qc-item ${st?esc(st.s):""}">
+            <span class="qtext">${LANG==="es"?esc(es):esc(en)}</span>
+            <span class="qc-btns"><button class="p ${st&&st.s==="pass"?"on":""}" data-k="${key}" data-s="pass">✓ ${t("pass")}</button>
+            <button class="f ${st&&st.s==="fix"?"on":""}" data-k="${key}" data-s="fix">✗ ${t("fix")}</button></span>
+            ${st&&st.s==="fix"?`<input data-note="${key}" placeholder="${t("fix_note_ph")}" value="${esc(st.note||"")}">`:""}
+          </div>`;}).join("")}
+      </div>`).join("")}
+    <div class="qc-final">
+      ${rec.ready?`<h3 style="font-family:Georgia,serif;color:var(--good);margin:0">${t("qc_ready")}</h3>
+        <div style="font-size:13px;color:var(--mut);margin-top:6px">${t("qc_by")}: ${esc(rec.by||"")} · ${esc(rec.date||"")}</div>`
+      :`<button class="btn" id="qcReady" ${done<QC_TOTAL||fixes?"disabled style='opacity:.5'":""}>${t("qc_mark_ready")}</button>`}
+    </div>`;
+}
+function wireQcSheet(){
+  if(!QC_OPEN) return;
+  document.querySelectorAll(".qc-btns button").forEach(b=>b.onclick=()=>{
+    const recs=qcRecords(), rec=recs[QC_OPEN];
+    const cur=rec.items[b.dataset.k];
+    if(cur&&cur.s===b.dataset.s) delete rec.items[b.dataset.k];
+    else rec.items[b.dataset.k]={s:b.dataset.s,note:cur?.note||""};
+    store.set(QC_KEY,recs); renderQC();
+  });
+  document.querySelectorAll("[data-note]").forEach(inp=>inp.onchange=()=>{
+    const recs=qcRecords(); recs[QC_OPEN].items[inp.dataset.note].note=inp.value; store.set(QC_KEY,recs);
+  });
+  const rd=$("#qcReady"); if(rd) rd.onclick=()=>{
+    const recs=qcRecords(); recs[QC_OPEN].ready=true; recs[QC_OPEN].date=new Date().toLocaleDateString(); store.set(QC_KEY,recs); renderQC();
+  };
+}
+
+checkGate();
+</script>
+</body>
+</html>
