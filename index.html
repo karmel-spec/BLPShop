@@ -20,7 +20,17 @@
   .num{font-variant-numeric:tabular-nums}
 
   .shell{display:grid;grid-template-columns:212px 1fr;min-height:100vh}
-  @media (max-width:840px){.shell{grid-template-columns:1fr}.side{position:static;flex-direction:row;overflow-x:auto}.side nav{flex-direction:row}.side .badge{display:none}}
+  @media (max-width:840px){
+    .shell{grid-template-columns:1fr}
+    aside.side{position:sticky;top:0;z-index:60;height:auto;min-height:0;flex-direction:row;align-items:center;overflow-x:auto;padding:2px 6px;-webkit-overflow-scrolling:touch}
+    aside.side .badge{display:none}
+    aside.side nav{flex-direction:row;margin:0;flex:none}
+    aside.side nav button,aside.side nav a.ext{padding:12px 11px;font-size:13.5px;white-space:nowrap;border-left:none;border-bottom:3px solid transparent}
+    aside.side nav button.on{border-bottom-color:var(--red);background:none}
+    aside.side nav .dot{display:none}
+    aside.side .who{margin:0 0 0 auto;border-top:0;padding:4px 10px;flex:none;max-width:230px;font-size:11.5px}
+    main{padding:16px 12px 60px}
+  }
 
   /* ---- sidebar (Option 2 side tabs, showroom-black) ---- */
   .side{background:linear-gradient(180deg,#17171b,var(--side));color:#c9c3ba;display:flex;flex-direction:column;padding:18px 0;position:sticky;top:0;height:100vh}
@@ -187,7 +197,7 @@
       <button data-view="pianos"><span class="dot"></span>Pianos</button>
       <button data-view="calendars"><span class="dot"></span>Calendars</button>
       <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
-      <a class="ext" href="https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit" target="_blank" rel="noreferrer"><span class="dot"></span>Restoration Handbook ↗</a>
+      <a class="ext" href="https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit" target="_blank" rel="noreferrer"><span class="dot"></span>Shop Handbook ↗</a>
     </nav>
     <div class="who" id="whoArea"></div>
   </aside>
