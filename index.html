@@ -187,6 +187,7 @@
       <button data-view="pianos"><span class="dot"></span>Pianos</button>
       <button data-view="calendars"><span class="dot"></span>Calendars</button>
       <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
+      <a class="ext" href="https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit" target="_blank" rel="noreferrer"><span class="dot"></span>Restoration Handbook ↗</a>
     </nav>
     <div class="who" id="whoArea"></div>
   </aside>
@@ -199,7 +200,10 @@
       <section class="view on" id="view-dashboard">
         <div class="row1">
           <div><h2 class="page" id="dashTitle">Week ending —</h2><div class="sub" id="dashSub">Shop overview</div></div>
-          <button class="btn" onclick="showView('report')">+ My Friday report</button>
+          <span style="display:flex;gap:10px;flex-wrap:wrap">
+            <a id="briggptBtn" class="btn" style="display:none;text-decoration:none;background:#1c1c1c" target="_blank" rel="noreferrer">🧠 BrigGPT ↗</a>
+            <button class="btn" onclick="showView('report')">+ My Friday report</button>
+          </span>
         </div>
         <div class="stats" id="dashStats"></div>
         <div class="cols">
@@ -352,6 +356,7 @@ const CONFIG = {
   APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby9WPjupHsyTV0TvujoE8ZL9Qq7x2_E8Qu2HSQQe0hQFkN3_jwttZICwqnRxg-foRksfA/exec",       // deploy shop-reports-apps-script.gs → paste /exec URL
   GOOGLE_CLIENT_ID: "118454775893-17u7t3glh8eu4kffhe7b42jl71apre4f.apps.googleusercontent.com",      // OAuth web client → enables Google sign-in + Calendars
   PIANOLOG_URL: "https://pianologapp.netlify.app/",
+  BRIGGPT_URL: "",   // paste the ChatGPT share link here to light up the dashboard button
   ACTIVE_WEEKS: 8,
   SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit"
 };
@@ -523,6 +528,8 @@ function renderAll(){
   renderWho();
   const histBtn=document.querySelector('#tabs button[data-view="history"]');
   if(histBtn) histBtn.style.display=isOwner()?"":"none";
+  const bg=$("#briggptBtn");
+  if(bg&&CONFIG.BRIGGPT_URL){ bg.href=CONFIG.BRIGGPT_URL; bg.style.display="inline-block"; }
   renderDashboard(); renderPlanner(); renderMyWeek(); renderReportForm();
   renderHistoryControls(); runSearch(); renderPianos(); renderCalReport();
   $("#dataStamp").textContent=`${DATA.entries.length.toLocaleString()} entries · 2017–${new Date().getFullYear()}`+(DATA.live?" · live from sheet":` · snapshot ${DATA.generated||""}`);
