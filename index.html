@@ -29,6 +29,7 @@
     aside.side nav button.on{border-bottom-color:var(--red);background:none}
     aside.side nav .dot{display:none}
     aside.side .who{margin:0 0 0 auto;border-top:0;padding:4px 10px;flex:none;max-width:230px;font-size:11.5px}
+    aside.side .lang{margin:0 8px 0 0;flex:none;align-self:center}
     main{padding:16px 12px 60px}
   }
 
@@ -51,6 +52,9 @@
   .side .who .uchip .ur{color:#a49d90;font-size:11.5px}
   .side .who .signout{background:none;border:1px solid #3a3a3a;color:#a49d90;border-radius:4px;padding:5px 10px;font-size:12px;align-self:flex-start}
   .side .who .hint{color:#7d7669;font-size:11px;line-height:1.45}
+  .side .lang{margin:10px 20px 2px;display:flex;border:1px solid #34343c;border-radius:99px;overflow:hidden;align-self:flex-start}
+  .side .lang button{background:none;border:0;color:#a49d90;padding:5px 14px;font-size:12.5px;font-weight:700;letter-spacing:.06em;cursor:pointer}
+  .side .lang button.on{background:var(--red);color:#fff}
 
   /* ---- content ---- */
   .content{min-width:0}
@@ -229,18 +233,19 @@
       <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
     </div>
     <nav id="tabs">
-      <button data-view="dashboard" class="on"><span class="dot"></span>Shop Dashboard</button>
-      <button data-view="planner"><span class="dot"></span>Assignment Planner</button>
-      <button data-view="myweek"><span class="dot"></span>My Week</button>
-      <button data-view="report"><span class="dot"></span>My Friday Report</button>
-      <button data-view="history"><span class="dot"></span>History</button>
-      <button data-view="pianos"><span class="dot"></span>Pianos</button>
-      <button data-view="calendars"><span class="dot"></span>Calendars</button>
-      <button data-view="handbook"><span class="dot"></span>Shop Handbook</button>
+      <button data-view="dashboard" class="on"><span class="dot"></span><span data-i18n="nav_dashboard">Shop Dashboard</span></button>
+      <button data-view="planner"><span class="dot"></span><span data-i18n="nav_planner">Assignment Planner</span></button>
+      <button data-view="myweek"><span class="dot"></span><span data-i18n="nav_myweek">My Week</span></button>
+      <button data-view="report"><span class="dot"></span><span data-i18n="nav_report">My Friday Report</span></button>
+      <button data-view="history"><span class="dot"></span><span data-i18n="nav_history">History</span></button>
+      <button data-view="pianos"><span class="dot"></span><span data-i18n="nav_pianos">Pianos</span></button>
+      <button data-view="calendars"><span class="dot"></span><span data-i18n="nav_calendars">Calendars</span></button>
+      <button data-view="handbook"><span class="dot"></span><span data-i18n="nav_handbook">Shop Handbook</span></button>
       <a class="ext" href="https://pianologapp.netlify.app/" target="_blank" rel="noreferrer"><span class="dot"></span>Piano Log ↗</a>
       <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
     </nav>
     <div class="who" id="whoArea"></div>
+    <div class="lang"><button id="langEn" onclick="setLang('en')">EN</button><button id="langEs" onclick="setLang('es')">ES</button></div>
   </aside>
 
   <div class="content">
@@ -253,22 +258,22 @@
           <div><h2 class="page" id="dashTitle">Week ending —</h2><div class="sub" id="dashSub">Shop overview</div></div>
           <span style="display:flex;gap:10px;flex-wrap:wrap">
             <a id="briggptBtn" class="btn" style="display:none;text-decoration:none;background:#1c1c1c" target="_blank" rel="noreferrer">🧠 BrigGPT ↗</a>
-            <button class="btn" onclick="showView('report')">+ My Friday report</button>
+            <button class="btn" onclick="showView('report')" data-i18n="dash_open_report">+ My Friday report</button>
           </span>
         </div>
         <div class="stats" id="dashStats"></div>
         <div class="cols">
           <div class="card">
-            <h4>This week's reports <span class="lite" id="weekLabel"></span></h4>
+            <h4><span data-i18n="card_week">This week's reports</span> <span class="lite" id="weekLabel"></span></h4>
             <table class="list"><tbody id="weekRows"></tbody></table>
           </div>
           <div>
             <div class="card">
-              <h4>Reports submitted <span class="lite">last 12 weeks</span></h4>
+              <h4><span data-i18n="card_12w">Reports submitted</span> <span class="lite" data-i18n="lite_12w">last 12 weeks</span></h4>
               <div id="compliance" style="padding:8px 0"></div>
             </div>
             <div class="card" style="margin-top:18px">
-              <h4>Latest activity</h4>
+              <h4 data-i18n="card_activity">Latest activity</h4>
               <table class="list"><tbody id="recentRows"></tbody></table>
             </div>
           </div>
@@ -279,10 +284,10 @@
       <section class="view" id="view-planner">
         <div class="row1">
           <div>
-            <h2 class="page">Monday assignment planner</h2>
-            <div class="sub">Carry-overs and unfinished work from this week's reports, grouped per technician — draft material for next week's calendar assignments.</div>
+            <h2 class="page" data-i18n="planner_title">Monday assignment planner</h2>
+            <div class="sub" data-i18n="planner_sub">Carry-overs and unfinished work from this week's reports, grouped per technician — draft material for next week's calendar assignments.</div>
           </div>
-          <button class="btn2" id="copyPlanBtn">Copy full plan</button>
+          <button class="btn2" id="copyPlanBtn" data-i18n="copy_plan">Copy full plan</button>
         </div>
         <div id="plannerStatus"></div>
         <div id="plannerCards"></div>
@@ -293,9 +298,9 @@
         <div class="row1">
           <div>
             <h2 class="page" id="mwTitle">My week</h2>
-            <div class="sub">Your work items this week — carried over from last Friday's report, pulled from your calendar, or added by hand. They flow straight into your Friday report.</div>
+            <div class="sub" data-i18n="myweek_sub">Your work items this week — carried over from last Friday's report, pulled from your calendar, or added by hand. They flow straight into your Friday report.</div>
           </div>
-          <button class="btn" onclick="showView('report')">Open Friday report →</button>
+          <button class="btn" onclick="showView('report')" data-i18n="open_report">Open Friday report →</button>
         </div>
         <div class="wgrid" id="weekCards"></div>
       </section>
@@ -306,19 +311,19 @@
           <div><h2 class="page" id="reportTitle">Friday report</h2><div class="sub" id="reportSub"></div></div>
         </div>
         <div class="panel">
-          <div class="ph"><span>Which pianos did you work on this week?</span><span>click ↗ to open in the Piano Log</span></div>
+          <div class="ph"><span data-i18n="ph_pianos">Which pianos did you work on this week?</span><span data-i18n="ph_pianos_hint">click ↗ to open in the Piano Log</span></div>
           <div class="chips" id="pianoChips"></div>
-          <div class="ph"><span>Work items — mark each Completed or Carry over, add notes &amp; hours</span><span id="itemCount"></span></div>
+          <div class="ph"><span data-i18n="ph_items">Work items — mark each Completed or Carry over, add notes &amp; hours</span><span id="itemCount"></span></div>
           <div id="workItems"></div>
-          <div class="ph" style="border-top:1px solid var(--line)"><span>Anything else? (general notes)</span><span id="charCount"></span></div>
-          <textarea class="extra" id="extraNotes" placeholder="Anything not tied to one piano — shop help, blockers, parts to order…"></textarea>
-          <div class="ph" style="border-top:1px solid var(--line)"><span>This is what goes on the sheet</span></div>
+          <div class="ph" style="border-top:1px solid var(--line)"><span data-i18n="ph_notes">Anything else? (general notes)</span><span id="charCount"></span></div>
+          <textarea class="extra" id="extraNotes" data-i18n-ph="extra_ph" placeholder="Anything not tied to one piano — shop help, blockers, parts to order…"></textarea>
+          <div class="ph" style="border-top:1px solid var(--line)"><span data-i18n="ph_sheet">This is what goes on the sheet</span></div>
           <div class="preview" id="composePreview">—</div>
           <div class="foot">
-            <span class="save" id="draftStatus">Draft saves automatically on this device.</span>
+            <span class="save" id="draftStatus" data-i18n="draft_note">Draft saves automatically on this device.</span>
             <span style="display:flex;gap:10px">
-              <button class="btn2" id="copyBtn">Copy for spreadsheet</button>
-              <button class="btn" id="submitBtn">Submit Friday report</button>
+              <button class="btn2" id="copyBtn" data-i18n="copy_sheet">Copy for spreadsheet</button>
+              <button class="btn" id="submitBtn" data-i18n="submit">Submit Friday report</button>
             </span>
           </div>
         </div>
@@ -329,10 +334,10 @@
       <!-- ============ HISTORY ============ -->
       <section class="view" id="view-history">
         <div class="row1">
-          <div><h2 class="page">Shop history</h2><div class="sub" id="histSub">Every Friday report ever submitted, searchable.</div></div>
+          <div><h2 class="page" data-i18n="hist_title">Shop history</h2><div class="sub" id="histSub">Every Friday report ever submitted, searchable.</div></div>
         </div>
         <div class="searchbar">
-          <input type="search" id="q" placeholder="Search pianos, serials, technicians, work — e.g. “Cable-Nelson 139681” or “restringing”">
+          <input type="search" id="q" data-i18n-ph="q_ph" placeholder="Search pianos, serials, technicians, work — e.g. “Cable-Nelson 139681” or “restringing”">
           <select id="fTech"><option value="">All technicians</option></select>
           <select id="fYear"><option value="">All years</option></select>
         </div>
@@ -344,7 +349,7 @@
           <div>
             <div id="pianoMetaBox"></div>
             <div class="card">
-              <h4>Reports submitted <span class="lite">last 12 weeks</span></h4>
+              <h4><span data-i18n="card_12w">Reports submitted</span> <span class="lite" data-i18n="lite_12w">last 12 weeks</span></h4>
               <div id="compliance2" style="padding:8px 0"></div>
             </div>
           </div>
@@ -355,15 +360,15 @@
       <section class="view" id="view-pianos">
         <div class="row1">
           <div>
-            <h2 class="page">Current Shopwork (mentioned in reports)</h2>
-            <div class="sub">Auto-detected make + serial mentions with logged hours. “History” shows every report on that piano; “Piano Log ↗” opens the inventory record.</div>
+            <h2 class="page" data-i18n="pianos_title">Current Shopwork (mentioned in reports)</h2>
+            <div class="sub" data-i18n="pianos_sub">Auto-detected make + serial mentions with logged hours. “History” shows every report on that piano; “Piano Log ↗” opens the inventory record.</div>
           </div>
           <select id="pianoSort" style="border:1px solid var(--line);border-radius:5px;padding:9px 12px;font:inherit;font-size:14px;background:#fff;align-self:center">
-            <option value="alpha">Sort: A–Z</option>
-            <option value="hours">Sort: Hours logged</option>
-            <option value="stage">Sort: Work stage</option>
-            <option value="mentions">Sort: Most mentions</option>
-            <option value="recent">Sort: Recently worked</option>
+            <option value="alpha" data-i18n="sort_alpha">Sort: A–Z</option>
+            <option value="hours" data-i18n="sort_hours">Sort: Hours logged</option>
+            <option value="stage" data-i18n="sort_stage">Sort: Work stage</option>
+            <option value="mentions" data-i18n="sort_mentions">Sort: Most mentions</option>
+            <option value="recent" data-i18n="sort_recent">Sort: Recently worked</option>
           </select>
         </div>
         <div class="pgrid" id="pianoGrid"></div>
@@ -373,20 +378,20 @@
       <section class="view" id="view-calendars">
         <div class="row1">
           <div>
-            <h2 class="page">Assigned vs. reported</h2>
-            <div class="sub">Google Calendar assignments next to what was reported finished. Sign in as <b>brighamlarson@gmail.com</b> or <b>walter@brighamlarsonpianos.com</b> (which have all technician calendars connected) to see the whole team; technicians see their own.</div>
+            <h2 class="page" data-i18n="cal_title">Assigned vs. reported</h2>
+            <div class="sub" data-i18n-html="cal_sub">Google Calendar assignments next to what was reported finished. Sign in as <b>brighamlarson@gmail.com</b> or <b>walter@brighamlarsonpianos.com</b> (which have all technician calendars connected) to see the whole team; technicians see their own.</div>
           </div>
-          <button class="btn" id="calConnect">Connect Google Calendar</button>
+          <button class="btn" id="calConnect" data-i18n="cal_connect">Connect Google Calendar</button>
         </div>
         <div id="calNotice"></div>
         <div id="calBody" class="cols" style="margin-top:18px">
           <div class="card">
-            <h4 id="calEvHead">This week on my calendar</h4>
-            <div id="calEvents"><div style="padding:14px 16px;color:var(--mut);font-size:13.5px">Not connected yet.</div></div>
+            <h4 id="calEvHead" data-i18n="cal_head">This week on my calendar</h4>
+            <div id="calEvents"><div style="padding:14px 16px;color:var(--mut);font-size:13.5px" data-i18n="cal_notyet">Not connected yet.</div></div>
           </div>
           <div class="card">
-            <h4>My report this week</h4>
-            <div id="calReport" style="font-size:13.5px;line-height:1.55;color:var(--mut);padding:14px 16px">Select your name in the sidebar.</div>
+            <h4 data-i18n="cal_myreport">My report this week</h4>
+            <div id="calReport" style="font-size:13.5px;line-height:1.55;color:var(--mut);padding:14px 16px" data-i18n="cal_pick">Select your name in the sidebar.</div>
           </div>
         </div>
         <div id="calTeam"></div>
@@ -396,24 +401,24 @@
       <section class="view" id="view-handbook">
         <div class="row1">
           <div>
-            <h2 class="page">BLP Restoration Handbook</h2>
+            <h2 class="page" data-i18n="hb_title">BLP Restoration Handbook</h2>
             <div class="sub" id="hbSub">Shop procedures with the training videos embedded where the QR codes used to be.</div>
           </div>
           <span style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-            <input class="hbsearch" id="hbSearch" type="search" placeholder="Search the handbook…">
-            <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" id="hbSource">Source doc ↗</a>
+            <input class="hbsearch" id="hbSearch" type="search" data-i18n-ph="hb_search" placeholder="Search the handbook…">
+            <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" id="hbSource" data-i18n="hb_source">Source doc ↗</a>
           </span>
         </div>
         <div class="hbwrap" id="hbWrap" style="display:none">
-          <nav class="hbtoc"><h4>Sections</h4><div class="toclist" id="hbToc"></div></nav>
+          <nav class="hbtoc"><h4 data-i18n="hb_sections">Sections</h4><div class="toclist" id="hbToc"></div></nav>
           <div id="hbBody"></div>
         </div>
-        <div id="hbStatus" style="padding:26px 0;color:var(--mut);font-size:14px">Loading handbook…</div>
+        <div id="hbStatus" style="padding:26px 0;color:var(--mut);font-size:14px" data-i18n="hb_loading">Loading handbook…</div>
       </section>
 
     </main>
     <footer>
-      <span>Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).</span>
+      <span data-i18n="footer_tag">Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).</span>
       <span id="dataStamp"></span>
     </footer>
   </div>
@@ -430,6 +435,173 @@ const CONFIG = {
   ACTIVE_WEEKS: 8,
   SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit"
 };
+
+/* ================= LANGUAGE (EN / ES) ================= */
+// Shares the "blpmgr.lang" key with the Shop Manager so the choice follows you.
+let LANG = localStorage.getItem("blpmgr.lang") || "en";
+const I18N = {
+  nav_dashboard:["Shop Dashboard","Panel del Taller"],
+  nav_planner:["Assignment Planner","Planificador"],
+  nav_myweek:["My Week","Mi Semana"],
+  nav_report:["My Friday Report","Mi Reporte del Viernes"],
+  nav_history:["History","Historial"],
+  nav_pianos:["Pianos","Pianos"],
+  nav_calendars:["Calendars","Calendarios"],
+  nav_handbook:["Shop Handbook","Manual del Taller"],
+  topbar_missing:["FRIDAY REPORTS — <b>%1 of %2</b> submitted for %3 · waiting on %4","REPORTES DEL VIERNES — <b>%1 de %2</b> entregados para %3 · faltan %4"],
+  topbar_all:["FRIDAY REPORTS — all <b>%1</b> in for %2 🎉","REPORTES DEL VIERNES — ¡los <b>%1</b> completos para %2! 🎉"],
+  week_ending:["Week ending %1","Semana que termina %1"],
+  dash_open_report:["+ My Friday report","+ Mi reporte del viernes"],
+  dash_sub:["Shop overview · %1 active technicians · %2 reports on file since 2017","Resumen del taller · %1 técnicos activos · %2 reportes archivados desde 2017"],
+  st_reports_in:["Reports in","Reportes entregados"],
+  st_pending:["%1 pending","faltan: %1"],
+  st_everyone:["everyone reported","todos reportaron"],
+  st_lastweek:["Last week","Semana pasada"],
+  st_reports_for:["reports for %1","reportes del %1"],
+  st_pianos:["Pianos mentioned","Pianos mencionados"],
+  st_pianos_d:["distinct pianos, last 4 weeks","pianos distintos, últimas 4 semanas"],
+  st_hours:["Hours logged","Horas registradas"],
+  st_hours_d:["parsed from reports, last 4 weeks","extraídas de los reportes, últimas 4 semanas"],
+  st_year:["Reports in %1","Reportes en %1"],
+  st_year_d:["%1 technicians","%1 técnicos"],
+  card_week:["This week's reports","Reportes de esta semana"],
+  card_12w:["Reports submitted","Reportes entregados"],
+  lite_12w:["last 12 weeks","últimas 12 semanas"],
+  card_activity:["Latest activity","Actividad reciente"],
+  pill_in:["Submitted","Entregado"],
+  pill_out:["Missing","Falta"],
+  planner_title:["Monday assignment planner","Planificador de asignaciones del lunes"],
+  planner_sub:["Carry-overs and unfinished work from this week's reports, grouped per technician — draft material for next week's calendar assignments.","Pendientes y trabajo sin terminar de los reportes de esta semana, agrupados por técnico — borrador para las asignaciones de la próxima semana."],
+  copy_plan:["Copy full plan","Copiar plan completo"],
+  copied:["Copied ✓","Copiado ✓"],
+  planner_status:["<b>%1 of %2</b> reports in for %3. ","<b>%1 de %2</b> reportes entregados para %3. "],
+  planner_good:["Most reports are in — good time to plan next week.","La mayoría de los reportes están — buen momento para planear la próxima semana."],
+  planner_wait:["The plan fills in as Friday reports arrive; technicians without a report this week fall back to last week's.","El plan se llena conforme llegan los reportes del viernes; los técnicos sin reporte esta semana usan el de la semana pasada."],
+  no_recent:["No recent report","Sin reporte reciente"],
+  nothing_carry:["Nothing to carry over — assign fresh work.","Nada pendiente — asignar trabajo nuevo."],
+  from_date:["from %1","del %1"],
+  carry_one:["1 carry-over","1 pendiente"],
+  carry_many:["%1 carry-overs","%1 pendientes"],
+  nothing_flagged:["nothing flagged","nada marcado"],
+  no_carry_found:["No carry-over language found — likely finished assignments","No se detectaron pendientes — probablemente terminó sus asignaciones"],
+  in_flight:[" (pianos in flight: %1)"," (pianos en proceso: %1)"],
+  myweek:["My week","Mi semana"],
+  myweek_of:["%1's week","Semana de %1"],
+  myweek_sub:["Your work items this week — carried over from last Friday's report, pulled from your calendar, or added by hand. They flow straight into your Friday report.","Tus tareas de esta semana — traídas del reporte del viernes pasado, de tu calendario o agregadas a mano. Pasan directo a tu reporte del viernes."],
+  open_report:["Open Friday report →","Abrir reporte del viernes →"],
+  st_todo:["Not started","Sin empezar"],
+  st_part:["Partly done","A medias"],
+  st_done:["Done","Terminado"],
+  st_carry:["Carry over","Pendiente"],
+  src_added_week:["added this week","agregado esta semana"],
+  src_by_hand:["added by hand","agregado a mano"],
+  src_carried:["carried from last week","traído de la semana pasada"],
+  src_recent:["from recent reports","de reportes recientes"],
+  myweek_none:["No work items yet — add pianos on the Friday Report tab, or connect your calendar.","Aún no hay tareas — agrega pianos en la pestaña Mi Reporte del Viernes o conecta tu calendario."],
+  myweek_pick:["Select your name in the sidebar to see your week.","Elige tu nombre en la barra lateral para ver tu semana."],
+  add_item:["+ Add a work item","+ Agregar tarea"],
+  prompt_piano:["Piano (make + serial), or a task name:","Piano (marca + serie), o nombre de la tarea:"],
+  greet_am:["Good morning, %1","Buenos días, %1"],
+  greet_pm:["Good afternoon, %1","Buenas tardes, %1"],
+  report_title:["Friday report","Reporte del viernes"],
+  report_sub:["Week of %1 – %2 · goes into the <a href=\"%3\" target=\"_blank\" rel=\"noreferrer\">report spreadsheet</a>","Semana del %1 – %2 · va a la <a href=\"%3\" target=\"_blank\" rel=\"noreferrer\">hoja de reportes</a>"],
+  ph_pianos:["Which pianos did you work on this week?","¿En qué pianos trabajaste esta semana?"],
+  ph_pianos_hint:["click ↗ to open in the Piano Log","toca ↗ para abrirlo en el Piano Log"],
+  ph_items:["Work items — mark each Completed or Carry over, add notes & hours","Tareas — marca cada una Terminado o Pendiente, agrega notas y horas"],
+  ph_notes:["Anything else? (general notes)","¿Algo más? (notas generales)"],
+  ph_sheet:["This is what goes on the sheet","Esto es lo que va a la hoja"],
+  extra_ph:["Anything not tied to one piano — shop help, blockers, parts to order…","Lo que no sea de un piano en particular — ayuda en el taller, bloqueos, piezas por pedir…"],
+  draft_note:["Draft saves automatically on this device.","El borrador se guarda automáticamente en este dispositivo."],
+  draft_saved:["Draft saved %1 (this device).","Borrador guardado %1 (este dispositivo)."],
+  copy_sheet:["Copy for spreadsheet","Copiar para la hoja"],
+  submit:["Submit Friday report","Enviar reporte del viernes"],
+  submitting:["Submitting…","Enviando…"],
+  pick_first:["Pick your name in the sidebar first.","Primero elige tu nombre en la barra lateral."],
+  add_first:["Add at least one work item or a note first.","Agrega al menos una tarea o una nota primero."],
+  submitted_ok:["<b>Submitted.</b> Your report is on the sheet in the %1 column.","<b>Enviado.</b> Tu reporte está en la hoja, en la columna %1."],
+  submit_fail:["Submission failed (%1). Your draft is safe on this device — use <b>Copy for spreadsheet</b> as a fallback.","No se pudo enviar (%1). Tu borrador está a salvo en este dispositivo — usa <b>Copiar para la hoja</b> como alternativa."],
+  already:["A report from you is already on the sheet for %1. Submitting again will <b>append</b>, not overwrite.","Ya hay un reporte tuyo en la hoja para %1. Enviar otra vez <b>agrega</b>, no reemplaza."],
+  add_piano_ph:["+ add piano (make + serial)","+ agregar piano (marca + serie)"],
+  add_btn:["Add","Agregar"],
+  chip_add_title:["Add to this week's work items","Agregar a las tareas de esta semana"],
+  items_count:["%1 item%2 · %3 hrs total","%1 tarea%2 · %3 hrs en total"],
+  done_btn:["✓ Completed","✓ Terminado"],
+  carry_btn:["⟳ Carry over","⟳ Pendiente"],
+  notes_ph:["notes — what happened, what's left…","notas — qué se hizo, qué falta…"],
+  no_items:["No work items yet — click a piano chip above or “+ add piano”.","Aún no hay tareas — toca un piano arriba o “+ agregar piano”."],
+  chars:["%1 characters","%1 caracteres"],
+  lastweek_head:["Your report last week (%1):","Tu reporte de la semana pasada (%1):"],
+  lastweek_none:["No report on file for you last week (%1).","No hay reporte tuyo de la semana pasada (%1)."],
+  hist_title:["Shop history","Historial del taller"],
+  hist_sub:["%1 Friday reports from %2 technicians, %3–%4.","%1 reportes del viernes de %2 técnicos, %3–%4."],
+  q_ph:["Search pianos, serials, technicians, work — e.g. “Cable-Nelson 139681” or “restringing”","Busca pianos, series, técnicos, trabajo — p. ej. “Cable-Nelson 139681” o “restringing”"],
+  all_techs:["All technicians","Todos los técnicos"],
+  all_years:["All years","Todos los años"],
+  n_reports:["%1 report%2","%1 reporte%2"],
+  matching:[" matching “%1”"," con “%1”"],
+  first120:["Showing first 120 — narrow the search to see the rest.","Mostrando los primeros 120 — afina la búsqueda para ver el resto."],
+  pianos_title:["Current Shopwork (mentioned in reports)","Trabajo actual del taller (mencionado en reportes)"],
+  pianos_sub:["Auto-detected make + serial mentions with logged hours. “History” shows every report on that piano; “Piano Log ↗” opens the inventory record.","Marcas y series detectadas automáticamente con horas registradas. “Historial” muestra cada reporte de ese piano; “Piano Log ↗” abre el inventario."],
+  sort_alpha:["Sort: A–Z","Orden: A–Z"],
+  sort_hours:["Sort: Hours logged","Orden: Horas registradas"],
+  sort_stage:["Sort: Work stage","Orden: Fase de trabajo"],
+  sort_mentions:["Sort: Most mentions","Orden: Más menciones"],
+  sort_recent:["Sort: Recently worked","Orden: Trabajados recientemente"],
+  card_mentions:["%1 report mention%2 · %3 technician%4","%1 mención%2 · %3 técnico%4"],
+  hrs_logged:["%1 hrs logged","%1 hrs registradas"],
+  history_btn:["History","Historial"],
+  no_pianos:["No serialized pianos detected.","No se detectaron pianos con serie."],
+  cal_title:["Assigned vs. reported","Asignado vs. reportado"],
+  cal_sub:["Google Calendar assignments next to what was reported finished. Sign in as <b>brighamlarson@gmail.com</b> or <b>walter@brighamlarsonpianos.com</b> (which have all technician calendars connected) to see the whole team; technicians see their own.","Las asignaciones del Google Calendar junto a lo reportado como terminado. Inicia sesión como <b>brighamlarson@gmail.com</b> o <b>walter@brighamlarsonpianos.com</b> (que tienen todos los calendarios conectados) para ver a todo el equipo; cada técnico ve el suyo."],
+  cal_connect:["Connect Google Calendar","Conectar Google Calendar"],
+  cal_head:["This week on my calendar","Esta semana en mi calendario"],
+  cal_myreport:["My report this week","Mi reporte esta semana"],
+  cal_pick:["Select your name in the sidebar.","Elige tu nombre en la barra lateral."],
+  cal_notyet:["Not connected yet.","Aún no conectado."],
+  hb_title:["BLP Restoration Handbook","Manual de Restauración BLP"],
+  hb_sub:["Shop procedures with the training videos embedded in place — snapshot of the Google Doc from %1.","Procedimientos del taller con los videos de capacitación integrados — captura del Google Doc del %1."],
+  hb_search:["Search the handbook…","Buscar en el manual…"],
+  hb_source:["Source doc ↗","Documento original ↗"],
+  hb_sections:["Sections","Secciones"],
+  hb_none:["No sections match your search.","Ninguna sección coincide con la búsqueda."],
+  hb_loading:["Loading handbook…","Cargando el manual…"],
+  hb_error:["Could not load data/handbook.json — regenerate it with scripts/fetch_handbook.py.","No se pudo cargar data/handbook.json — regenéralo con scripts/fetch_handbook.py."],
+  who_pick:["— select your name —","— elige tu nombre —"],
+  who_owner:["Owner","Propietario"],
+  who_tech:["Technician — %1","Técnico — %1"],
+  who_nomatch:["No technician match","Sin técnico asignado"],
+  who_acting:["Acting as technician","Actuando como técnico"],
+  who_which:["Which technician are you?","¿Qué técnico eres?"],
+  who_signout:["Sign out","Cerrar sesión"],
+  who_hint:["Sign in with your Google account — you'll be matched to your technician row automatically.","Inicia sesión con tu cuenta de Google — se te asignará tu fila de técnico automáticamente."],
+  who_signedas:["Signed in as","Sesión de"],
+  footer_tag:["Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).","Brigham Larson Pianos · Reportes del Taller — una vista en vivo de la hoja de reportes semanal (y escribe en ella)."],
+  stamp:["%1 entries · 2017–%2","%1 registros · 2017–%2"],
+  stamp_live:[" · live from sheet"," · en vivo desde la hoja"],
+  stamp_snap:[" · snapshot %1"," · captura %1"],
+};
+const t = (k, ...args) => {
+  let s = (I18N[k] || [k, k])[LANG === "es" ? 1 : 0];
+  args.forEach((a, i) => { s = s.replaceAll("%" + (i + 1), a); });
+  return s;
+};
+window.t = t;   // reachable inside callbacks whose parameter shadows `t`
+function applyI18n(){
+  document.documentElement.lang = LANG;
+  const en = document.getElementById("langEn"), es = document.getElementById("langEs");
+  if(en) en.classList.toggle("on", LANG === "en");
+  if(es) es.classList.toggle("on", LANG === "es");
+  document.querySelectorAll("[data-i18n]").forEach(el => el.textContent = t(el.dataset.i18n));
+  document.querySelectorAll("[data-i18n-ph]").forEach(el => el.setAttribute("placeholder", t(el.dataset.i18nPh)));
+  document.querySelectorAll("[data-i18n-html]").forEach(el => el.innerHTML = t(el.dataset.i18nHtml));
+}
+function setLang(l){
+  LANG = l;
+  localStorage.setItem("blpmgr.lang", l);
+  applyI18n();
+  if(typeof DATA !== "undefined" && DATA && DATA.entries) renderAll();
+  if(typeof HB !== "undefined" && HB) renderHandbook();
+}
 
 let DATA = { entries: [], tabs: {} };
 let ME = localStorage.getItem("blp-shop-reports.me") || "";
@@ -452,7 +624,7 @@ function thisFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x
 // one just passed. (Submissions still target thisFriday — the upcoming column.)
 function reportFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+2)%7)); return x; }
 const iso = (d) => d.toISOString().slice(0,10);
-function fmtLong(d){ return d.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
+function fmtLong(d){ return d.toLocaleDateString(LANG==="es"?"es-MX":"en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
 function fmtShort(s){ if(!s) return "—"; const [y,m,d]=String(s).split("-"); return d?`${+m}/${+d}/${String(y).slice(2)}`:s; }
 function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return m; }
 
@@ -466,21 +638,21 @@ async function ensureHandbook(scrollTo){
   if(hbLoading) return;
   hbLoading=true;
   try{ HB = await (await fetch("./data/handbook.json")).json(); }
-  catch(e){ $("#hbStatus").textContent="Could not load data/handbook.json — regenerate it with scripts/fetch_handbook.py."; hbLoading=false; return; }
+  catch(e){ $("#hbStatus").textContent=t("hb_error"); hbLoading=false; return; }
   renderHandbook();
   if(scrollTo) hbScroll(scrollTo);
 }
 
 function renderHandbook(){
   $("#hbSource").href=HB.source;
-  $("#hbSub").textContent=`Shop procedures with the training videos embedded in place — snapshot of the Google Doc from ${HB.generated}.`;
+  $("#hbSub").textContent=t("hb_sub",HB.generated);
   $("#hbStatus").style.display="none"; $("#hbWrap").style.display="";
   $("#hbToc").innerHTML=HB.sections.map(s=>
     `<a href="#handbook-${s.slug}" data-slug="${s.slug}"><span class="n">${esc(s.num)}</span><span>${esc(s.title.replace(/^\d+[a-z]?\.\s*/,""))}</span>${s.videos?`<span class="vc">▶ ${s.videos}</span>`:""}</a>`
   ).join("");
   $("#hbBody").innerHTML=HB.sections.map(s=>
     `<article class="hbsec" id="hb-${s.slug}"><h2 class="hbtitle">${esc(s.title)}</h2>${s.html}</article>`
-  ).join("")+`<div class="hbnone" id="hbNone" style="display:none">No sections match your search.</div>`;
+  ).join("")+`<div class="hbnone" id="hbNone" style="display:none">${t("hb_none")}</div>`;
 
   const seen=hbSeen();
   document.querySelectorAll("#hbBody .hbvid").forEach(v=>{
@@ -535,6 +707,7 @@ async function boot(){
   await tryLiveRefresh();
   DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
+  applyI18n();
   renderAll();
   handleHandbookHash();  // deep links: #handbook or #handbook-<section>
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
@@ -619,7 +792,7 @@ const isOwner=()=>!!USER&&(OWNERS.includes((USER.email||"").toLowerCase())||(USE
 
 function rosterSelectHTML(label){
   return `<label for="whoSelect">${label}</label>
-    <select id="whoSelect"><option value="">— select your name —</option>
+    <select id="whoSelect"><option value="">${t("who_pick")}</option>
     ${ROSTER.map(t=>`<option${t===ME?" selected":""}>${esc(t)}</option>`).join("")}</select>`;
 }
 function renderWho(){
@@ -631,17 +804,17 @@ function renderWho(){
       <div class="uchip">
         ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
         <span><span class="un">${esc(USER.name||USER.email)}</span><br>
-        <span class="ur">${isOwner()?"Owner":tech?"Technician — "+esc(tech):"No technician match"}</span></span>
+        <span class="ur">${isOwner()?t("who_owner"):tech?t("who_tech",esc(tech)):t("who_nomatch")}</span></span>
       </div>
-      ${isOwner()||!tech?rosterSelectHTML(isOwner()?"Acting as technician":"Which technician are you?"):""}
+      ${isOwner()||!tech?rosterSelectHTML(isOwner()?t("who_acting"):t("who_which")):""}
       ${isOwner()?`<a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>`:""}
-      <button class="signout" id="signOutBtn">Sign out</button>`;
+      <button class="signout" id="signOutBtn">${t("who_signout")}</button>`;
     $("#signOutBtn").onclick=signOut;
   }else if(CONFIG.GOOGLE_CLIENT_ID){
-    area.innerHTML=`<div id="gsiBtn"></div><span class="hint">Sign in with your Google account — you'll be matched to your technician row automatically.</span>`;
+    area.innerHTML=`<div id="gsiBtn"></div><span class="hint">${t("who_hint")}</span>`;
     initGsi();
   }else{
-    area.innerHTML=rosterSelectHTML("Signed in as")+`<span class="hint">Google login activates once an admin sets <b>GOOGLE_CLIENT_ID</b> (docs/shop-reports-setup.md).</span>`;
+    area.innerHTML=rosterSelectHTML(t("who_signedas"))+`<span class="hint">Google login activates once an admin sets <b>GOOGLE_CLIENT_ID</b> (docs/shop-reports-setup.md).</span>`;
   }
   const sel=$("#whoSelect");
   if(sel) sel.onchange=()=>{ ME=sel.value; localStorage.setItem("blp-shop-reports.me",ME); renderAll(); };
@@ -692,7 +865,7 @@ function renderAll(){
   if(bg&&CONFIG.BRIGGPT_URL){ bg.href=CONFIG.BRIGGPT_URL; bg.style.display="inline-block"; }
   renderDashboard(); renderPlanner(); renderMyWeek(); renderReportForm();
   renderHistoryControls(); runSearch(); renderPianos(); renderCalReport();
-  $("#dataStamp").textContent=`${DATA.entries.length.toLocaleString()} entries · 2017–${new Date().getFullYear()}`+(DATA.live?" · live from sheet":` · snapshot ${DATA.generated||""}`);
+  $("#dataStamp").textContent=t("stamp",DATA.entries.length.toLocaleString(),new Date().getFullYear())+(DATA.live?t("stamp_live"):t("stamp_snap",DATA.generated||""));
 }
 
 const weekEntries=(fISO)=>DATA.entries.filter(e=>e.date===fISO);
@@ -700,13 +873,13 @@ const weekEntries=(fISO)=>DATA.entries.filter(e=>e.date===fISO);
 /* ---------- dashboard ---------- */
 function renderDashboard(){
   const fri=reportFriday(), friISO=iso(fri);
-  $("#dashTitle").textContent="Week ending "+fmtLong(fri);
+  $("#dashTitle").textContent=t("week_ending",fmtLong(fri));
   const wk=weekEntries(friISO), inSet=new Set(wk.map(e=>e.tech));
   const missing=ROSTER.filter(t=>!inSet.has(t));
-  $("#dashSub").textContent=`Shop overview · ${ROSTER.length} active technicians · ${DATA.entries.length.toLocaleString()} reports on file since 2017`;
+  $("#dashSub").textContent=t("dash_sub",ROSTER.length,DATA.entries.length.toLocaleString());
   $("#topBar").innerHTML=missing.length
-    ? `FRIDAY REPORTS — <b>${inSet.size} of ${ROSTER.length}</b> submitted for ${fmtShort(friISO)} · waiting on ${esc(missing.slice(0,5).join(", "))}${missing.length>5?"…":""}`
-    : `FRIDAY REPORTS — all <b>${ROSTER.length}</b> in for ${fmtShort(friISO)} 🎉`;
+    ? t("topbar_missing",inSet.size,ROSTER.length,fmtShort(friISO),esc(missing.slice(0,5).join(", "))+(missing.length>5?"…":""))
+    : t("topbar_all",ROSTER.length,fmtShort(friISO));
 
   const year=new Date().getFullYear();
   const yearEntries=DATA.entries.filter(e=>e.year===year);
@@ -717,19 +890,19 @@ function renderDashboard(){
   DATA.entries.filter(e=>e.date&&e.date>=iso(monthAgo)).forEach(e=>extractPianos(e.text).forEach(p=>pianosMo.add(p.serial||p.label)));
   const hrsMo=DATA.entries.filter(e=>e.date&&e.date>=iso(monthAgo)).reduce((s,e)=>s+sumHours(e.text),0);
   $("#dashStats").innerHTML=`
-    <div class="stat"><div class="k">Reports in</div><div class="v num">${inSet.size}<small>/${ROSTER.length}</small></div>
-      <div class="d ${missing.length?"warn":"good"}">${missing.length?esc(missing.slice(0,4).join(", "))+(missing.length>4?` +${missing.length-4} more`:"")+" pending":"everyone reported"}</div></div>
-    <div class="stat"><div class="k">Last week</div><div class="v num">${prevCount}</div><div class="d">reports for ${fmtShort(iso(prevFri))}</div></div>
-    <div class="stat"><div class="k">Pianos mentioned</div><div class="v num">${pianosMo.size}</div><div class="d">distinct pianos, last 4 weeks</div></div>
-    <div class="stat"><div class="k">Hours logged</div><div class="v num">${hrsMo?hrsMo.toFixed(0):"—"}</div><div class="d">parsed from reports, last 4 weeks</div></div>
-    <div class="stat"><div class="k">Reports in ${year}</div><div class="v num">${yearEntries.length}</div><div class="d">${new Set(yearEntries.map(e=>e.tech)).size} technicians</div></div>`;
+    <div class="stat"><div class="k">${t("st_reports_in")}</div><div class="v num">${inSet.size}<small>/${ROSTER.length}</small></div>
+      <div class="d ${missing.length?"warn":"good"}">${missing.length?t("st_pending",esc(missing.slice(0,4).join(", "))+(missing.length>4?` +${missing.length-4}`:"")):t("st_everyone")}</div></div>
+    <div class="stat"><div class="k">${t("st_lastweek")}</div><div class="v num">${prevCount}</div><div class="d">${t("st_reports_for",fmtShort(iso(prevFri)))}</div></div>
+    <div class="stat"><div class="k">${t("st_pianos")}</div><div class="v num">${pianosMo.size}</div><div class="d">${t("st_pianos_d")}</div></div>
+    <div class="stat"><div class="k">${t("st_hours")}</div><div class="v num">${hrsMo?hrsMo.toFixed(0):"—"}</div><div class="d">${t("st_hours_d")}</div></div>
+    <div class="stat"><div class="k">${t("st_year",year)}</div><div class="v num">${yearEntries.length}</div><div class="d">${t("st_year_d",new Set(yearEntries.map(e=>e.tech)).size)}</div></div>`;
 
   $("#weekLabel").textContent=fmtShort(friISO);
   $("#weekRows").innerHTML=ROSTER.map(t=>{
     const e=wk.find(x=>x.tech===t);
     return e
-      ? `<tr><td class="tech-name">${esc(t)}</td><td class="excerpt">${esc(e.text.slice(0,160))}${e.text.length>160?"…":""}</td><td><span class="pill in">Submitted</span></td></tr>`
-      : `<tr><td class="tech-name">${esc(t)}</td><td class="excerpt" style="color:var(--mut2)">—</td><td><span class="pill out">Missing</span></td></tr>`;
+      ? `<tr><td class="tech-name">${esc(t)}</td><td class="excerpt">${esc(e.text.slice(0,160))}${e.text.length>160?"…":""}</td><td><span class="pill in">${window.t("pill_in")}</span></td></tr>`
+      : `<tr><td class="tech-name">${esc(t)}</td><td class="excerpt" style="color:var(--mut2)">—</td><td><span class="pill out">${window.t("pill_out")}</span></td></tr>`;
   }).join("");
 
   $("#compliance").innerHTML = complianceHTML();
@@ -767,7 +940,7 @@ function itemsKey(){ return `blp-shop-reports.items.${ME||"anon"}.${iso(thisFrid
 function extraKey(){ return `blp-shop-reports.extra.${ME||"anon"}.${iso(thisFriday())}`; }
 function getItems(){ try{ return JSON.parse(localStorage.getItem(itemsKey()))||[]; }catch(e){ return []; } }
 function setItems(items){ localStorage.setItem(itemsKey(),JSON.stringify(items)); markSaved(); renderMyWeek(); renderWorkItems(); }
-function markSaved(){ $("#draftStatus").textContent="Draft saved "+new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})+" (this device)."; }
+function markSaved(){ $("#draftStatus").textContent=t("draft_saved",new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})); }
 
 function seedItems(){
   // seed from last week's carry-overs, once per week per tech
@@ -789,25 +962,26 @@ function seedItems(){
 
 /* ---------- my week (workbench cards) ---------- */
 function renderMyWeek(){
-  $("#mwTitle").textContent=ME?`${ME}'s week`:"My week";
+  $("#mwTitle").textContent=ME?t("myweek_of",ME):t("myweek");
   const items=getItems();
+  const srcMap={"added this week":"src_added_week","added by hand":"src_by_hand","carried from last week":"src_carried","from recent reports":"src_recent"};
   const cards=items.map(it=>`
     <div class="job" data-id="${it.id}">
-      <div class="src">${esc(it.src||"added this week")}</div>
+      <div class="src">${srcMap[it.src]?t(srcMap[it.src]):esc(it.src||t("src_added_week"))}</div>
       <h5>${esc(it.piano)}</h5>
       <p>${esc(it.notes||"")}</p>
       <div class="jfoot">
         <select data-act="status">
-          <option value="todo"${it.status==="todo"?" selected":""}>Not started</option>
-          <option value="part"${it.status==="part"?" selected":""}>Partly done</option>
-          <option value="done"${it.status==="done"?" selected":""}>Done</option>
-          <option value="carry"${it.status==="carry"?" selected":""}>Carry over</option>
+          <option value="todo"${it.status==="todo"?" selected":""}>${t("st_todo")}</option>
+          <option value="part"${it.status==="part"?" selected":""}>${t("st_part")}</option>
+          <option value="done"${it.status==="done"?" selected":""}>${t("st_done")}</option>
+          <option value="carry"${it.status==="carry"?" selected":""}>${t("st_carry")}</option>
         </select>
-        <span class="pill ${it.status==="done"?"in":it.status==="carry"?"mid":"out"}">${{todo:"Not started",part:"Partly done",done:"Done",carry:"Carry over"}[it.status]||"Not started"}</span>
+        <span class="pill ${it.status==="done"?"in":it.status==="carry"?"mid":"out"}">${t({todo:"st_todo",part:"st_part",done:"st_done",carry:"st_carry"}[it.status]||"st_todo")}</span>
       </div>
     </div>`).join("");
-  $("#weekCards").innerHTML=(cards||`<div class="sub">${ME?"No work items yet — add pianos on the Friday Report tab, or connect your calendar.":"Select your name in the sidebar to see your week."}</div>`)
-    + (ME?`<button class="job" style="border-style:dashed;color:var(--red);font-weight:700;font-size:14px" onclick="addItemPrompt()">+ Add a work item</button>`:"");
+  $("#weekCards").innerHTML=(cards||`<div class="sub">${ME?t("myweek_none"):t("myweek_pick")}</div>`)
+    + (ME?`<button class="job" style="border-style:dashed;color:var(--red);font-weight:700;font-size:14px" onclick="addItemPrompt()">${t("add_item")}</button>`:"");
   document.querySelectorAll('#weekCards .job select[data-act=status]').forEach(sel=>{
     sel.onchange=()=>{
       const id=sel.closest(".job").dataset.id;
@@ -817,7 +991,7 @@ function renderMyWeek(){
   });
 }
 function addItemPrompt(){
-  const piano=prompt("Piano (make + serial), or a task name:");
+  const piano=prompt(t("prompt_piano"));
   if(!piano) return;
   const items=getItems();
   items.push({id:Date.now()+Math.random(),piano:piano.trim(),notes:"",hours:"",status:"todo",src:"added by hand"});
@@ -828,8 +1002,8 @@ function addItemPrompt(){
 function renderReportForm(){
   const fri=thisFriday();
   seedItems();
-  $("#reportTitle").textContent=ME?`Good ${new Date().getHours()<12?"morning":"afternoon"}, ${ME}`:"Friday report";
-  $("#reportSub").innerHTML=`Week of ${mondayOf(fri).toLocaleDateString("en-US",{month:"long",day:"numeric"})} – ${fmtLong(fri)} · goes into the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">report spreadsheet</a>`;
+  $("#reportTitle").textContent=ME?t(new Date().getHours()<12?"greet_am":"greet_pm",ME):t("report_title");
+  $("#reportSub").innerHTML=t("report_sub",mondayOf(fri).toLocaleDateString(LANG==="es"?"es-MX":"en-US",{month:"long",day:"numeric"}),fmtLong(fri),CONFIG.SHEET_URL);
   $("#extraNotes").value=localStorage.getItem(extraKey())||"";
 
   // piano chips: recent pianos + currently-used ones
@@ -841,10 +1015,10 @@ function renderReportForm(){
   const chips=[...seen.values()].slice(0,8);
   $("#pianoChips").innerHTML=(ME?chips.map(p=>`
       <span class="chip${inItems.has(p.label)?" on":""}">
-        <button data-piano="${esc(p.label)}" title="Add to this week's work items">${inItems.has(p.label)?"✓ ":"+ "}${esc(p.label)}</button>
-        <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial||p.label)}" target="_blank" rel="noreferrer" title="Open in Piano Log">↗</a>
-      </span>`).join(""):`<span style="color:var(--mut);font-size:13px">Select your name in the sidebar first.</span>`)
-    + (ME?`<span class="chip add"><input id="newPiano" placeholder="+ add piano (make + serial)"><button onclick="addPianoFromInput()">Add</button></span>`:"");
+        <button data-piano="${esc(p.label)}" title="${t("chip_add_title")}">${inItems.has(p.label)?"✓ ":"+ "}${esc(p.label)}</button>
+        <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial||p.label)}" target="_blank" rel="noreferrer" title="Piano Log ↗">↗</a>
+      </span>`).join(""):`<span style="color:var(--mut);font-size:13px">${t("pick_first")}</span>`)
+    + (ME?`<span class="chip add"><input id="newPiano" placeholder="${t("add_piano_ph")}"><button onclick="addPianoFromInput()">${t("add_btn")}</button></span>`:"");
   document.querySelectorAll("#pianoChips button[data-piano]").forEach(b=>{
     b.onclick=()=>{
       const label=b.dataset.piano; const items=getItems();
@@ -862,12 +1036,12 @@ function renderReportForm(){
   const prev=new Date(fri); prev.setDate(prev.getDate()-7);
   const last=DATA.entries.find(e=>e.tech===ME&&e.date===iso(prev));
   $("#lastWeekBox").innerHTML=last
-    ? `<b>Your report last week (${fmtShort(last.date)}):</b> “${esc(last.text.slice(0,400))}${last.text.length>400?"…":""}”`
-    : (ME?`<b>No report on file for you last week (${fmtShort(iso(prev))}).</b>`:"");
+    ? `<b>${t("lastweek_head",fmtShort(last.date))}</b> “${esc(last.text.slice(0,400))}${last.text.length>400?"…":""}”`
+    : (ME?`<b>${t("lastweek_none",fmtShort(iso(prev)))}</b>`:"");
 
   const already=DATA.entries.find(e=>e.tech===ME&&e.date===iso(fri));
   $("#submitNotice").innerHTML=already
-    ? `<div class="notice ok">A report from you is already on the sheet for ${fmtShort(iso(fri))}. Submitting again will <b>append</b>, not overwrite.</div>`
+    ? `<div class="notice ok">${t("already",fmtShort(iso(fri)))}</div>`
     : (CONFIG.APPS_SCRIPT_URL?"":`<div class="notice">Direct submission isn't wired up yet — an admin deploys <code>shop-reports-apps-script.gs</code> and pastes its URL into <code>CONFIG.APPS_SCRIPT_URL</code> (see <code>docs/shop-reports-setup.md</code>). Until then use <b>Copy for spreadsheet</b>.</div>`);
 }
 function addPianoFromInput(){
@@ -880,19 +1054,19 @@ function addPianoFromInput(){
 
 function renderWorkItems(){
   const items=getItems();
-  $("#itemCount").textContent=items.length?`${items.length} item${items.length===1?"":"s"} · ${items.reduce((s,i)=>s+(parseFloat(i.hours)||0),0)} hrs total`:"";
+  $("#itemCount").textContent=items.length?t("items_count",items.length,items.length===1?"":"s",items.reduce((s,i)=>s+(parseFloat(i.hours)||0),0)):"";
   $("#workItems").innerHTML=items.length?items.map(it=>`
     <div class="item" data-id="${it.id}">
       <span class="plabel">${esc(it.piano)}</span>
       <input type="number" min="0" step="0.5" placeholder="hrs" value="${esc(it.hours||"")}" data-act="hours" aria-label="hours on ${esc(it.piano)}">
       <span class="seg">
-        <button class="done${it.status==="done"?" on":""}" data-act="done">✓ Completed</button>
-        <button class="carry${it.status!=="done"?" on":""}" data-act="carry">⟳ Carry over</button>
+        <button class="done${it.status==="done"?" on":""}" data-act="done">${t("done_btn")}</button>
+        <button class="carry${it.status!=="done"?" on":""}" data-act="carry">${t("carry_btn")}</button>
       </span>
-      <input type="text" placeholder="notes — what happened, what's left…" value="${esc(it.notes||"")}" data-act="notes">
-      <button class="del" data-act="del" title="Remove">✕</button>
+      <input type="text" placeholder="${t("notes_ph")}" value="${esc(it.notes||"")}" data-act="notes">
+      <button class="del" data-act="del" title="✕">✕</button>
     </div>`).join("")
-    : `<div style="padding:13px 16px;color:var(--mut);font-size:13.5px">No work items yet — click a piano chip above or “+ add piano”.</div>`;
+    : `<div style="padding:13px 16px;color:var(--mut);font-size:13.5px">${t("no_items")}</div>`;
   document.querySelectorAll("#workItems .item").forEach(rowEl=>{
     const id=rowEl.dataset.id;
     const update=(fn)=>{ const items=getItems(); const it=items.find(x=>String(x.id)===id); if(it){ fn(it); localStorage.setItem(itemsKey(),JSON.stringify(items)); markSaved(); renderMyWeek(); updatePreview(); } };
@@ -916,38 +1090,38 @@ function composeText(){
   return [lines.join("\n"),extra].filter(Boolean).join("\n\n");
 }
 function updatePreview(){
-  const t=composeText();
-  $("#composePreview").textContent=t||"—";
-  $("#charCount").textContent=t?`${t.length.toLocaleString()} characters`:"";
+  const txt=composeText();
+  $("#composePreview").textContent=txt||"—";
+  $("#charCount").textContent=txt?t("chars",txt.length.toLocaleString()):"";
 }
 $("#extraNotes").addEventListener("input",()=>{ localStorage.setItem(extraKey(),$("#extraNotes").value); markSaved(); updatePreview(); });
 
 $("#copyBtn").onclick=async()=>{
   await navigator.clipboard.writeText(composeText());
-  $("#copyBtn").textContent="Copied ✓";
-  setTimeout(()=>$("#copyBtn").textContent="Copy for spreadsheet",1600);
+  $("#copyBtn").textContent=t("copied");
+  setTimeout(()=>$("#copyBtn").textContent=t("copy_sheet"),1600);
 };
 $("#submitBtn").onclick=async()=>{
   const text=composeText().trim();
-  if(!ME){ $("#submitNotice").innerHTML=`<div class="notice err">Pick your name in the sidebar first.</div>`; return; }
-  if(!text){ $("#submitNotice").innerHTML=`<div class="notice err">Add at least one work item or a note first.</div>`; return; }
+  if(!ME){ $("#submitNotice").innerHTML=`<div class="notice err">${t("pick_first")}</div>`; return; }
+  if(!text){ $("#submitNotice").innerHTML=`<div class="notice err">${t("add_first")}</div>`; return; }
   if(!CONFIG.APPS_SCRIPT_URL){
     $("#submitNotice").innerHTML=`<div class="notice">Submission endpoint not configured yet — use <b>Copy for spreadsheet</b> and paste into your ${fmtShort(iso(thisFriday()))} cell on the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">sheet</a>.</div>`;
     return;
   }
-  const btn=$("#submitBtn"); btn.disabled=true; btn.textContent="Submitting…";
+  const btn=$("#submitBtn"); btn.disabled=true; btn.textContent=t("submitting");
   try{
     const r=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
       body:JSON.stringify({action:"submit",tech:ME,date:iso(thisFriday()),text})});
     const out=await r.json();
     if(!out.ok) throw new Error(out.error||"unknown error");
-    $("#submitNotice").innerHTML=`<div class="notice ok"><b>Submitted.</b> Your report is on the sheet in the ${fmtShort(iso(thisFriday()))} column.</div>`;
+    $("#submitNotice").innerHTML=`<div class="notice ok">${t("submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
     DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
     renderDashboard(); renderPlanner();
   }catch(e){
-    $("#submitNotice").innerHTML=`<div class="notice err">Submission failed (${esc(String(e.message||e))}). Your draft is safe on this device — use <b>Copy for spreadsheet</b> as a fallback.</div>`;
+    $("#submitNotice").innerHTML=`<div class="notice err">${t("submit_fail",esc(String(e.message||e)))}</div>`;
   }
-  btn.disabled=false; btn.textContent="Submit Friday report";
+  btn.disabled=false; btn.textContent=t("submit");
 };
 
 /* ---------- planner ---------- */
@@ -957,16 +1131,16 @@ function renderPlanner(){
   const prevISO=iso(new Date(fri.getTime()-7*864e5));
   const inCount=new Set(wk.map(e=>e.tech)).size;
   $("#plannerStatus").innerHTML=`<div class="notice ${inCount>=Math.ceil(ROSTER.length*0.6)?"ok":""}">
-    <b>${inCount} of ${ROSTER.length}</b> reports in for ${fmtShort(friISO)}. ${inCount>=Math.ceil(ROSTER.length*0.6)?"Most reports are in — good time to plan next week.":"The plan fills in as Friday reports arrive; technicians without a report this week fall back to last week's."}</div>`;
-  $("#plannerCards").innerHTML=ROSTER.map(t=>{
-    const cur=wk.find(e=>e.tech===t) || DATA.entries.find(e=>e.tech===t&&e.date===prevISO);
-    if(!cur) return `<div class="tcard"><h4>${esc(t)} <span class="pill out st">No recent report</span></h4><div class="none">Nothing to carry over — assign fresh work.</div></div>`;
+    ${t("planner_status",inCount,ROSTER.length,fmtShort(friISO))}${inCount>=Math.ceil(ROSTER.length*0.6)?t("planner_good"):t("planner_wait")}</div>`;
+  $("#plannerCards").innerHTML=ROSTER.map(tech=>{
+    const cur=wk.find(e=>e.tech===tech) || DATA.entries.find(e=>e.tech===tech&&e.date===prevISO);
+    if(!cur) return `<div class="tcard"><h4>${esc(tech)} <span class="pill out st">${t("no_recent")}</span></h4><div class="none">${t("nothing_carry")}</div></div>`;
     const carries=carryLines(cur.text);
     const pianos=[...new Set(extractPianos(cur.text).filter(p=>p.serial).map(p=>p.label))];
     return `<div class="tcard">
-      <h4>${esc(t)} <span class="lite" style="font-weight:400;color:var(--mut2)">from ${fmtShort(cur.date)}</span>
-        <span style="margin-left:auto" class="pill ${carries.length?"mid":"in"} st">${carries.length?carries.length+" carry-over"+(carries.length===1?"":"s"):"nothing flagged"}</span></h4>
-      ${carries.length?`<ul>${carries.map(c=>`<li>${esc(c.slice(0,220))}</li>`).join("")}</ul>`:`<div class="none">No carry-over language found — likely finished assignments${pianos.length?` (pianos in flight: ${esc(pianos.join(", "))})`:""}.</div>`}
+      <h4>${esc(tech)} <span class="lite" style="font-weight:400;color:var(--mut2)">${t("from_date",fmtShort(cur.date))}</span>
+        <span style="margin-left:auto" class="pill ${carries.length?"mid":"in"} st">${carries.length?(carries.length===1?t("carry_one"):t("carry_many",carries.length)):t("nothing_flagged")}</span></h4>
+      ${carries.length?`<ul>${carries.map(c=>`<li>${esc(c.slice(0,220))}</li>`).join("")}</ul>`:`<div class="none">${t("no_carry_found")}${pianos.length?t("in_flight",esc(pianos.join(", "))):""}.</div>`}
     </div>`;
   }).join("");
 }
@@ -979,16 +1153,16 @@ $("#copyPlanBtn").onclick=async()=>{
     return `${t}:\n${carries.length?carries.map(c=>"  • "+c).join("\n"):"  • (no carry-overs — assign fresh work)"}`;
   }).join("\n\n");
   await navigator.clipboard.writeText(`BLP next-week assignment draft — from reports of ${fmtShort(iso(fri))}\n\n${txt}`);
-  $("#copyPlanBtn").textContent="Copied ✓";
-  setTimeout(()=>$("#copyPlanBtn").textContent="Copy full plan",1600);
+  $("#copyPlanBtn").textContent=t("copied");
+  setTimeout(()=>$("#copyPlanBtn").textContent=t("copy_plan"),1600);
 };
 
 /* ---------- history ---------- */
 function renderHistoryControls(){
   const years=[...new Set(DATA.entries.map(e=>e.year))].sort((a,b)=>b-a);
-  $("#fYear").innerHTML=`<option value="">All years</option>`+years.map(y=>`<option>${y}</option>`).join("");
-  $("#fTech").innerHTML=`<option value="">All technicians</option>`+ALL_TECHS.map(t=>`<option>${esc(t)}</option>`).join("");
-  $("#histSub").textContent=`${DATA.entries.length.toLocaleString()} Friday reports from ${ALL_TECHS.length} technicians, ${Math.min(...years)}–${Math.max(...years)}.`;
+  $("#fYear").innerHTML=`<option value="">${t("all_years")}</option>`+years.map(y=>`<option>${y}</option>`).join("");
+  $("#fTech").innerHTML=`<option value="">${t("all_techs")}</option>`+ALL_TECHS.map(x=>`<option>${esc(x)}</option>`).join("");
+  $("#histSub").textContent=t("hist_sub",DATA.entries.length.toLocaleString(),ALL_TECHS.length,Math.min(...years),Math.max(...years));
   $("#compliance2").innerHTML=complianceHTML();
 }
 let searchT;
@@ -1003,13 +1177,13 @@ function runSearch(){
   const terms=q?q.split(/\s+/).filter(Boolean):[];
   if(terms.length) hits=hits.filter(e=>{ const t=e.text.toLowerCase(); return terms.every(w=>t.includes(w)||e.tech.toLowerCase().includes(w)); });
   hits=[...hits].sort((a,b)=>(b.date||"").localeCompare(a.date||""));
-  $("#hits").textContent=`${hits.length.toLocaleString()} report${hits.length===1?"":"s"}`+(q?` matching “${qRaw}”`:"");
+  $("#hits").textContent=t("n_reports",hits.length.toLocaleString(),hits.length===1?"":"s")+(q?t("matching",qRaw):"");
   $("#results").innerHTML=hits.slice(0,120).map(e=>`
     <div class="result">
       <div class="meta"><span class="tech-name">${esc(e.tech)}</span>
         <span class="date-cell">${e.date?fmtShort(e.date):e.year}${e.approx?` <span class="approx">approx. week</span>`:""}</span></div>
       <div class="body">${highlight(esc(e.text),terms)}</div>
-    </div>`).join("")+(hits.length>120?`<div class="hits">Showing first 120 — narrow the search to see the rest.</div>`:"");
+    </div>`).join("")+(hits.length>120?`<div class="hits">${t("first120")}</div>`:"");
 
   // ledger-style piano meta box when the query includes a serial
   const serialM=/(\d{4,7})/.exec(qRaw);
@@ -1097,11 +1271,11 @@ function renderPianos(){
           ${STAGES.map(([id,nm])=>`<option value="${id}" ${p.stage===id?"selected":""}>${esc(id==="OTHER"?"— stage —":nm)}</option>`).join("")}
         </select>
       </div>
-      <div class="pm num">${p.count} report mention${p.count===1?"":"s"} · ${p.techs.size} technician${p.techs.size===1?"":"s"}</div>
+      <div class="pm num">${t("card_mentions",p.count,p.count===1?"":(LANG==="es"?"es":"s"),p.techs.size,p.techs.size===1?"":"s")}</div>
       <div class="pt num">${fmtShort(p.first)} → ${fmtShort(p.last)}</div>
-      ${p.hrs?`<div class="hrs num">${p.hrs.toFixed(1)} hrs logged</div>`:""}
+      ${p.hrs?`<div class="hrs num">${t("hrs_logged",p.hrs.toFixed(1))}</div>`:""}
       <div class="plinks">
-        ${isOwner()?`<button data-q="${esc(p.serial)}">History</button>`:""}
+        ${isOwner()?`<button data-q="${esc(p.serial)}">${t("history_btn")}</button>`:""}
         <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial)}" target="_blank" rel="noreferrer">Piano Log ↗</a>
       </div>
     </div>`;
@@ -1114,9 +1288,9 @@ function renderPianos(){
           <span class="num" style="background:var(--red);color:#fff;border-radius:99px;font-size:12px;font-weight:700;padding:2px 11px">${group.length}</span>
           <span style="flex:1;height:2px;background:var(--line)"></span>
         </div>` + group.map(cardHTML).join("");
-    }).join("")||`<div class="sub">No serialized pianos detected.</div>`;
+    }).join("")||`<div class="sub">${t("no_pianos")}</div>`;
   }else{
-    $("#pianoGrid").innerHTML=pianos.map(cardHTML).join("")||`<div class="sub">No serialized pianos detected.</div>`;
+    $("#pianoGrid").innerHTML=pianos.map(cardHTML).join("")||`<div class="sub">${t("no_pianos")}</div>`;
   }
   const sortSel=$("#pianoSort"); if(sortSel && !sortSel.dataset.wired){ sortSel.dataset.wired="1"; sortSel.onchange=renderPianos; }
   document.querySelectorAll(".pcard button[data-q]").forEach(b=>b.onclick=()=>{
