@@ -914,7 +914,7 @@ function extractPianos(text){
   return found;
 }
 
-const STAGES=[["INTAKE","Intake"],["ASSESS","Assessment"],["TEARDOWN","Teardown"],["PRSB","Belly (PRSB)"],["CAP","Action (CAP)"],["REFINISH","Refinishing"],["ASSEMBLY","Assembly"],["DHRT","DHRT"],["TUNING","Tuning"],["QC","QC"],["READY","Ready / Exit"],["OTHER","—"]];
+const STAGES=[["INTAKE","New Arrival"],["ASSESS","Assessment"],["TEARDOWN","Teardown"],["PRSB","PRSB"],["CAP","CAP"],["REFINISH","Refinishing"],["ASSEMBLY","Final Assembly"],["DHRT","DHRT"],["TUNING","Tuning"],["QC","QC"],["READY","Admin Exit Prep"],["DELIVERED","Delivered"],["OTHER","—"]];
 // Manual stage corrections — shared key with the Shop Manager pipeline, so a
 // fix made here moves the piano's kanban card there too (per device).
 const stageOverrides=()=>{ try{ return JSON.parse(localStorage.getItem("blpmgr.phase"))||{}; }catch(e){ return {}; } };

@@ -784,17 +784,18 @@ function renderSequence(){
 
 /* ================= PIPELINE ================= */
 const PHASES=[
-  {id:"INTAKE",   en:"Intake",          es:"Ingreso",           code:"",     hb:["Storing Cabinetry"]},
+  {id:"INTAKE",   en:"New Arrival",     es:"Recién llegado",    code:"",     hb:["Storing Cabinetry"]},
   {id:"ASSESS",   en:"Assessment",      es:"Evaluación",        code:"",     hb:["Tear-down Sheet (§16)"]},
   {id:"TEARDOWN", en:"Teardown",        es:"Desarmado",         code:"",     hb:["Upright Teardown: Cleaning & Prep","Grand Teardown: Cleaning & Prep","Removing Tuning Pins","Storing Cabinetry (§14)","Tear-down Sheet (§16)"]},
-  {id:"PRSB",     en:"Belly — PRSB",    es:"Caja armónica — PRSB", code:"Perimeter · Ribs · Soundboard · Bridge", hb:["Find Proper Downbearing: Targets","How to Chisel a Bridge","Restringing (§12)"]},
-  {id:"CAP",      en:"Action — CAP",    es:"Mecanismo — CAP",   code:"Cleaning · Action Prep", hb:["Cleaning and Prep","Action Prep","Reshape Hammers","Hammer Prep & Hanging","Keys (§13)"]},
+  {id:"PRSB",     en:"PRSB",            es:"PRSB",              code:"Perimeter · Ribs · Soundboard · Bridge", hb:["Find Proper Downbearing: Targets","How to Chisel a Bridge","Restringing (§12)"]},
+  {id:"CAP",      en:"CAP",             es:"CAP",               code:"Cleaning · Action Prep", hb:["Cleaning and Prep","Action Prep","Reshape Hammers","Hammer Prep & Hanging","Keys (§13)"]},
   {id:"REFINISH", en:"Refinishing",     es:"Acabado",           code:"L1 · L2 · L3", hb:["Buffing Basics","Buffing Casters","Hardware (§3)"]},
-  {id:"ASSEMBLY", en:"Final assembly",  es:"Ensamblaje final",  code:"",     hb:["Storing Cabinetry (§14)","Hardware (§3)"]},
+  {id:"ASSEMBLY", en:"Final Assembly",  es:"Ensamblaje final",  code:"",     hb:["Storing Cabinetry (§14)","Hardware (§3)"]},
   {id:"DHRT",     en:"DHRT",            es:"DHRT",              code:"Dampers · Hammers · Regulation · Trapwork", hb:["Upright Regulation","Grand Piano Regulation Theory","Key Leveling","Tricks for Let Off Regulation","Aligning Backchecks","Damper Lift","Damper Spoon Regulation","Spring Strength, Drop, and Dip"]},
   {id:"TUNING",   en:"Tuning",          es:"Afinación",         code:"",     hb:[]},
-  {id:"QC",       en:"Quality Control", es:"Control de calidad",code:"",     hb:["QC Checklist (doc)"]},
-  {id:"READY",    en:"Ready / Exit",    es:"Listo / Salida",    code:"",     hb:[]},
+  {id:"QC",       en:"QC",              es:"QC",                code:"",     hb:["QC Checklist (doc)"]},
+  {id:"READY",    en:"Admin Exit Prep", es:"Preparación de salida", code:"", hb:[]},
+  {id:"DELIVERED",en:"Delivered",       es:"Entregado",         code:"",     hb:[]},
 ];
 const phaseName=p=>LANG==="es"?p.es:p.en;
 function inferPhase(rec){
