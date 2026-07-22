@@ -564,6 +564,8 @@ const I18N = {
   hb_source:["Source doc ↗","Documento original ↗"],
   hb_sections:["Sections","Secciones"],
   hb_none:["No sections match your search.","Ninguna sección coincide con la búsqueda."],
+  hb_play:["Play","Reproducir"],
+  hb_watched:["✓ watched","✓ visto"],
   hb_loading:["Loading handbook…","Cargando el manual…"],
   hb_error:["Could not load data/handbook.json — regenerate it with scripts/fetch_handbook.py.","No se pudo cargar data/handbook.json — regenéralo con scripts/fetch_handbook.py."],
   who_pick:["— select your name —","— elige tu nombre —"],
@@ -600,7 +602,8 @@ function setLang(l){
   localStorage.setItem("blpmgr.lang", l);
   applyI18n();
   if(typeof DATA !== "undefined" && DATA && DATA.entries) renderAll();
-  if(typeof HB !== "undefined" && HB) renderHandbook();
+  // reload the handbook in the new language (uses cache after first fetch)
+  if(HB) ensureHandbook();
 }
 
 let DATA = { entries: [], tabs: {} };
@@ -629,16 +632,27 @@ function fmtShort(s){ if(!s) return "—"; const [y,m,d]=String(s).split("-"); r
 function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return m; }
 
 /* ---------- shop handbook ---------- */
-let HB=null, hbLoading=false;
+let HB=null;
+const HB_CACHE={}, hbLoading={};   // per-language: {en:{…}, es:{…}}
 const HB_SEEN_KEY="blp-shop-reports.hbseen";
 const hbSeen=()=>{ try{ return JSON.parse(localStorage.getItem(HB_SEEN_KEY))||{}; }catch(e){ return {}; } };
+const hbFile=lang=>lang==="es"?"./data/handbook.es.json":"./data/handbook.json";
 
 async function ensureHandbook(scrollTo){
-  if(HB){ if(scrollTo) hbScroll(scrollTo); return; }
-  if(hbLoading) return;
-  hbLoading=true;
-  try{ HB = await (await fetch("./data/handbook.json")).json(); }
-  catch(e){ $("#hbStatus").textContent=t("hb_error"); hbLoading=false; return; }
+  const lang=LANG;
+  if(HB_CACHE[lang]){ HB=HB_CACHE[lang]; renderHandbook(); if(scrollTo) hbScroll(scrollTo); return; }
+  if(hbLoading[lang]) return;
+  hbLoading[lang]=true;
+  let doc=null, fellBack=false;
+  try{ const r=await fetch(hbFile(lang)); if(r.ok) doc=await r.json(); }catch(e){}
+  // fall back to English if the Spanish snapshot isn't there yet
+  if(!doc && lang!=="en"){ fellBack=true; try{ const r=await fetch(hbFile("en")); if(r.ok) doc=await r.json(); }catch(e){} }
+  hbLoading[lang]=false;
+  if(!doc){ $("#hbStatus").textContent=t("hb_error"); return; }
+  // only cache under the requested lang on a real hit — a fallback stays uncached
+  // so toggling back later re-attempts the (possibly now-present) translation
+  if(!fellBack) HB_CACHE[lang]=doc;
+  HB=doc;
   renderHandbook();
   if(scrollTo) hbScroll(scrollTo);
 }
@@ -657,11 +671,11 @@ function renderHandbook(){
   const seen=hbSeen();
   document.querySelectorAll("#hbBody .hbvid").forEach(v=>{
     const id=v.dataset.yt, start=+v.dataset.start||0, title=v.dataset.title||"Video";
-    v.innerHTML=`<button class="vposter" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')" aria-label="Play ${esc(title)}"><span class="play"></span></button>
-      <div class="vcap"><span>▶ ${esc(title)}</span>${seen[id]?`<span class="seen">✓ watched</span>`:""}</div>`;
+    v.innerHTML=`<button class="vposter" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')" aria-label="${t("hb_play")} ${esc(title)}"><span class="play"></span></button>
+      <div class="vcap"><span>▶ ${esc(title)}</span>${seen[id]?`<span class="seen">${t("hb_watched")}</span>`:""}</div>`;
     v.querySelector(".vposter").onclick=()=>{
       const s2=hbSeen(); s2[id]=true; localStorage.setItem(HB_SEEN_KEY,JSON.stringify(s2));
-      if(!v.querySelector(".vcap .seen")) v.querySelector(".vcap").insertAdjacentHTML("beforeend",`<span class="seen">✓ watched</span>`);
+      if(!v.querySelector(".vcap .seen")) v.querySelector(".vcap").insertAdjacentHTML("beforeend",`<span class="seen">${t("hb_watched")}</span>`);
       v.querySelector(".vposter").outerHTML=
         `<iframe src="https://www.youtube-nocookie.com/embed/${id}?start=${start}&autoplay=1&rel=0" title="${esc(title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
     };

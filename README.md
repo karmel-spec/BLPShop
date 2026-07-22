@@ -40,8 +40,13 @@ Apps Script, Google login + Calendars via an OAuth client ID) are in
 - `index.html` — the whole app (no build step)
 - `data/report-history.json` — imported history snapshot (2017–2026); regenerate with `scripts/fetch_history.py`
 - `data/handbook.json` + `assets/handbook/` — Restoration Handbook snapshot (sections, embedded videos, images); regenerate with `scripts/fetch_handbook.py` after editing the Google Doc
+- `data/handbook.es.json` — Spanish translation of the handbook, same shape as `handbook.json` (matching `slug`/`num`/`videos`, translated `title`/`html`, video-embed divs preserved). The app loads it when the sidebar EN/ES toggle is set to ES. Regenerate after re-running `fetch_handbook.py` (the English snapshot changing leaves this stale).
 - `apps-script/Code.gs` — Apps Script web app that writes submissions into the report sheet
+- `scripts/guess_phases.py` — best-guess the Piano Log CURRENT PHASE column for active pianos from section, progress columns, Friday reports, and the refinishing queue; fills blanks only (`--write` to push, dry-run otherwise)
 - `docs/setup.md` — setup for submissions, Google login, and calendars
+
+The sidebar EN/ES toggle (under the Google login) translates the whole UI; the
+choice is stored in `blpmgr.lang`, shared with the Shop Manager.
 
 This app also ships as a module of the BLP operations mega-app
 (`BLPOperationsWebApp/BLPMegaApp03/modules/shop-reports/`); this repo is the
