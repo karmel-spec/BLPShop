@@ -179,6 +179,46 @@
   .view{display:none}
   .view.on{display:block}
   footer{border-top:1px solid var(--line);color:var(--mut2);font-size:12.5px;padding:14px 22px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+
+  /* ---- shop handbook ---- */
+  .hbwrap{display:grid;grid-template-columns:236px minmax(0,1fr);gap:22px;margin-top:18px;align-items:start}
+  .hbtoc{position:sticky;top:14px;border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden;max-height:calc(100vh - 28px);overflow-y:auto}
+  .hbtoc h4{margin:0;padding:11px 14px;border-bottom:1px solid var(--line);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#57524b;font-weight:700}
+  .hbtoc a{display:flex;gap:8px;align-items:baseline;padding:8px 14px;font-size:13px;color:#57524b;text-decoration:none;border-left:3px solid transparent;line-height:1.35}
+  .hbtoc a:hover{background:#faf8f4}
+  .hbtoc a.on{border-left-color:var(--red);background:rgba(180,51,51,.06);color:var(--ink);font-weight:600}
+  .hbtoc a .n{color:var(--mut2);font-family:ui-monospace,Menlo,monospace;font-size:11.5px;flex:none;min-width:24px}
+  .hbtoc a .vc{margin-left:auto;color:var(--mut2);font-size:10.5px;flex:none}
+  .hbsec{border:1px solid var(--line);border-radius:6px;background:#fff;padding:20px 26px 24px;margin-bottom:20px;scroll-margin-top:14px}
+  .hbsec h2.hbtitle{font-family:Georgia,serif;font-size:21px;margin:0 0 4px;border-bottom:2px solid var(--red);padding-bottom:9px}
+  .hbsec h3{font-family:Georgia,serif;font-size:16px;margin:18px 0 6px}
+  .hbsec p{font-size:14px;line-height:1.65;margin:9px 0;color:#2c2925}
+  .hbsec ol,.hbsec ul{font-size:14px;line-height:1.65;color:#2c2925;padding-left:26px;margin:9px 0}
+  .hbsec li{margin:5px 0}
+  .hbsec a{color:var(--red);font-weight:600}
+  .hbsec img.hbimg{max-width:100%;height:auto;border:1px solid var(--line);border-radius:6px;margin:10px 0;display:block}
+  .hbsec table{border-collapse:collapse;font-size:13px;margin:10px 0}
+  .hbsec td,.hbsec th{border:1px solid var(--line);padding:6px 10px}
+  .hbvid{margin:14px 0;max-width:560px}
+  .hbvid .vposter{position:relative;display:block;width:100%;aspect-ratio:16/9;border:0;padding:0;background:#000 center/cover no-repeat;border-radius:8px;overflow:hidden;cursor:pointer}
+  .hbvid .vposter:after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.28))}
+  .hbvid .vposter .play{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:62px;height:44px;background:var(--red);border-radius:10px;display:grid;place-items:center;z-index:2;box-shadow:0 4px 14px rgba(0,0,0,.4)}
+  .hbvid .vposter .play:before{content:"";border-style:solid;border-width:9px 0 9px 16px;border-color:transparent transparent transparent #fff;display:block;margin-left:3px}
+  .hbvid .vposter:hover .play{background:var(--red-deep)}
+  .hbvid .vcap{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:#57524b;margin-top:7px}
+  .hbvid .vcap .seen{color:var(--good);font-weight:700;font-size:12px}
+  .hbvid iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:8px;display:block}
+  .hbsearch{border:1px solid var(--line);border-radius:6px;padding:9px 12px;font-size:14px;width:250px;background:#fff}
+  .hbnone{color:var(--mut);font-size:14px;padding:30px 0;text-align:center}
+  @media (max-width:840px){
+    .hbwrap{grid-template-columns:1fr}
+    .hbtoc{position:static;max-height:none}
+    .hbtoc .toclist{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch}
+    .hbtoc a{white-space:nowrap;border-left:none;border-bottom:3px solid transparent;flex:none}
+    .hbtoc a.on{border-bottom-color:var(--red)}
+    .hbtoc a .vc{display:none}
+    .hbsec{padding:16px 14px 18px}
+  }
 </style>
 </head>
 <body>
@@ -196,8 +236,8 @@
       <button data-view="history"><span class="dot"></span>History</button>
       <button data-view="pianos"><span class="dot"></span>Pianos</button>
       <button data-view="calendars"><span class="dot"></span>Calendars</button>
+      <button data-view="handbook"><span class="dot"></span>Shop Handbook</button>
       <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
-      <a class="ext" href="https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit" target="_blank" rel="noreferrer"><span class="dot"></span>Shop Handbook ↗</a>
     </nav>
     <div class="who" id="whoArea"></div>
   </aside>
@@ -351,6 +391,25 @@
         <div id="calTeam"></div>
       </section>
 
+      <!-- ============ SHOP HANDBOOK ============ -->
+      <section class="view" id="view-handbook">
+        <div class="row1">
+          <div>
+            <h2 class="page">BLP Restoration Handbook</h2>
+            <div class="sub" id="hbSub">Shop procedures with the training videos embedded where the QR codes used to be.</div>
+          </div>
+          <span style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input class="hbsearch" id="hbSearch" type="search" placeholder="Search the handbook…">
+            <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" id="hbSource">Source doc ↗</a>
+          </span>
+        </div>
+        <div class="hbwrap" id="hbWrap" style="display:none">
+          <nav class="hbtoc"><h4>Sections</h4><div class="toclist" id="hbToc"></div></nav>
+          <div id="hbBody"></div>
+        </div>
+        <div id="hbStatus" style="padding:26px 0;color:var(--mut);font-size:14px">Loading handbook…</div>
+      </section>
+
     </main>
     <footer>
       <span>Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).</span>
@@ -393,6 +452,78 @@ function fmtLong(d){ return d.toLocaleDateString("en-US",{weekday:"long",month:"
 function fmtShort(s){ if(!s) return "—"; const [y,m,d]=String(s).split("-"); return d?`${+m}/${+d}/${String(y).slice(2)}`:s; }
 function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return m; }
 
+/* ---------- shop handbook ---------- */
+let HB=null, hbLoading=false;
+const HB_SEEN_KEY="blp-shop-reports.hbseen";
+const hbSeen=()=>{ try{ return JSON.parse(localStorage.getItem(HB_SEEN_KEY))||{}; }catch(e){ return {}; } };
+
+async function ensureHandbook(scrollTo){
+  if(HB){ if(scrollTo) hbScroll(scrollTo); return; }
+  if(hbLoading) return;
+  hbLoading=true;
+  try{ HB = await (await fetch("./data/handbook.json")).json(); }
+  catch(e){ $("#hbStatus").textContent="Could not load data/handbook.json — regenerate it with scripts/fetch_handbook.py."; hbLoading=false; return; }
+  renderHandbook();
+  if(scrollTo) hbScroll(scrollTo);
+}
+
+function renderHandbook(){
+  $("#hbSource").href=HB.source;
+  $("#hbSub").textContent=`Shop procedures with the training videos embedded in place — snapshot of the Google Doc from ${HB.generated}.`;
+  $("#hbStatus").style.display="none"; $("#hbWrap").style.display="";
+  $("#hbToc").innerHTML=HB.sections.map(s=>
+    `<a href="#handbook-${s.slug}" data-slug="${s.slug}"><span class="n">${esc(s.num)}</span><span>${esc(s.title.replace(/^\d+[a-z]?\.\s*/,""))}</span>${s.videos?`<span class="vc">▶ ${s.videos}</span>`:""}</a>`
+  ).join("");
+  $("#hbBody").innerHTML=HB.sections.map(s=>
+    `<article class="hbsec" id="hb-${s.slug}"><h2 class="hbtitle">${esc(s.title)}</h2>${s.html}</article>`
+  ).join("")+`<div class="hbnone" id="hbNone" style="display:none">No sections match your search.</div>`;
+
+  const seen=hbSeen();
+  document.querySelectorAll("#hbBody .hbvid").forEach(v=>{
+    const id=v.dataset.yt, start=+v.dataset.start||0, title=v.dataset.title||"Video";
+    v.innerHTML=`<button class="vposter" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')" aria-label="Play ${esc(title)}"><span class="play"></span></button>
+      <div class="vcap"><span>▶ ${esc(title)}</span>${seen[id]?`<span class="seen">✓ watched</span>`:""}</div>`;
+    v.querySelector(".vposter").onclick=()=>{
+      const s2=hbSeen(); s2[id]=true; localStorage.setItem(HB_SEEN_KEY,JSON.stringify(s2));
+      if(!v.querySelector(".vcap .seen")) v.querySelector(".vcap").insertAdjacentHTML("beforeend",`<span class="seen">✓ watched</span>`);
+      v.querySelector(".vposter").outerHTML=
+        `<iframe src="https://www.youtube-nocookie.com/embed/${id}?start=${start}&autoplay=1&rel=0" title="${esc(title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+    };
+  });
+  document.querySelectorAll("#hbToc a").forEach(a=>a.onclick=e=>{
+    e.preventDefault();
+    hbScroll(a.dataset.slug);
+    history.replaceState(null,"","#handbook-"+a.dataset.slug);
+  });
+  $("#hbSearch").oninput=()=>hbFilter($("#hbSearch").value);
+}
+
+function hbScroll(slug){
+  const el=document.getElementById("hb-"+slug); if(!el) return;
+  document.querySelectorAll("#hbToc a").forEach(a=>a.classList.toggle("on",a.dataset.slug===slug));
+  el.scrollIntoView({block:"start"});   // instant — sections can be tens of thousands of px apart
+}
+
+function hbFilter(q){
+  q=q.trim().toLowerCase();
+  let shown=0;
+  document.querySelectorAll("#hbBody .hbsec").forEach(sec=>{
+    const hit=!q||sec.textContent.toLowerCase().includes(q);
+    sec.style.display=hit?"":"none"; if(hit) shown++;
+  });
+  document.querySelectorAll("#hbToc a").forEach(a=>{
+    const sec=document.getElementById("hb-"+a.dataset.slug);
+    a.style.display=(sec&&sec.style.display!=="none")?"":"none";
+  });
+  $("#hbNone").style.display=shown?"none":"";
+}
+
+function handleHandbookHash(){
+  const m=location.hash.match(/^#handbook(?:-(.+))?$/);
+  if(m){ showView("handbook"); ensureHandbook(m[1]); }
+}
+window.addEventListener("hashchange",handleHandbookHash);
+
 /* ---------- boot ---------- */
 async function boot(){
   try{ DATA = await (await fetch("./data/report-history.json")).json(); }
@@ -401,6 +532,7 @@ async function boot(){
   DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
   renderAll();
+  handleHandbookHash();  // deep links: #handbook or #handbook-<section>
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
 }
 
@@ -544,6 +676,7 @@ function showView(name){
   if(name==="history"&&!isOwner()) name="dashboard";   // History is management-only
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="view-"+name));
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===name));
+  if(name==="handbook") ensureHandbook();
 }
 $("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&b.dataset.view) showView(b.dataset.view); });
 

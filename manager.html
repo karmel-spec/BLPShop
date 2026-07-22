@@ -190,6 +190,7 @@ const CONFIG = {
   APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby9WPjupHsyTV0TvujoE8ZL9Qq7x2_E8Qu2HSQQe0hQFkN3_jwttZICwqnRxg-foRksfA/exec",
   PIANOLOG_URL: "https://pianologapp.netlify.app/",
   HANDBOOK_URL: "https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit",
+  HANDBOOK_APP: "index.html#handbook",   // in-app handbook (Shop Reports → Shop Handbook view)
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
   ADMINS: ["brighamlarson@gmail.com","brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"],
   ADMIN_DOMAIN: "brighamlarsonpianos.com",
@@ -847,7 +848,7 @@ function renderPipeline(){
   });
   $("#view-pipeline").innerHTML=`
     <div class="row1"><div><h2 class="page">${t("pipe_title")}</h2><div class="sub">${t("pipe_sub")}</div></div>
-      <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" href="${CONFIG.HANDBOOK_URL}">${t("handbook")} ↗</a></div>
+      <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" href="${CONFIG.HANDBOOK_APP}">${t("handbook")} ↗</a></div>
     <div class="pipe">${PHASES.map(p=>`
       <div class="pcol"><h4>${phaseName(p)} <span style="display:flex;gap:5px;align-items:center"><span class="n num">${cols[p.id].length}</span>${p.hb.length?`<button class="hb" data-p="${p.id}">?</button>`:""}</span></h4>
         <div class="code">${p.code}</div>
@@ -871,8 +872,11 @@ function renderPipeline(){
     const p=PHASES.find(x=>x.id===b.dataset.p);
     $("#hbbox").innerHTML=`<h3>${phaseName(p)}</h3><div style="color:var(--mut2);font-size:12px">${p.code}</div>
       <div style="font-weight:700;font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-top:12px;color:#57524b">${t("hb_sections")}</div>
-      <ul>${p.hb.map(h=>`<li>${esc(h)}</li>`).join("")}</ul>
-      <a class="btn" style="display:inline-block;text-decoration:none" target="_blank" rel="noreferrer" href="${p.id==="QC"?CONFIG.QC_DOC_URL:CONFIG.HANDBOOK_URL}">${t("open_handbook")}</a>`;
+      <ul>${p.hb.map(h=>{
+        const sec=/§(\d+[a-z]?)/.exec(h);   // items tagged (§N) deep-link into the in-app handbook
+        return sec?`<li><a target="_blank" rel="noreferrer" href="index.html#handbook-s${sec[1]}">${esc(h)}</a></li>`:`<li>${esc(h)}</li>`;
+      }).join("")}</ul>
+      <a class="btn" style="display:inline-block;text-decoration:none" target="_blank" rel="noreferrer" href="${p.id==="QC"?CONFIG.QC_DOC_URL:CONFIG.HANDBOOK_APP}">${t("open_handbook")}</a>`;
     $("#hbpop").classList.add("on");
   });
 }

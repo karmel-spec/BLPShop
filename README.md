@@ -20,6 +20,7 @@ week cards, and Ledger-style searchable history.
 | History | Full-text search over every report since 2017 (4,500+), with per-piano summary |
 | Pianos | Auto-detected make + serial mentions, hours totals, links to [pianologapp.netlify.app](https://pianologapp.netlify.app/) |
 | Calendars | Google Calendar assigned-vs-reported comparison (owner sees all technicians) |
+| Shop Handbook | The BLP Restoration Handbook rendered in-app — searchable sections, TOC, and the training videos embedded click-to-play where the doc's QR codes were (watched state remembered per device) |
 
 ## Run it
 
@@ -38,6 +39,7 @@ Apps Script, Google login + Calendars via an OAuth client ID) are in
 
 - `index.html` — the whole app (no build step)
 - `data/report-history.json` — imported history snapshot (2017–2026); regenerate with `scripts/fetch_history.py`
+- `data/handbook.json` + `assets/handbook/` — Restoration Handbook snapshot (sections, embedded videos, images); regenerate with `scripts/fetch_handbook.py` after editing the Google Doc
 - `apps-script/Code.gs` — Apps Script web app that writes submissions into the report sheet
 - `docs/setup.md` — setup for submissions, Google login, and calendars
 
