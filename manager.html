@@ -323,6 +323,8 @@ async function gviz(sheetId, gidOrName){
   return parseCSV(await r.text());
 }
 function thisFriday(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()+((5-x.getDay()+7)%7));return x;}
+// Reports land on Fridays: review the Friday just passed (or today, on a Friday).
+function reportFriday(d=new Date()){const x=new Date(d);x.setHours(0,0,0,0);x.setDate(x.getDate()-((x.getDay()+2)%7));return x;}
 const iso = d => d.toISOString().slice(0,10);
 function fmtShort(s){ if(!s)return "—"; const [y,m,d]=String(s).split("-"); return `${+m}/${+d}/${String(y).slice(2)}`; }
 function mondayOf(f){const m=new Date(f);m.setDate(m.getDate()-4);return m;}
@@ -524,7 +526,7 @@ async function createEvent(tech, summary, dayISO){
 }
 
 /* ================= STATE (per week) ================= */
-const FRI = thisFriday(), FRI_ISO = iso(FRI);
+const FRI = reportFriday(), FRI_ISO = iso(FRI);
 const NEXT_FRI = new Date(FRI); NEXT_FRI.setDate(NEXT_FRI.getDate()+7);
 const store = {
   get(k, d){ try{ return JSON.parse(localStorage.getItem(k)) ?? d; }catch(e){ return d; } },
@@ -797,6 +799,7 @@ const PHASES=[
   {id:"QC",       en:"QC",              es:"QC",                code:"",     hb:["QC Checklist (doc)"]},
   {id:"READY",    en:"Admin Exit Prep", es:"Preparación de salida", code:"", hb:[]},
   {id:"DELIVERED",en:"Delivered",       es:"Entregado",         code:"",     hb:[]},
+  {id:"FORSALE",  en:"For Sale",        es:"En venta",          code:"",     hb:[]},
 ];
 const phaseName=p=>LANG==="es"?p.es:p.en;
 function inferPhase(rec){
