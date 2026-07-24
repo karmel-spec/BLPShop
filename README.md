@@ -21,6 +21,7 @@ week cards, and Ledger-style searchable history.
 | Pianos | Auto-detected make + serial mentions, hours totals, links to [pianologapp.netlify.app](https://pianologapp.netlify.app/) |
 | Calendars | Google Calendar assigned-vs-reported comparison (owner sees all technicians) |
 | Shop Handbook | The BLP Restoration Handbook rendered in-app — searchable sections, TOC, and the training videos embedded click-to-play where the doc's QR codes were (watched state remembered per device) |
+| Shop Policies | The shop conduct & standards doc rendered in-app the same way (English source only; the EN/ES toggle supplies Spanish from a translated snapshot) |
 
 ## Run it
 
@@ -40,6 +41,7 @@ Apps Script, Google login + Calendars via an OAuth client ID) are in
 - `index.html` — the whole app (no build step)
 - `data/report-history.json` — imported history snapshot (2017–2026); regenerate with `scripts/fetch_history.py`
 - `data/handbook.json` + `assets/handbook/` — Restoration Handbook snapshot (sections, embedded videos, images); regenerate with `scripts/fetch_handbook.py` after editing the Google Doc
+- `data/policies.json` + `assets/policies/` — Shop Policies snapshot (English half of the bilingual doc only); regenerate with `scripts/fetch_policies.py`. `data/policies.es.json` / `data/handbook.es.json` are the translated snapshots the ES toggle loads — regenerate after the English changes
 - `data/handbook.es.json` — Spanish translation of the handbook, same shape as `handbook.json` (matching `slug`/`num`/`videos`, translated `title`/`html`, video-embed divs preserved). The app loads it when the sidebar EN/ES toggle is set to ES. Regenerate after re-running `fetch_handbook.py` (the English snapshot changing leaves this stale).
 - `apps-script/Code.gs` — Apps Script web app that writes submissions into the report sheet
 - `scripts/guess_phases.py` — best-guess the Piano Log CURRENT PHASE column for active pianos from section, progress columns, Friday reports, and the refinishing queue; fills blanks only (`--write` to push, dry-run otherwise)

@@ -196,6 +196,11 @@
   .hbsec{border:1px solid var(--line);border-radius:6px;background:#fff;padding:20px 26px 24px;margin-bottom:20px;scroll-margin-top:14px}
   .hbsec h2.hbtitle{font-family:Georgia,serif;font-size:21px;margin:0 0 4px;border-bottom:2px solid var(--red);padding-bottom:9px}
   .hbsec h3{font-family:Georgia,serif;font-size:16px;margin:18px 0 6px}
+  .hbsec h4{font-size:13.5px;font-weight:700;letter-spacing:.02em;color:#57524b;margin:12px 0 3px}
+  /* the source doc nests some subheadings inside list items — drop the bullet
+     for those so they read as headings, not list rows */
+  .hbsec li:has(>h3),.hbsec li:has(>h4){list-style:none;margin-left:-20px}
+  .hbsec li>h3,.hbsec li>h4{margin:10px 0 3px}
   .hbsec p{font-size:14px;line-height:1.65;margin:9px 0;color:#2c2925}
   .hbsec ol,.hbsec ul{font-size:14px;line-height:1.65;color:#2c2925;padding-left:26px;margin:9px 0}
   .hbsec li{margin:5px 0}
@@ -241,7 +246,7 @@
       <button data-view="pianos"><span class="dot"></span><span data-i18n="nav_pianos">Pianos</span></button>
       <button data-view="calendars"><span class="dot"></span><span data-i18n="nav_calendars">Calendars</span></button>
       <button data-view="handbook"><span class="dot"></span><span data-i18n="nav_handbook">Shop Handbook</span></button>
-      <a class="ext" href="https://docs.google.com/document/d/1PYw5R8o9k8iLtCIfRkWVcno2hqqYQcS5-8izyM4Fbsk/edit" target="_blank" rel="noreferrer"><span class="dot"></span><span data-i18n="nav_policies">Shop Policies</span> ↗</a>
+      <button data-view="policies"><span class="dot"></span><span data-i18n="nav_policies">Shop Policies</span></button>
       <a class="ext" href="https://pianologapp.netlify.app/" target="_blank" rel="noreferrer"><span class="dot"></span>Piano Log ↗</a>
       <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
     </nav>
@@ -417,6 +422,25 @@
         <div id="hbStatus" style="padding:26px 0;color:var(--mut);font-size:14px" data-i18n="hb_loading">Loading handbook…</div>
       </section>
 
+      <!-- ============ SHOP POLICIES ============ -->
+      <section class="view" id="view-policies">
+        <div class="row1">
+          <div>
+            <h2 class="page" data-i18n="pol_title">Shop Policies</h2>
+            <div class="sub" id="polSub">Shop conduct &amp; standards.</div>
+          </div>
+          <span style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input class="hbsearch" id="polSearch" type="search" data-i18n-ph="pol_search" placeholder="Search the policies…">
+            <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" id="polSource" data-i18n="pol_source">Source doc ↗</a>
+          </span>
+        </div>
+        <div class="hbwrap" id="polWrap" style="display:none">
+          <nav class="hbtoc"><h4 data-i18n="hb_sections">Sections</h4><div class="toclist" id="polToc"></div></nav>
+          <div id="polBody"></div>
+        </div>
+        <div id="polStatus" style="padding:26px 0;color:var(--mut);font-size:14px" data-i18n="hb_loading">Loading…</div>
+      </section>
+
     </main>
     <footer>
       <span data-i18n="footer_tag">Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).</span>
@@ -570,6 +594,11 @@ const I18N = {
   hb_watched:["✓ watched","✓ visto"],
   hb_loading:["Loading handbook…","Cargando el manual…"],
   hb_error:["Could not load data/handbook.json — regenerate it with scripts/fetch_handbook.py.","No se pudo cargar data/handbook.json — regenéralo con scripts/fetch_handbook.py."],
+  doc_error:["Could not load this document — regenerate its snapshot with the matching scripts/fetch_*.py.","No se pudo cargar este documento — regenera su captura con el scripts/fetch_*.py correspondiente."],
+  pol_title:["Shop Policies","Políticas del Taller"],
+  pol_sub:["Shop conduct & standards — snapshot of the Google Doc from %1.","Conducta y normas del taller — captura del Google Doc del %1."],
+  pol_search:["Search the policies…","Buscar en las políticas…"],
+  pol_source:["Source doc ↗","Documento original ↗"],
   who_pick:["— select your name —","— elige tu nombre —"],
   who_owner:["Owner","Propietario"],
   who_tech:["Technician — %1","Técnico — %1"],
@@ -604,8 +633,8 @@ function setLang(l){
   localStorage.setItem("blpmgr.lang", l);
   applyI18n();
   if(typeof DATA !== "undefined" && DATA && DATA.entries) renderAll();
-  // reload the handbook in the new language (uses cache after first fetch)
-  if(HB) ensureHandbook();
+  // re-render any open document in the new language (cached after first fetch)
+  Object.values(DOCVIEWS).forEach(d=>{ if(d.loaded) d.ensure(); });
 }
 
 let DATA = { entries: [], tabs: {} };
@@ -633,88 +662,106 @@ function fmtLong(d){ return d.toLocaleDateString(LANG==="es"?"es-MX":"en-US",{we
 function fmtShort(s){ if(!s) return "—"; const [y,m,d]=String(s).split("-"); return d?`${+m}/${+d}/${String(y).slice(2)}`:s; }
 function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return m; }
 
-/* ---------- shop handbook ---------- */
-let HB=null;
-const HB_CACHE={}, hbLoading={};   // per-language: {en:{…}, es:{…}}
-const HB_SEEN_KEY="blp-shop-reports.hbseen";
-const hbSeen=()=>{ try{ return JSON.parse(localStorage.getItem(HB_SEEN_KEY))||{}; }catch(e){ return {}; } };
-const hbFile=lang=>lang==="es"?"./data/handbook.es.json":"./data/handbook.json";
+/* ---------- in-app documents (Shop Handbook + Shop Policies) ----------
+   Both render the same way: a snapshot JSON ({generated,source,sections})
+   per language, a searchable TOC, and click-to-play video embeds. */
+const DOC_SEEN_KEY="blp-shop-reports.hbseen";   // shared "watched" state, keyed by video id
+const docSeen=()=>{ try{ return JSON.parse(localStorage.getItem(DOC_SEEN_KEY))||{}; }catch(e){ return {}; } };
 
-async function ensureHandbook(scrollTo){
-  const lang=LANG;
-  if(HB_CACHE[lang]){ HB=HB_CACHE[lang]; renderHandbook(); if(scrollTo) hbScroll(scrollTo); return; }
-  if(hbLoading[lang]) return;
-  hbLoading[lang]=true;
-  let doc=null, fellBack=false;
-  try{ const r=await fetch(hbFile(lang)); if(r.ok) doc=await r.json(); }catch(e){}
-  // fall back to English if the Spanish snapshot isn't there yet
-  if(!doc && lang!=="en"){ fellBack=true; try{ const r=await fetch(hbFile("en")); if(r.ok) doc=await r.json(); }catch(e){} }
-  hbLoading[lang]=false;
-  if(!doc){ $("#hbStatus").textContent=t("hb_error"); return; }
-  // only cache under the requested lang on a real hit — a fallback stays uncached
-  // so toggling back later re-attempts the (possibly now-present) translation
-  if(!fellBack) HB_CACHE[lang]=doc;
-  HB=doc;
-  renderHandbook();
-  if(scrollTo) hbScroll(scrollTo);
+function makeDocView(view, subKey){
+  // view is the hash prefix + data-file stem ("handbook"/"policies");
+  // DOM ids use a short prefix so both views can coexist.
+  const idp = view==="handbook" ? "hb" : "pol";
+  const cache={}, loading={};
+  let CUR=null, pendingScroll=null;
+  const $id=s=>document.getElementById(idp+s);
+  const file=lang=>`./data/${view}${lang==="es"?".es":""}.json`;
+  const secId=slug=>`${view}-${slug}`;
+
+  async function ensure(scrollTo){
+    const lang=LANG;
+    if(cache[lang]){ CUR=cache[lang]; render(); if(scrollTo) go(scrollTo); return; }
+    // a load is already in flight (e.g. showView kicked one off) — remember the
+    // scroll target so the deep link still lands once that load resolves
+    if(loading[lang]){ if(scrollTo) pendingScroll=scrollTo; return; }
+    loading[lang]=true;
+    if(scrollTo) pendingScroll=scrollTo;
+    let doc=null, fellBack=false;
+    try{ const r=await fetch(file(lang)); if(r.ok) doc=await r.json(); }catch(e){}
+    // fall back to English if the Spanish snapshot isn't there yet
+    if(!doc && lang!=="en"){ fellBack=true; try{ const r=await fetch(file("en")); if(r.ok) doc=await r.json(); }catch(e){} }
+    loading[lang]=false;
+    if(!doc){ $id("Status").textContent=t("doc_error"); return; }
+    // cache under the requested lang only on a real hit — a fallback stays
+    // uncached so toggling back later re-attempts the translation
+    if(!fellBack) cache[lang]=doc;
+    CUR=doc; render();
+    if(pendingScroll){ go(pendingScroll); pendingScroll=null; }
+  }
+
+  function render(){
+    const src=$id("Source"); if(src) src.href=CUR.source;
+    const sub=$id("Sub"); if(sub) sub.textContent=t(subKey,CUR.generated);
+    $id("Status").style.display="none"; $id("Wrap").style.display="";
+    $id("Toc").innerHTML=CUR.sections.map(s=>
+      `<a href="#${secId(s.slug)}" data-slug="${s.slug}"><span class="n">${esc(s.num||"")}</span><span>${esc(s.title.replace(/^\d+[a-z]?\.\s*/,""))}</span>${s.videos?`<span class="vc">▶ ${s.videos}</span>`:""}</a>`
+    ).join("");
+    $id("Body").innerHTML=CUR.sections.map(s=>
+      `<article class="hbsec" id="${secId(s.slug)}"><h2 class="hbtitle">${esc(s.title)}</h2>${s.html}</article>`
+    ).join("")+`<div class="hbnone" id="${idp}None" style="display:none">${t("hb_none")}</div>`;
+
+    const seen=docSeen();
+    $id("Body").querySelectorAll(".hbvid").forEach(v=>{
+      const id=v.dataset.yt, start=+v.dataset.start||0, title=v.dataset.title||"Video";
+      v.innerHTML=`<button class="vposter" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')" aria-label="${t("hb_play")} ${esc(title)}"><span class="play"></span></button>
+        <div class="vcap"><span>▶ ${esc(title)}</span>${seen[id]?`<span class="seen">${t("hb_watched")}</span>`:""}</div>`;
+      v.querySelector(".vposter").onclick=()=>{
+        const s2=docSeen(); s2[id]=true; localStorage.setItem(DOC_SEEN_KEY,JSON.stringify(s2));
+        if(!v.querySelector(".vcap .seen")) v.querySelector(".vcap").insertAdjacentHTML("beforeend",`<span class="seen">${t("hb_watched")}</span>`);
+        v.querySelector(".vposter").outerHTML=
+          `<iframe src="https://www.youtube-nocookie.com/embed/${id}?start=${start}&autoplay=1&rel=0" title="${esc(title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
+      };
+    });
+    $id("Toc").querySelectorAll("a").forEach(a=>a.onclick=e=>{
+      e.preventDefault();
+      go(a.dataset.slug);
+      history.replaceState(null,"","#"+secId(a.dataset.slug));
+    });
+    $id("Search").oninput=()=>filter($id("Search").value);
+  }
+
+  function go(slug){
+    const el=document.getElementById(secId(slug)); if(!el) return;
+    $id("Toc").querySelectorAll("a").forEach(a=>a.classList.toggle("on",a.dataset.slug===slug));
+    el.scrollIntoView({block:"start"});   // instant — sections can be far apart
+  }
+
+  function filter(q){
+    q=q.trim().toLowerCase();
+    let shown=0;
+    $id("Body").querySelectorAll(".hbsec").forEach(sec=>{
+      const hit=!q||sec.textContent.toLowerCase().includes(q);
+      sec.style.display=hit?"":"none"; if(hit) shown++;
+    });
+    $id("Toc").querySelectorAll("a").forEach(a=>{
+      const sec=document.getElementById(secId(a.dataset.slug));
+      a.style.display=(sec&&sec.style.display!=="none")?"":"none";
+    });
+    const none=$id("None"); if(none) none.style.display=shown?"none":"";
+  }
+
+  return { ensure, get loaded(){ return !!CUR; } };
 }
 
-function renderHandbook(){
-  $("#hbSource").href=HB.source;
-  $("#hbSub").textContent=t("hb_sub",HB.generated);
-  $("#hbStatus").style.display="none"; $("#hbWrap").style.display="";
-  $("#hbToc").innerHTML=HB.sections.map(s=>
-    `<a href="#handbook-${s.slug}" data-slug="${s.slug}"><span class="n">${esc(s.num)}</span><span>${esc(s.title.replace(/^\d+[a-z]?\.\s*/,""))}</span>${s.videos?`<span class="vc">▶ ${s.videos}</span>`:""}</a>`
-  ).join("");
-  $("#hbBody").innerHTML=HB.sections.map(s=>
-    `<article class="hbsec" id="hb-${s.slug}"><h2 class="hbtitle">${esc(s.title)}</h2>${s.html}</article>`
-  ).join("")+`<div class="hbnone" id="hbNone" style="display:none">${t("hb_none")}</div>`;
-
-  const seen=hbSeen();
-  document.querySelectorAll("#hbBody .hbvid").forEach(v=>{
-    const id=v.dataset.yt, start=+v.dataset.start||0, title=v.dataset.title||"Video";
-    v.innerHTML=`<button class="vposter" style="background-image:url('https://i.ytimg.com/vi/${id}/hqdefault.jpg')" aria-label="${t("hb_play")} ${esc(title)}"><span class="play"></span></button>
-      <div class="vcap"><span>▶ ${esc(title)}</span>${seen[id]?`<span class="seen">${t("hb_watched")}</span>`:""}</div>`;
-    v.querySelector(".vposter").onclick=()=>{
-      const s2=hbSeen(); s2[id]=true; localStorage.setItem(HB_SEEN_KEY,JSON.stringify(s2));
-      if(!v.querySelector(".vcap .seen")) v.querySelector(".vcap").insertAdjacentHTML("beforeend",`<span class="seen">${t("hb_watched")}</span>`);
-      v.querySelector(".vposter").outerHTML=
-        `<iframe src="https://www.youtube-nocookie.com/embed/${id}?start=${start}&autoplay=1&rel=0" title="${esc(title)}" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>`;
-    };
-  });
-  document.querySelectorAll("#hbToc a").forEach(a=>a.onclick=e=>{
-    e.preventDefault();
-    hbScroll(a.dataset.slug);
-    history.replaceState(null,"","#handbook-"+a.dataset.slug);
-  });
-  $("#hbSearch").oninput=()=>hbFilter($("#hbSearch").value);
+const DOCVIEWS={
+  handbook: makeDocView("handbook","hb_sub"),
+  policies: makeDocView("policies","pol_sub"),
+};
+function handleDocHash(){
+  const m=location.hash.match(/^#(handbook|policies)(?:-(.+))?$/);
+  if(m){ showView(m[1]); DOCVIEWS[m[1]].ensure(m[2]); }
 }
-
-function hbScroll(slug){
-  const el=document.getElementById("hb-"+slug); if(!el) return;
-  document.querySelectorAll("#hbToc a").forEach(a=>a.classList.toggle("on",a.dataset.slug===slug));
-  el.scrollIntoView({block:"start"});   // instant — sections can be tens of thousands of px apart
-}
-
-function hbFilter(q){
-  q=q.trim().toLowerCase();
-  let shown=0;
-  document.querySelectorAll("#hbBody .hbsec").forEach(sec=>{
-    const hit=!q||sec.textContent.toLowerCase().includes(q);
-    sec.style.display=hit?"":"none"; if(hit) shown++;
-  });
-  document.querySelectorAll("#hbToc a").forEach(a=>{
-    const sec=document.getElementById("hb-"+a.dataset.slug);
-    a.style.display=(sec&&sec.style.display!=="none")?"":"none";
-  });
-  $("#hbNone").style.display=shown?"none":"";
-}
-
-function handleHandbookHash(){
-  const m=location.hash.match(/^#handbook(?:-(.+))?$/);
-  if(m){ showView("handbook"); ensureHandbook(m[1]); }
-}
-window.addEventListener("hashchange",handleHandbookHash);
+window.addEventListener("hashchange",handleDocHash);
 
 /* ---------- boot ---------- */
 async function boot(){
@@ -725,7 +772,7 @@ async function boot(){
   buildRoster();
   applyI18n();
   renderAll();
-  handleHandbookHash();  // deep links: #handbook or #handbook-<section>
+  handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
 }
 
@@ -869,7 +916,7 @@ function showView(name){
   if(name==="history"&&!isOwner()) name="dashboard";   // History is management-only
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on",v.id==="view-"+name));
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.view===name));
-  if(name==="handbook") ensureHandbook();
+  if(DOCVIEWS[name]) DOCVIEWS[name].ensure();
 }
 $("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&b.dataset.view) showView(b.dataset.view); });
 
