@@ -26,7 +26,26 @@ OUT_JSON = os.path.join(ROOT, "data", "policies.json")
 
 # The Spanish mirror begins here — stop importing at this heading.
 STOP_RE = re.compile(r"^(CAPACITACI|SEGURIDAD|C[ÓO]DIGO DE|AMBIENTE LABORAL)", re.I)
+# ...but the mirror also has heading-less Spanish front-matter (team-culture /
+# roles paragraphs), so we additionally cut at the first block whose text is
+# unmistakably Spanish (2+ accented chars / inverted punctuation).
+ACCENTED = re.compile(r"[áéíóúñÁÉÍÓÚÑ¿¡]")
+ES_WORDS = re.compile(r"\b(de|del|la|el|los|las|para|con|una|nuestro|nuestra|equipo|aquí|normas)\b", re.I)
 BLOCKS = {"p", "ul", "ol", "li", "table", "tr", "td", "th"}
+
+
+def is_spanish(text):
+    return bool(ACCENTED.search(text) and ES_WORDS.search(text))
+
+
+def cut_at_spanish(body_html):
+    """Truncate the doc body at the start of the Spanish half."""
+    import html as H
+    for m in re.finditer(r"<(p|li|h[1-6])[^>]*>(.*?)</\1>", body_html, re.S):
+        text = H.unescape(re.sub(r"<[^>]+>", " ", m.group(2)))
+        if is_spanish(text) or (m.group(1) == "h1" and STOP_RE.match(text.strip())):
+            return body_html[:m.start()]
+    return body_html
 
 
 def unwrap(url):
@@ -277,7 +296,7 @@ def main():
     css = re.search(r"<style[^>]*>(.*?)</style>", raw, re.S)
     cleaner = DocCleaner(style_classes(css.group(1)) if css else {})
     body = re.search(r"<body[^>]*>(.*)</body>", raw, re.S)
-    cleaner.feed(body.group(1) if body else raw)
+    cleaner.feed(cut_at_spanish(body.group(1) if body else raw))
     cleaner.flush_videos()
 
     slugs, sections = set(), []

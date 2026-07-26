@@ -456,6 +456,10 @@ const CONFIG = {
   APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby9WPjupHsyTV0TvujoE8ZL9Qq7x2_E8Qu2HSQQe0hQFkN3_jwttZICwqnRxg-foRksfA/exec",       // deploy shop-reports-apps-script.gs → paste /exec URL
   GOOGLE_CLIENT_ID: "118454775893-17u7t3glh8eu4kffhe7b42jl71apre4f.apps.googleusercontent.com",      // OAuth web client → enables Google sign-in + Calendars
   PIANOLOG_URL: "https://pianologapp.netlify.app/",
+  // live two-way stage sync with the Piano Log (shared with the Store Map app):
+  // reads CURRENT PHASE from the map's API, writes changes through its bridge
+  STORE_MAP_API: "https://blpstoremap.netlify.app/api/data",
+  STORE_MAP_BRIDGE: "https://script.google.com/macros/s/AKfycbxY4BKnr_Tr0iCTc9itCWhNYLvgszmkI1IoYSkbBWpyAqRtWI-yaUkJQjcVdgG58KXt/exec",
   BRIGGPT_URL: "",   // paste the ChatGPT share link here to light up the dashboard button
   ACTIVE_WEEKS: 8,
   SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit"
@@ -774,6 +778,7 @@ async function boot(){
   renderAll();
   handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
+  loadLivePhases();   // CURRENT PHASE from the Piano Log via the Store Map API
 }
 
 async function tryLiveRefresh(){
@@ -1293,6 +1298,42 @@ const STAGES=[["INTAKE","New Arrival"],["ASSESS","Assessment"],["TEARDOWN","Tear
 // fix made here moves the piano's kanban card there too (per device).
 const stageOverrides=()=>{ try{ return JSON.parse(localStorage.getItem("blpmgr.phase"))||{}; }catch(e){ return {}; } };
 const setStageOverride=(digits,stage)=>{ const o=stageOverrides(); o[digits]=stage; localStorage.setItem("blpmgr.phase",JSON.stringify(o)); };
+/* Live stage sync with the Piano Log's CURRENT PHASE column (the Store Map
+   app writes the same column, so both apps + the spreadsheet always agree).
+   The sheet wins over local overrides; keyword guesses are the last resort. */
+let LIVE_PHASE=null;                          // serial digits -> phase name
+const PHASE_TO_STAGE={}; STAGES.forEach(([id,nm])=>{ if(nm&&nm!=="—") PHASE_TO_STAGE[nm]=id; });
+const STAGE_TO_PHASE={}; STAGES.forEach(([id,nm])=>{ if(nm&&nm!=="—") STAGE_TO_PHASE[id]=nm; });
+async function loadLivePhases(){
+  if(!CONFIG.STORE_MAP_API) return;
+  try{
+    const j=await (await fetch(CONFIG.STORE_MAP_API)).json();
+    const m={};
+    (j.pianos||[]).forEach(p=>{ if(p.active&&p.serial&&p.phase) m[String(p.serial).replace(/\D/g,"")]=p.phase; });
+    LIVE_PHASE=m;
+    if(document.querySelector("#pianoGrid .pcard")) renderPianos();
+  }catch(e){ /* offline — device overrides + keyword guesses still work */ }
+}
+async function savePhaseToLog(digits,stage){
+  const phase=STAGE_TO_PHASE[stage];
+  if(!phase||!CONFIG.STORE_MAP_BRIDGE) return;
+  let pin=(localStorage.getItem("blpPin")||"").trim();
+  if(!pin){
+    pin=(prompt("BLP team PIN (asked once on this device — saves the stage to the Piano Log):")||"").trim();
+    if(pin) localStorage.setItem("blpPin",pin);
+  }
+  if(!pin){ alert("No PIN — the stage was saved on this device only, NOT to the Piano Log."); return; }
+  try{
+    const body={pin,serial:digits,action:"setphase",phase};
+    if(USER&&(USER.name||USER.email)) body.user={name:USER.name||"",email:USER.email||""};
+    const r=await fetch(CONFIG.STORE_MAP_BRIDGE,{method:"POST",redirect:"follow",
+      headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(body)});
+    const j=await r.json();
+    if(j.error==="unauthorized"){ localStorage.removeItem("blpPin"); alert("Wrong PIN — the stage was NOT saved to the Piano Log."); }
+    else if(j.error){ alert("Piano Log: "+j.error); }
+    else if(LIVE_PHASE){ LIVE_PHASE[digits]=phase; }
+  }catch(e){ alert("Could not reach the Piano Log — stage saved on this device only."); }
+}
 function stageOf(snip){
   const p=String(snip||"").toLowerCase();
   if(/teardown|tear down/.test(p)) return "TEARDOWN";
@@ -1320,7 +1361,10 @@ function renderPianos(){
   const mode=($("#pianoSort")||{}).value||"alpha";
   let pianos=[...map.values()].sort((a,b)=>b.count-a.count).slice(0,60);
   const ov=stageOverrides();
-  pianos.forEach(p=>{ p.digits=String(p.serial).replace(/\D/g,""); p.stage=ov[p.digits]||stageOf(p.snip); });
+  pianos.forEach(p=>{ p.digits=String(p.serial).replace(/\D/g,"");
+    const live=LIVE_PHASE&&LIVE_PHASE[p.digits];
+    p.live=!!(live&&PHASE_TO_STAGE[live]);
+    p.stage=(p.live&&PHASE_TO_STAGE[live])||ov[p.digits]||stageOf(p.snip); });
   const stageIdx=s=>STAGES.findIndex(([id])=>id===s);
   if(mode==="alpha") pianos.sort((a,b)=>a.label.localeCompare(b.label));
   else if(mode==="hours") pianos.sort((a,b)=>b.hrs-a.hrs);
@@ -1330,7 +1374,7 @@ function renderPianos(){
     <div class="pcard">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
         <h5 style="margin:0">${esc(p.label)}</h5>
-        <select class="stageSel" data-d="${esc(p.digits)}" title="Work stage" style="border:1px solid var(--line);border-radius:5px;font-size:11px;font-weight:700;color:#57524b;background:#faf8f4;padding:3px 4px;max-width:118px;flex:none">
+        <select class="stageSel" data-d="${esc(p.digits)}" title="${p.live?"Work stage — live from the Piano Log":"Work stage"}" style="border:1px solid ${p.live?"#7da583":"var(--line)"};border-radius:5px;font-size:11px;font-weight:700;color:#57524b;background:#faf8f4;padding:3px 4px;max-width:118px;flex:none">
           ${STAGES.map(([id,nm])=>`<option value="${id}" ${p.stage===id?"selected":""}>${esc(id==="OTHER"?"— stage —":nm)}</option>`).join("")}
         </select>
       </div>
@@ -1360,8 +1404,9 @@ function renderPianos(){
     $("#q").value=b.dataset.q; $("#fTech").value=""; $("#fYear").value="";
     showView("history"); runSearch();
   });
-  document.querySelectorAll(".stageSel").forEach(sel=>sel.onchange=()=>{
-    setStageOverride(sel.dataset.d, sel.value);
+  document.querySelectorAll(".stageSel").forEach(sel=>sel.onchange=async()=>{
+    setStageOverride(sel.dataset.d, sel.value);          // instant, offline-safe
+    await savePhaseToLog(sel.dataset.d, sel.value);      // then the Piano Log
     const y=window.scrollY; renderPianos(); window.scrollTo(0,y);
   });
 }
