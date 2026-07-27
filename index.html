@@ -184,6 +184,14 @@
   .view.on{display:block}
   footer{border-top:1px solid var(--line);color:var(--mut2);font-size:12.5px;padding:14px 22px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
 
+  /* ---- mandatory sign-in gate ---- */
+  #gate{position:fixed;inset:0;background:var(--side);z-index:100;display:grid;place-items:center}
+  #gate .gatecard{background:#fff;border-radius:14px;padding:36px 32px;max-width:410px;width:92%;text-align:center;display:flex;flex-direction:column;gap:14px;align-items:center}
+  #gate img{max-width:210px}
+  #gate h1{font-size:13px;letter-spacing:.24em;margin:0;color:#4a4a4a;font-weight:600}
+  #gate .msg{color:var(--mut);font-size:13.5px;line-height:1.55}
+  #gate .signout{background:none;border:1px solid var(--line);color:var(--mut);border-radius:5px;padding:6px 13px;font-size:12.5px;cursor:pointer}
+
   /* ---- shop handbook ---- */
   .hbwrap{display:grid;grid-template-columns:236px minmax(0,1fr);gap:22px;margin-top:18px;align-items:start}
   .hbtoc{position:sticky;top:14px;border:1px solid var(--line);border-radius:6px;background:#fff;overflow:hidden;max-height:calc(100vh - 28px);overflow-y:auto}
@@ -231,6 +239,14 @@
 </style>
 </head>
 <body>
+<div id="gate" style="display:none">
+  <div class="gatecard">
+    <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
+    <h1 data-i18n="gate_title">SHOP REPORTS</h1>
+    <div id="gsiGate"></div>
+    <div class="msg" id="gateMsg" data-i18n="gate_msg">Sign in with Google — your reports and actions are logged under your name.</div>
+  </div>
+</div>
 <div class="shell">
 
   <aside class="side">
@@ -616,6 +632,9 @@ const I18N = {
   stamp:["%1 entries · 2017–%2","%1 registros · 2017–%2"],
   stamp_live:[" · live from sheet"," · en vivo desde la hoja"],
   stamp_snap:[" · snapshot %1"," · captura %1"],
+  gate_title:["SHOP REPORTS","REPORTES DEL TALLER"],
+  gate_msg:["Sign in with Google — your reports and actions are logged under your name.","Inicia sesión con Google — tus reportes y acciones quedan registrados con tu nombre."],
+  gate_nomatch:["This Google account doesn't match a technician on the roster. Ask the office to add you, or sign in with your work account.","Esta cuenta de Google no coincide con ningún técnico del roster. Pide a la oficina que te agregue, o usa tu cuenta de trabajo."],
 };
 const t = (k, ...args) => {
   let s = (I18N[k] || [k, k])[LANG === "es" ? 1 : 0];
@@ -777,13 +796,17 @@ function handleDocHash(){
 window.addEventListener("hashchange",handleDocHash);
 
 /* ---------- boot ---------- */
+let BOOTED=false;
 async function boot(){
+  BOOTED=true;
   try{ DATA = await (await fetch("./data/report-history.json")).json(); }
   catch(e){ $("#topBar").textContent="Could not load data/report-history.json."; return; }
   await tryLiveRefresh();
   DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
   applyI18n();
+  // signed-in but not an admin and not on the roster → not a technician
+  if(USER&&!devBypass()&&!isOwner()&&!matchTech(USER)){ showGateNoMatch(); return; }
   renderAll();
   handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
@@ -867,6 +890,27 @@ function matchTech(user){
 }
 const isOwner=()=>!!USER&&(OWNERS.includes((USER.email||"").toLowerCase())||(USER.email||"").toLowerCase().endsWith("@brighamlarsonpianos.com"));
 
+/* ---------- mandatory sign-in gate (identity for the activity trail) ---------- */
+const isLocal=["localhost","127.0.0.1"].includes(location.hostname);
+const devBypass=()=>isLocal&&new URLSearchParams(location.search).get("dev")==="1";
+function showGate(){ $("#gate").style.display=""; document.querySelector(".shell").style.display="none"; initGateGsi(); }
+function hideGate(){ $("#gate").style.display="none"; document.querySelector(".shell").style.display="grid"; }
+function showGateNoMatch(){
+  showGate();
+  $("#gateMsg").innerHTML=`<b>${esc(USER.email)}</b><br>${t("gate_nomatch")}<br><br>
+    <button class="signout" onclick="signOut()">${t("who_signout")}</button>`;
+}
+function initGateGsi(){
+  if(!window.google||!google.accounts){
+    const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true;
+    s.onload=()=>initGateGsi(); document.head.appendChild(s); return;
+  }
+  if(!gsiReady){ google.accounts.id.initialize({ client_id:CONFIG.GOOGLE_CLIENT_ID, callback:onCredential, auto_select:true }); gsiReady=true; }
+  const el=$("#gsiGate");
+  if(el&&!el.hasChildNodes()) google.accounts.id.renderButton(el,{theme:"filled_black",size:"large",shape:"pill"});
+  try{ google.accounts.id.prompt(); }catch(e){}
+}
+
 function rosterSelectHTML(label){
   return `<label for="whoSelect">${label}</label>
     <select id="whoSelect"><option value="">${t("who_pick")}</option>
@@ -912,9 +956,12 @@ function onCredential(resp){
     const p=JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
     USER={email:(p.email||"").toLowerCase(),name:p.name||"",given:p.given_name||"",picture:p.picture||""};
     localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
+    sessionStorage.setItem("blpshop.idtok",resp.credential);   // identity token for authed bridges
+    if(!BOOTED){ hideGate(); boot(); return; }
     const tech=matchTech(USER);
     if(tech&&!isOwner()){ ME=tech; localStorage.setItem("blp-shop-reports.me",ME); }
-    renderAll();
+    if(!isOwner()&&!tech){ showGateNoMatch(); return; }
+    hideGate(); renderAll();
   }catch(e){ console.error("sign-in failed",e); }
 }
 function signOut(){
@@ -922,7 +969,9 @@ function signOut(){
   USER=null; ME="";
   localStorage.removeItem("blp-shop-reports.user");
   localStorage.removeItem("blp-shop-reports.me");
-  renderAll();
+  sessionStorage.removeItem("blpshop.idtok");
+  $("#gateMsg").textContent=t("gate_msg");
+  showGate();
 }
 
 /* ---------- navigation ---------- */
@@ -1490,7 +1539,11 @@ if(CONFIG.GOOGLE_CLIENT_ID){
   document.head.appendChild(s);
 }
 
-boot();
+/* entry: the app only opens with a Google identity (dev bypass on localhost ?dev=1) */
+applyI18n();
+if(devBypass()){ USER=USER||{email:"brighamlarson@gmail.com",name:"Dev Preview"}; hideGate(); boot(); }
+else if(USER){ hideGate(); boot(); initGateGsi(); }   // known user: enter, refresh the token silently
+else showGate();
 </script>
 </body>
 </html>

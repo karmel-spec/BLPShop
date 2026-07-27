@@ -330,6 +330,7 @@ const I18N = {
   cur_rows:["%1 rows · synced %2","%1 filas · sincronizado %2"],
   cur_pass:["BLP app passcode (asked once on this device)","Código de acceso BLP (una vez en este dispositivo)"],
   cur_unlock:["Unlock","Entrar"],
+  auth_need:["Sign in with Google to edit — or enter the BLP app passcode:","Inicia sesión con Google para editar — o escribe el código de acceso BLP:"],
   cur_added:["Work order added (row %1) — fill in the details.","Orden agregada (fila %1) — completa los detalles."],
   /* brigham task list */
   nav_brigham:["Brigham","Brigham"],
@@ -780,6 +781,62 @@ const CUR_TABS=["Requested","Completed, paid, received"];
 let CUR={tab:CUR_TABS[0], tabs:null, fetchedAt:null, loading:false, err:null, needKey:false};
 
 function curKey(){ return (localStorage.getItem("blp.appkey")||"").trim(); }
+/* Google credential refresh for the sheet-backed views (Curtis / Brigham).
+   The gate only stores an ID token during an actual sign-in click; returning
+   visitors enter via the cached profile with no token — so these views load
+   GIS themselves, try a silent One Tap refresh, and offer a sign-in button. */
+let gsiLoadP=null, gsiInited=false, gsiPrompted=false;
+function loadGsi(){
+  if(window.google&&google.accounts) return Promise.resolve();
+  if(!gsiLoadP) gsiLoadP=new Promise(res=>{ const s=document.createElement("script");
+    s.src="https://accounts.google.com/gsi/client"; s.async=true; s.onload=()=>res(); document.head.appendChild(s); });
+  return gsiLoadP;
+}
+async function gsiTokenSetup(){
+  await loadGsi();
+  if(gsiInited) return; gsiInited=true;
+  google.accounts.id.initialize({client_id:CONFIG.GOOGLE_CLIENT_ID, auto_select:true, callback:(resp)=>{
+    try{
+      sessionStorage.setItem("blpmgr.idtok",resp.credential);
+      const p=JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+      USER={email:(p.email||"").toLowerCase(),name:p.name||"",given:p.given_name||"",picture:p.picture||""};
+      localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
+    }catch(e){}
+    CUR.needKey=false; CUR.err=null; BRIG.err=null;
+    if(ACTIVE==="curtis"){ CUR.tabs=null; curFetch(); }
+    if(ACTIVE==="brigham"){ BRIG.rows=null; brigFetch(); }
+  }});
+}
+async function gsiSilentRefresh(){
+  if(gsiPrompted) return; gsiPrompted=true;
+  await gsiTokenSetup();
+  try{ google.accounts.id.prompt(); }catch(e){}
+}
+function gsiButton(el){
+  if(!el) return;
+  gsiTokenSetup().then(()=>{ try{ google.accounts.id.renderButton(el,{theme:"filled_black",size:"medium",shape:"pill"}); }catch(e){} });
+}
+// the shared "sign in or passcode" card + wiring for a view container
+function authCardHTML(){
+  return `<div class="card" style="padding:16px;max-width:520px;display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+    <div style="font-size:13.5px;color:var(--mut)">${t("auth_need")}</div>
+    <div class="gsiSlot"></div>
+    <div style="display:flex;gap:9px;align-items:center">
+      <input type="password" class="passIn" placeholder="${t("cur_pass")}" autocomplete="current-password"
+        style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;font-size:14px">
+      <button class="btn2 passGo">${t("cur_unlock")}</button>
+    </div></div>`;
+}
+function wireAuthCard(v,onUnlocked){
+  const slot=v.querySelector(".gsiSlot"), inp=v.querySelector(".passIn"), go=v.querySelector(".passGo");
+  if(!inp) return;
+  gsiButton(slot);
+  gsiSilentRefresh();
+  const unlock=()=>{ const k=inp.value.trim(); if(!k) return;
+    localStorage.setItem("blp.appkey",k); CUR.needKey=false; onUnlocked(); };
+  go.onclick=unlock;
+  inp.onkeydown=e=>{ if(e.key==="Enter") unlock(); };
+}
 // Google ID token from the manager's sign-in (stored by the auth gate);
 // discarded when within 2 min of expiry.
 function curToken(){
@@ -806,7 +863,7 @@ async function curFetch(){
   try{
     const r=await fetch(CONFIG.CURTIS_API+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; CUR.err=j.error||t("cur_wrongpass"); }
+    if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; CUR.needKey=true; CUR.err=j.error||t("cur_wrongpass"); }
     else if(j.error){ CUR.err=t("cur_err",j.error); }
     else { CUR.tabs=j.tabs; CUR.fetchedAt=j.fetchedAt; CUR.needKey=false; }
   }catch(e){ CUR.err=t("cur_err",String(e.message||e)); }
@@ -828,7 +885,7 @@ async function curSave(tab,row,col,value,td){
       curMsg(t("cur_saved"));
     }else{
       td.classList.add("savefail");
-      if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; renderCurtis(); }
+      if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; CUR.needKey=true; renderCurtis(); }
       curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true);
     }
   }catch(e){ td.classList.remove("saving"); td.classList.add("savefail"); curMsg(t("cur_savefail",String(e.message||e)),true); }
@@ -845,7 +902,7 @@ async function curAdd(){
       body:JSON.stringify({key:curKey(),tab,append:row})});
     const j=await r.json();
     if(j.ok){ CUR.flashRow=j.row||null; CUR.tabs=null; await curFetch(); }
-    else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; renderCurtis(); } curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
+    else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; CUR.needKey=true; renderCurtis(); } curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
   }catch(e){ curMsg(t("cur_savefail",String(e.message||e)),true); }
 }
 
@@ -861,11 +918,7 @@ function renderCurtis(){
       </span></div>
     <div class="cats">${CUR_TABS.map(x=>`<button class="cat ${CUR.tab===x?"on":""}" data-ct="${esc(x)}">${esc(x)}</button>`).join("")}</div>
     <div class="curmsg${CUR.err?" err":""}" id="curMsg">${CUR.err?esc(CUR.err):(CUR.loading?t("cur_loading"):(rows?t("cur_rows",Math.max(rows.length-1,0),CUR.fetchedAt?new Date(CUR.fetchedAt).toLocaleTimeString():""):""))}</div>
-    ${CUR.needKey&&!curAuthed()?`<div class="card" style="padding:16px;max-width:460px;display:flex;gap:9px;align-items:center;margin-bottom:14px">
-        <input type="password" id="curPass" placeholder="${t("cur_pass")}" autocomplete="current-password"
-          style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;font-size:14px">
-        <button class="btn" id="curPassGo">${t("cur_unlock")}</button>
-      </div>`:""}
+    ${CUR.needKey&&!curAuthed()?authCardHTML():""}
     ${rows&&rows.length?`<div class="curwrap"><table class="curgrid">
       <tr>${(rows[0]||[]).map(h=>`<th>${esc(h)}</th>`).join("")}</tr>
       ${rows.slice(1).map((r,ri)=>{
@@ -882,14 +935,7 @@ function renderCurtis(){
     </table></div>`:""}`;
   $("#curRefresh").onclick=()=>{ CUR.tabs=null; CUR.err=null; curFetch(); };
   $("#curAddBtn").onclick=curAdd;
-  const cp=$("#curPass");
-  if(cp){
-    const unlock=()=>{ const k=cp.value.trim(); if(!k) return;
-      localStorage.setItem("blp.appkey",k); CUR.needKey=false; CUR.err=null; CUR.tabs=null; curFetch(); };
-    $("#curPassGo").onclick=unlock;
-    cp.onkeydown=e=>{ if(e.key==="Enter") unlock(); };
-    setTimeout(()=>cp.focus(),50);
-  }
+  if(CUR.needKey&&!curAuthed()) wireAuthCard(v,()=>{ CUR.err=null; CUR.tabs=null; curFetch(); });
   v.querySelectorAll(".cat").forEach(b=>b.onclick=()=>{ CUR.tab=b.dataset.ct; renderCurtis(); });
   v.querySelectorAll("td[contenteditable]").forEach(td=>{
     td.dataset.orig=td.textContent;
@@ -932,12 +978,12 @@ let BRIG={rows:null, loading:false, err:null, showAdd:false};
 
 async function brigFetch(){
   if(BRIG.loading) return;
-  if(!curAuthed()){ CUR.needKey=true; BRIG.err=t("cur_wrongpass"); renderBrigham(); return; }
+  if(!curAuthed()){ renderBrigham(); return; }   // the view shows the sign-in card
   BRIG.loading=true; BRIG.err=null; renderBrigham();
   try{
     const r=await fetch(CONFIG.BRIGHAM_API+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); BRIG.err=j.error||t("cur_wrongpass"); }
+    if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; BRIG.err=j.error||t("cur_wrongpass"); }
     else if(j.error){ BRIG.err=t("cur_err",j.error); }
     else BRIG.rows=j.rows||[];
   }catch(e){ BRIG.err=t("cur_err",String(e.message||e)); }
@@ -974,6 +1020,7 @@ function renderBrigham(){
         <button class="btn2" id="brigRefresh">${t("cur_refresh")}</button>
       </span></div>
     <div class="curmsg${BRIG.err?" err":""}" id="brigMsg">${BRIG.err?esc(BRIG.err):(BRIG.loading?t("cur_loading"):"")}</div>
+    ${!curAuthed()?authCardHTML():""}
     ${BRIG.showAdd?`<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:9px;max-width:560px;margin-bottom:16px">
       <input id="brigPiano" placeholder="${t("brig_piano_ph")}" style="border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit">
       <textarea id="brigNote" rows="3" placeholder="${t("brig_note_ph")}" style="border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;resize:vertical"></textarea>
@@ -1000,6 +1047,7 @@ function renderBrigham(){
             <span style="font-size:11px;color:var(--mut2)"> · ${esc(x.doneAt)}</span></div>`).join("")}
         </div></details>`:""}`:""}`;
   $("#brigRefresh").onclick=()=>{ BRIG.rows=null; BRIG.err=null; brigFetch(); };
+  if(!curAuthed()) wireAuthCard(v,()=>{ BRIG.err=null; BRIG.rows=null; brigFetch(); });
   $("#brigAddBtn").onclick=()=>{ BRIG.showAdd=!BRIG.showAdd; renderBrigham(); if(BRIG.showAdd) setTimeout(()=>$("#brigNote")?.focus(),50); };
   const sv=$("#brigSave");
   if(sv) sv.onclick=()=>{
