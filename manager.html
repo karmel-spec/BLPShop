@@ -326,7 +326,8 @@ const I18N = {
   cur_addrow:["+ Add work order","+ Agregar orden"],
   cur_loading:["Loading work orders…","Cargando órdenes de trabajo…"],
   cur_rows:["%1 rows · synced %2","%1 filas · sincronizado %2"],
-  cur_pass:["BLP app passcode (asked once on this device):","Código de acceso BLP (una vez en este dispositivo):"],
+  cur_pass:["BLP app passcode (asked once on this device)","Código de acceso BLP (una vez en este dispositivo)"],
+  cur_unlock:["Unlock","Entrar"],
   cur_wrongpass:["Wrong passcode — click Refresh to try again.","Código incorrecto — toca Actualizar para reintentar."],
   cur_err:["Couldn't reach the work-orders bridge: %1","No se pudo conectar con el puente de órdenes: %1"],
   cur_saved:["Saved ✓","Guardado ✓"],
@@ -757,30 +758,27 @@ function suggest(q){
    two-way: cell edits / new rows POST through the sales-app bridge
    (service account), and sheet-side edits arrive on refresh/poll. */
 const CUR_TABS=["Requested","Completed, paid, received"];
-let CUR={tab:CUR_TABS[0], tabs:null, fetchedAt:null, loading:false, err:null};
+let CUR={tab:CUR_TABS[0], tabs:null, fetchedAt:null, loading:false, err:null, needKey:false};
 
-function curKey(){
-  let k=localStorage.getItem("blp.appkey")||"";
-  if(!k){ k=(prompt(t("cur_pass"))||"").trim(); if(k) localStorage.setItem("blp.appkey",k); }
-  return k;
-}
+function curKey(){ return (localStorage.getItem("blp.appkey")||"").trim(); }
 function curMsg(s,err){ const m=$("#curMsg"); if(m){ m.textContent=s; m.className="curmsg"+(err?" err":""); } }
 
 async function curFetch(){
   if(CUR.loading) return;
-  const key=curKey(); if(!key){ CUR.err=t("cur_wrongpass"); renderCurtis(); return; }
+  const key=curKey(); if(!key){ CUR.needKey=true; renderCurtis(); return; }
   CUR.loading=true; CUR.err=null; renderCurtis();
   try{
     const r=await fetch(CONFIG.CURTIS_API+"?key="+encodeURIComponent(key));
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.err=t("cur_wrongpass"); }
+    if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; CUR.err=t("cur_wrongpass"); }
     else if(j.error){ CUR.err=t("cur_err",j.error); }
-    else { CUR.tabs=j.tabs; CUR.fetchedAt=j.fetchedAt; }
+    else { CUR.tabs=j.tabs; CUR.fetchedAt=j.fetchedAt; CUR.needKey=false; }
   }catch(e){ CUR.err=t("cur_err",String(e.message||e)); }
   CUR.loading=false; renderCurtis();
 }
 
 async function curSave(tab,row,col,value,td){
+  if(!curKey()){ CUR.needKey=true; renderCurtis(); return; }
   td.classList.remove("saved","savefail"); td.classList.add("saving");
   try{
     const r=await fetch(CONFIG.CURTIS_API,{method:"POST",headers:{"content-type":"application/json"},
@@ -794,13 +792,14 @@ async function curSave(tab,row,col,value,td){
       curMsg(t("cur_saved"));
     }else{
       td.classList.add("savefail");
-      if(r.status===401) localStorage.removeItem("blp.appkey");
+      if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; renderCurtis(); }
       curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true);
     }
   }catch(e){ td.classList.remove("saving"); td.classList.add("savefail"); curMsg(t("cur_savefail",String(e.message||e)),true); }
 }
 
 async function curAdd(){
+  if(!curKey()){ CUR.needKey=true; renderCurtis(); return; }
   const tab=CUR.tab, hdr=(CUR.tabs&&CUR.tabs[tab]&&CUR.tabs[tab][0])||[];
   const row=new Array(Math.max(hdr.length,14)).fill("");
   const di=hdr.findIndex(h=>/date requested/i.test(h||""));
@@ -810,7 +809,7 @@ async function curAdd(){
       body:JSON.stringify({key:curKey(),tab,append:row})});
     const j=await r.json();
     if(j.ok){ CUR.tabs=null; await curFetch(); }
-    else{ if(r.status===401) localStorage.removeItem("blp.appkey"); curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
+    else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; renderCurtis(); } curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
   }catch(e){ curMsg(t("cur_savefail",String(e.message||e)),true); }
 }
 
@@ -826,6 +825,11 @@ function renderCurtis(){
       </span></div>
     <div class="cats">${CUR_TABS.map(x=>`<button class="cat ${CUR.tab===x?"on":""}" data-ct="${esc(x)}">${esc(x)}</button>`).join("")}</div>
     <div class="curmsg${CUR.err?" err":""}" id="curMsg">${CUR.err?esc(CUR.err):(CUR.loading?t("cur_loading"):(rows?t("cur_rows",Math.max(rows.length-1,0),CUR.fetchedAt?new Date(CUR.fetchedAt).toLocaleTimeString():""):""))}</div>
+    ${CUR.needKey||!curKey()?`<div class="card" style="padding:16px;max-width:460px;display:flex;gap:9px;align-items:center;margin-bottom:14px">
+        <input type="password" id="curPass" placeholder="${t("cur_pass")}" autocomplete="current-password"
+          style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;font-size:14px">
+        <button class="btn" id="curPassGo">${t("cur_unlock")}</button>
+      </div>`:""}
     ${rows&&rows.length?`<div class="curwrap"><table class="curgrid">
       <tr>${(rows[0]||[]).map(h=>`<th>${esc(h)}</th>`).join("")}</tr>
       ${rows.slice(1).map((r,ri)=>{
@@ -842,6 +846,14 @@ function renderCurtis(){
     </table></div>`:""}`;
   $("#curRefresh").onclick=()=>{ CUR.tabs=null; CUR.err=null; curFetch(); };
   $("#curAddBtn").onclick=curAdd;
+  const cp=$("#curPass");
+  if(cp){
+    const unlock=()=>{ const k=cp.value.trim(); if(!k) return;
+      localStorage.setItem("blp.appkey",k); CUR.needKey=false; CUR.err=null; CUR.tabs=null; curFetch(); };
+    $("#curPassGo").onclick=unlock;
+    cp.onkeydown=e=>{ if(e.key==="Enter") unlock(); };
+    setTimeout(()=>cp.focus(),50);
+  }
   v.querySelectorAll(".cat").forEach(b=>b.onclick=()=>{ CUR.tab=b.dataset.ct; renderCurtis(); });
   v.querySelectorAll("td[contenteditable]").forEach(td=>{
     td.dataset.orig=td.textContent;
