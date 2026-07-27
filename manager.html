@@ -189,6 +189,7 @@
     <section class="view" id="view-client"></section>
     <section class="view" id="view-team"></section>
     <section class="view" id="view-curtis"></section>
+    <section class="view" id="view-plating"></section>
     <section class="view" id="view-brigham"></section>
   </main>
 </div>
@@ -212,6 +213,8 @@ const CONFIG = {
   CURTIS_API: "https://blpsalesapp.netlify.app/.netlify/functions/curtis-orders",  // two-way sync bridge (sales app service account)
   BRIGHAM_API: "https://blpsalesapp.netlify.app/.netlify/functions/brigham-tasks", // Brigham priority list bridge
   CURTIS_SHEET_URL: "https://docs.google.com/spreadsheets/d/1DxvDQ9WlhxXfiZaKGpdJLOOPNMBfVA9PsHGuLe55pmc/edit",
+  PLATING_API: "https://blpsalesapp.netlify.app/.netlify/functions/plating-orders", // buffing & electroplating grid bridge
+  PLATING_SHEET_URL: "https://docs.google.com/spreadsheets/d/1lIGUxeI-Em3CxhBTSHTrlVM7VFTgjwFCzNxFZNwPTWE/edit",
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
   ADMINS: ["brighamlarson@gmail.com","brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"],
   ADMIN_DOMAIN: "brighamlarsonpianos.com",
@@ -333,6 +336,10 @@ const I18N = {
   auth_need:["Sign in with Google to edit — or enter the BLP app passcode:","Inicia sesión con Google para editar — o escribe el código de acceso BLP:"],
   cur_added:["Work order added (row %1) — fill in the details.","Orden agregada (fila %1) — completa los detalles."],
   /* brigham task list */
+  nav_plating:["Plating","Galvanoplastia"],
+  plat_title:["Plating & Hardware","Galvanoplastia y herrajes"],
+  plat_sub:["Two-way sync with the “BLP buffing and electroplating” sheet — in-house polishing log, the Category 3b send-out inventory, and completed pianos. Click any cell to edit.","Sincronización con la hoja “BLP buffing and electroplating” — pulido interno, inventario Category 3b para envío y pianos terminados. Toca cualquier celda para editar."],
+  plat_addrow:["+ Add row","+ Agregar fila"],
   nav_brigham:["Brigham","Brigham"],
   brig_title:["Brigham — Priority List","Brigham — Lista de prioridades"],
   brig_sub:["Tasks requested for Brigham — from the Store Map's “Request Brigham Task” button or added here. Set the priority number, check off what's done. Everything lives on the “Brigham Tasks” tab of the report sheet.","Tareas solicitadas para Brigham — desde el botón “Request Brigham Task” del Store Map o agregadas aquí. Asigna prioridad y marca lo terminado. Todo vive en la pestaña “Brigham Tasks” de la hoja de reportes."],
@@ -585,7 +592,7 @@ const store = {
 const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_KEY="blpmgr.qc", PH_KEY="blpmgr.phase";
 
 /* ================= SHELL ================= */
-const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
+const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["curtis","nav_curtis"],["plating","nav_plating"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -604,7 +611,7 @@ function renderShell(){
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderCurtis(); renderBrigham();
+  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderCurtis(); renderPlating(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -773,18 +780,43 @@ function suggest(q){
   list.querySelectorAll("div").forEach(d=>d.onclick=()=>{ WA_PIANO=PIANOS.get(d.dataset.k); $("#waPiano").value=WA_PIANO.label; list.style.display="none"; });
 }
 
-/* ================= CURTIS HARPER WORK ORDERS =================
-   Editable grid over the "Curtis Harper work orders" sheet (both tabs),
-   two-way: cell edits / new rows POST through the sales-app bridge
-   (service account), and sheet-side edits arrive on refresh/poll. */
-const CUR_TABS=["Requested","Completed, paid, received"];
-let CUR={tab:CUR_TABS[0], tabs:null, fetchedAt:null, loading:false, err:null, needKey:false};
-
+/* ================= SHEET GRIDS (Curtis Harper · Plating) =================
+   Editable grids over team Google Sheets, two-way synced through the
+   sales-app bridges (service account). One factory, one instance per sheet. */
+const GRID_CFGS={
+  curtis:{ api:()=>CONFIG.CURTIS_API, sheet:()=>CONFIG.CURTIS_SHEET_URL,
+    tabs:["Requested","Completed, paid, received"],
+    title:"cur_title", sub:"cur_sub", addLabel:"cur_addrow", dateHeader:/date requested/i },
+  plating:{ api:()=>CONFIG.PLATING_API, sheet:()=>CONFIG.PLATING_SHEET_URL,
+    tabs:["In-house polishing: cat 2 & 3a","Category 3b","Completed Pianos"],
+    title:"plat_title", sub:"plat_sub", addLabel:"plat_addrow", dateHeader:null },
+};
+const GRIDS={};
+function gridState(id){
+  return GRIDS[id]||(GRIDS[id]={tab:GRID_CFGS[id].tabs[0],tabs:null,fetchedAt:null,loading:false,err:null,flashRow:null,needKey:false});
+}
 function curKey(){ return (localStorage.getItem("blp.appkey")||"").trim(); }
-/* Google credential refresh for the sheet-backed views (Curtis / Brigham).
-   The gate only stores an ID token during an actual sign-in click; returning
-   visitors enter via the cached profile with no token — so these views load
-   GIS themselves, try a silent One Tap refresh, and offer a sign-in button. */
+function curToken(){
+  const tok=sessionStorage.getItem("blpmgr.idtok")||"";
+  if(!tok) return "";
+  try{
+    const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    if(p.exp && p.exp*1000 < Date.now()+120000) return "";
+  }catch(e){ return ""; }
+  return tok;
+}
+const curAuthed=()=>!!(curToken()||curKey());
+function curHeaders(json){
+  const h=json?{"content-type":"application/json"}:{};
+  const tok=curToken(); if(tok) h["authorization"]="Bearer "+tok;
+  return h;
+}
+
+
+/* Google credential refresh for the sheet-backed views. The gate only
+   stores an ID token during an actual sign-in click; returning visitors
+   enter via the cached profile with no token — so these views load GIS
+   themselves, try a silent One Tap refresh, and offer a sign-in button. */
 let gsiLoadP=null, gsiInited=false, gsiPrompted=false;
 function loadGsi(){
   if(window.google&&google.accounts) return Promise.resolve();
@@ -802,8 +834,9 @@ async function gsiTokenSetup(){
       USER={email:(p.email||"").toLowerCase(),name:p.name||"",given:p.given_name||"",picture:p.picture||""};
       localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
     }catch(e){}
-    CUR.needKey=false; CUR.err=null; BRIG.err=null;
-    if(ACTIVE==="curtis"){ CUR.tabs=null; curFetch(); }
+    Object.keys(GRIDS).forEach(k=>{ GRIDS[k].needKey=false; GRIDS[k].err=null; });
+    BRIG.err=null;
+    if(GRID_CFGS[ACTIVE]){ gridState(ACTIVE).tabs=null; gridFetch(ACTIVE); }
     if(ACTIVE==="brigham"){ BRIG.rows=null; brigFetch(); }
   }});
 }
@@ -816,7 +849,6 @@ function gsiButton(el){
   if(!el) return;
   gsiTokenSetup().then(()=>{ try{ google.accounts.id.renderButton(el,{theme:"filled_black",size:"medium",shape:"pill"}); }catch(e){} });
 }
-// the shared "sign in or passcode" card + wiring for a view container
 function authCardHTML(){
   return `<div class="card" style="padding:16px;max-width:520px;display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
     <div style="font-size:13.5px;color:var(--mut)">${t("auth_need")}</div>
@@ -833,92 +865,85 @@ function wireAuthCard(v,onUnlocked){
   gsiButton(slot);
   gsiSilentRefresh();
   const unlock=()=>{ const k=inp.value.trim(); if(!k) return;
-    localStorage.setItem("blp.appkey",k); CUR.needKey=false; onUnlocked(); };
+    localStorage.setItem("blp.appkey",k); onUnlocked(); };
   go.onclick=unlock;
   inp.onkeydown=e=>{ if(e.key==="Enter") unlock(); };
 }
-// Google ID token from the manager's sign-in (stored by the auth gate);
-// discarded when within 2 min of expiry.
-function curToken(){
-  const tok=sessionStorage.getItem("blpmgr.idtok")||"";
-  if(!tok) return "";
-  try{
-    const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
-    if(p.exp && p.exp*1000 < Date.now()+120000) return "";
-  }catch(e){ return ""; }
-  return tok;
-}
-const curAuthed=()=>!!(curToken()||curKey());
-function curHeaders(json){
-  const h=json?{"content-type":"application/json"}:{};
-  const tok=curToken(); if(tok) h["authorization"]="Bearer "+tok;
-  return h;
-}
-function curMsg(s,err){ const m=$("#curMsg"); if(m){ m.textContent=s; m.className="curmsg"+(err?" err":""); } }
 
-async function curFetch(){
-  if(CUR.loading) return;
-  if(!curAuthed()){ CUR.needKey=true; renderCurtis(); return; }
-  CUR.loading=true; CUR.err=null; renderCurtis();
+async function gridFetch(id){
+  const G=gridState(id), cfg=GRID_CFGS[id];
+  if(G.loading) return;
+  if(!curAuthed()){ G.needKey=true; renderGrid(id); return; }
+  G.loading=true; G.err=null; renderGrid(id);
   try{
-    const r=await fetch(CONFIG.CURTIS_API+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
+    const r=await fetch(cfg.api()+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; CUR.needKey=true; CUR.err=j.error||t("cur_wrongpass"); }
-    else if(j.error){ CUR.err=t("cur_err",j.error); }
-    else { CUR.tabs=j.tabs; CUR.fetchedAt=j.fetchedAt; CUR.needKey=false; }
-  }catch(e){ CUR.err=t("cur_err",String(e.message||e)); }
-  CUR.loading=false; renderCurtis();
+    if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; G.needKey=true; G.err=j.error||t("cur_wrongpass"); }
+    else if(j.error){ G.err=t("cur_err",j.error); }
+    else { G.tabs=j.tabs; G.fetchedAt=j.fetchedAt; G.needKey=false; }
+  }catch(e){ G.err=t("cur_err",String(e.message||e)); }
+  G.loading=false; renderGrid(id);
 }
 
-async function curSave(tab,row,col,value,td){
-  if(!curAuthed()){ CUR.needKey=true; renderCurtis(); return; }
+async function gridSave(id,tab,row,col,value,td){
+  const G=gridState(id), cfg=GRID_CFGS[id];
+  if(!curAuthed()){ G.needKey=true; renderGrid(id); return; }
   td.classList.remove("saved","savefail"); td.classList.add("saving");
   try{
-    const r=await fetch(CONFIG.CURTIS_API,{method:"POST",headers:curHeaders(true),
+    const r=await fetch(cfg.api(),{method:"POST",headers:curHeaders(true),
       body:JSON.stringify({key:curKey(),tab,updates:[{row,col,value}]})});
     const j=await r.json();
     td.classList.remove("saving");
     if(j.ok){
       td.classList.add("saved"); setTimeout(()=>td.classList.remove("saved"),1500);
-      const rows=CUR.tabs[tab]; while(rows.length<row) rows.push([]);
+      const rows=G.tabs[tab]; while(rows.length<row) rows.push([]);
       const rr=rows[row-1]; while(rr.length<col) rr.push(""); rr[col-1]=value;
-      curMsg(t("cur_saved"));
+      gridMsg(id,t("cur_saved"));
     }else{
       td.classList.add("savefail");
-      if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; CUR.needKey=true; renderCurtis(); }
-      curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true);
+      if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; G.needKey=true; renderGrid(id); }
+      gridMsg(id,t("cur_savefail",j.error||("HTTP "+r.status)),true);
     }
-  }catch(e){ td.classList.remove("saving"); td.classList.add("savefail"); curMsg(t("cur_savefail",String(e.message||e)),true); }
+  }catch(e){ td.classList.remove("saving"); td.classList.add("savefail"); gridMsg(id,t("cur_savefail",String(e.message||e)),true); }
 }
 
-async function curAdd(){
-  if(!curAuthed()){ CUR.needKey=true; renderCurtis(); return; }
-  const tab=CUR.tab, hdr=(CUR.tabs&&CUR.tabs[tab]&&CUR.tabs[tab][0])||[];
-  const row=new Array(Math.max(hdr.length,14)).fill("");
-  const di=hdr.findIndex(h=>/date requested/i.test(h||""));
-  if(di>=0) row[di]=new Date().toLocaleDateString("en-US");
+async function gridAdd(id){
+  const G=gridState(id), cfg=GRID_CFGS[id];
+  if(!curAuthed()){ G.needKey=true; renderGrid(id); return; }
+  const tab=G.tab, hdr=(G.tabs&&G.tabs[tab]&&G.tabs[tab][0])||[];
+  const row=new Array(Math.max(hdr.length,4)).fill("");
+  if(cfg.dateHeader){
+    const di=hdr.findIndex(h=>cfg.dateHeader.test(h||""));
+    if(di>=0) row[di]=new Date().toLocaleDateString("en-US");
+  }
   try{
-    const r=await fetch(CONFIG.CURTIS_API,{method:"POST",headers:curHeaders(true),
+    const r=await fetch(cfg.api(),{method:"POST",headers:curHeaders(true),
       body:JSON.stringify({key:curKey(),tab,append:row})});
     const j=await r.json();
-    if(j.ok){ CUR.flashRow=j.row||null; CUR.tabs=null; await curFetch(); }
-    else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; CUR.needKey=true; renderCurtis(); } curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
-  }catch(e){ curMsg(t("cur_savefail",String(e.message||e)),true); }
+    if(j.ok){ G.flashRow=j.row||null; G.tabs=null; await gridFetch(id); }
+    else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); sessionStorage.removeItem("blpmgr.idtok"); gsiPrompted=false; G.needKey=true; renderGrid(id); } gridMsg(id,t("cur_savefail",j.error||("HTTP "+r.status)),true); }
+  }catch(e){ gridMsg(id,t("cur_savefail",String(e.message||e)),true); }
 }
 
-function renderCurtis(){
-  const v=$("#view-curtis"); if(!v) return;
-  const rows=CUR.tabs?(CUR.tabs[CUR.tab]||[]):null;
+function gridMsg(id,txt,err){
+  const m=document.querySelector(`#view-${id} .gridmsg`);
+  if(m){ m.textContent=txt; m.className="curmsg gridmsg"+(err?" err":""); }
+}
+
+function renderGrid(id){
+  const cfg=GRID_CFGS[id], G=gridState(id);
+  const v=$(`#view-${id}`); if(!v) return;
+  const rows=G.tabs?(G.tabs[G.tab]||[]):null;
   v.innerHTML=`
-    <div class="row1"><div><h2 class="page">${t("cur_title")}</h2><div class="sub">${t("cur_sub")}</div></div>
+    <div class="row1"><div><h2 class="page">${t(cfg.title)}</h2><div class="sub">${t(cfg.sub)}</div></div>
       <span style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn2" id="curAddBtn">${t("cur_addrow")}</button>
-        <button class="btn2" id="curRefresh">${t("cur_refresh")}</button>
-        <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" href="${CONFIG.CURTIS_SHEET_URL}">${t("cur_open_sheet")}</a>
+        <button class="btn2 gridAddBtn">${t(cfg.addLabel)}</button>
+        <button class="btn2 gridRefresh">${t("cur_refresh")}</button>
+        <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" href="${cfg.sheet()}">${t("cur_open_sheet")}</a>
       </span></div>
-    <div class="cats">${CUR_TABS.map(x=>`<button class="cat ${CUR.tab===x?"on":""}" data-ct="${esc(x)}">${esc(x)}</button>`).join("")}</div>
-    <div class="curmsg${CUR.err?" err":""}" id="curMsg">${CUR.err?esc(CUR.err):(CUR.loading?t("cur_loading"):(rows?t("cur_rows",Math.max(rows.length-1,0),CUR.fetchedAt?new Date(CUR.fetchedAt).toLocaleTimeString():""):""))}</div>
-    ${CUR.needKey&&!curAuthed()?authCardHTML():""}
+    <div class="cats">${cfg.tabs.map(x=>`<button class="cat ${G.tab===x?"on":""}" data-ct="${esc(x)}">${esc(x)}</button>`).join("")}</div>
+    <div class="curmsg gridmsg${G.err?" err":""}">${G.err?esc(G.err):(G.loading?t("cur_loading"):(rows?t("cur_rows",Math.max(rows.length-1,0),G.fetchedAt?new Date(G.fetchedAt).toLocaleTimeString():""):""))}</div>
+    ${G.needKey&&!curAuthed()?authCardHTML():""}
     ${rows&&rows.length?`<div class="curwrap"><table class="curgrid">
       <tr>${(rows[0]||[]).map(h=>`<th>${esc(h)}</th>`).join("")}</tr>
       ${rows.slice(1).map((r,ri)=>{
@@ -933,10 +958,10 @@ function renderCurtis(){
         }).join("")}</tr>`;
       }).join("")}
     </table></div>`:""}`;
-  $("#curRefresh").onclick=()=>{ CUR.tabs=null; CUR.err=null; curFetch(); };
-  $("#curAddBtn").onclick=curAdd;
-  if(CUR.needKey&&!curAuthed()) wireAuthCard(v,()=>{ CUR.err=null; CUR.tabs=null; curFetch(); });
-  v.querySelectorAll(".cat").forEach(b=>b.onclick=()=>{ CUR.tab=b.dataset.ct; renderCurtis(); });
+  v.querySelector(".gridRefresh").onclick=()=>{ G.tabs=null; G.err=null; gridFetch(id); };
+  v.querySelector(".gridAddBtn").onclick=()=>gridAdd(id);
+  if(G.needKey&&!curAuthed()) wireAuthCard(v,()=>{ G.err=null; G.tabs=null; gridFetch(id); });
+  v.querySelectorAll(".cat").forEach(b=>b.onclick=()=>{ G.tab=b.dataset.ct; renderGrid(id); });
   v.querySelectorAll("td[contenteditable]").forEach(td=>{
     td.dataset.orig=td.textContent;
     td.onkeydown=e=>{
@@ -944,30 +969,31 @@ function renderCurtis(){
       if(e.key==="Escape"){ td.textContent=td.dataset.orig; td.blur(); }
     };
     td.onblur=()=>{ const val=td.textContent;
-      if(val!==td.dataset.orig){ td.dataset.orig=val; curSave(CUR.tab,+td.dataset.r,+td.dataset.c,val,td); } };
+      if(val!==td.dataset.orig){ td.dataset.orig=val; gridSave(id,G.tab,+td.dataset.r,+td.dataset.c,val,td); } };
   });
   v.querySelectorAll(".ck").forEach(ck=>ck.onclick=()=>{
     const td=ck.parentElement, nv=ck.dataset.b==="TRUE"?"FALSE":"TRUE";
     ck.dataset.b=nv; ck.textContent=nv==="TRUE"?"☑":"☐";
-    curSave(CUR.tab,+td.dataset.r,+td.dataset.c,nv,td);
+    gridSave(id,G.tab,+td.dataset.r,+td.dataset.c,nv,td);
   });
-  // a just-added row: scroll it into view and flash it so the add is visible
-  if(CUR.flashRow){
-    const cell=v.querySelector(`td[data-r="${CUR.flashRow}"]`);
+  if(G.flashRow){
+    const cell=v.querySelector(`td[data-r="${G.flashRow}"]`);
     if(cell){
       cell.parentElement.querySelectorAll("td").forEach(x=>x.classList.add("saved"));
       cell.scrollIntoView({block:"center"});
       setTimeout(((tr)=>()=>tr.querySelectorAll("td").forEach(x=>x.classList.remove("saved")))(cell.parentElement),2500);
     }
-    curMsg(t("cur_added",CUR.flashRow));
-    CUR.flashRow=null;
+    gridMsg(id,t("cur_added",G.flashRow));
+    G.flashRow=null;
   }
-  if(ACTIVE==="curtis"&&!CUR.tabs&&!CUR.loading&&!CUR.err) curFetch();
+  if(ACTIVE===id&&!G.tabs&&!G.loading&&!G.err) gridFetch(id);
 }
-// sheet-side edits flow in: gentle poll while the view is open (paused mid-edit)
+const renderCurtis=()=>renderGrid("curtis");
+const renderPlating=()=>renderGrid("plating");
+// sheet-side edits flow in: gentle poll while a grid view is open (paused mid-edit)
 setInterval(()=>{
-  if(ACTIVE==="curtis"&&CUR.tabs&&!CUR.loading&&
-     !(document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".curgrid"))) curFetch();
+  if(GRID_CFGS[ACTIVE]&&gridState(ACTIVE).tabs&&!gridState(ACTIVE).loading&&
+     !(document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".curgrid"))) gridFetch(ACTIVE);
 },60000);
 
 /* ================= BRIGHAM PRIORITY LIST =================
