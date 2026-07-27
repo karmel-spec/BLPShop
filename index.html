@@ -1302,7 +1302,7 @@ function extractPianos(text){
   return found;
 }
 
-const STAGES=[["INTAKE","New Arrival - Admin"],["ASSESS","Assessment"],["CAP","CAP"],["PRSB","PRSB & Plate Refinishing"],["LACQUER","Lacquer Soundboard"],["RESTRING","Restringing"],["CHIPTUNE","Chip Tuning"],["DHRT","DHRT"],["TUNING1","1st Tuning"],["REFINISH","Refinishing"],["QC","QC & Assembly"],["TUNING2","2nd Tuning"],["EXIT","Exit Prep - Admin"],["DELIVERED","Delivered"],["FORSALE","For Sale"],["OTHER","—"]];
+const STAGES=[["INTAKE","New Arrival - Admin"],["ASSESS","Assessment"],["CAP","CAP"],["PRSB","PRSB & Plate Refinishing"],["LACQUER","Lacquer Soundboard"],["RESTRING","Restringing"],["CHIPTUNE","Chip Tuning"],["DHRT","DHRT"],["TUNING1","1st Tuning"],["REFINISH","Refinishing"],["QC","QC & Assembly"],["TUNING2","2nd Tuning"],["EXIT","Exit Prep - Admin"],["DELIVERED","Delivered"],["FORSALE","For Sale"],["WAITB","Waiting on Brigham"],["WAITC","Waiting on Curtis Harper"],["WAITO","Waiting on OTHER"],["OTHER","—"]];
 // Manual stage corrections — shared key with the Shop Manager pipeline, so a
 // fix made here moves the piano's kanban card there too (per device).
 const stageOverrides=()=>{ try{ return JSON.parse(localStorage.getItem("blpmgr.phase"))||{}; }catch(e){ return {}; } };
