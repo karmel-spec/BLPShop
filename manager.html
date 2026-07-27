@@ -1322,6 +1322,7 @@ function clientPianos(){
     const owner=(r[1]||"").trim(), serial=(r[2]||"").trim();
     if(!owner||!serial||/blp\s*owned/i.test(owner)) return;
     if(crCol>=0&&/^no$/i.test(String(r[crCol]||"").trim())) return;   // client reports switched off on the Store Map
+    const crYes=crCol>=0&&/^yes$/i.test(String(r[crCol]||"").trim());   // explicit opt-in from the Store Map
     const key=skey(serial)||serial.toLowerCase();
     const lines=owner.split("\n").map(s=>s.trim()).filter(Boolean);
     const ownerName=(lines.find(l=>!l.includes("@")&&!/\d{3}/.test(l))||lines[0]||"").slice(0,60);
@@ -1335,7 +1336,7 @@ function clientPianos(){
     const rec=PIANOS.get(key);
     const lastMention=SERIAL_DATES.get(key)||null;
     const activity=!!(lastMention&&lastMention>=iso(recentCut));
-    const include=key in flags ? flags[key] : activity;
+    const include=crYes||(key in flags ? flags[key] : activity);
     out.push({key, serial, owner, ownerName, ownerEmail,
       summary:(r[3]||"").trim()||`${(r[5]||"").trim()} ${serial}`,
       make:(r[5]||"").trim(), model:(r[6]||"").trim(), status:(r[18]||"").trim(),
