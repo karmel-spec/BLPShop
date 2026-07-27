@@ -397,7 +397,7 @@ function checkGate(){
   if(isAdmin(USER)){ enter(); return; }
   if(USER){ $("#gateMsg").textContent = `${USER.email} — ${LANG==="es"?"esta sección es solo para administración.":"this section is management-only."}`; }
   const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true;
-  s.onload=()=>{ google.accounts.id.initialize({client_id:CONFIG.GOOGLE_CLIENT_ID, callback:(resp)=>{
+  s.onload=()=>{ google.accounts.id.initialize({client_id:CONFIG.GOOGLE_CLIENT_ID, use_fedcm_for_prompt:true, use_fedcm_for_button:true, itp_support:true, callback:(resp)=>{
       try{
         const p=JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
         USER={email:(p.email||"").toLowerCase(),name:p.name||"",given:p.given_name||"",picture:p.picture||""};
@@ -795,7 +795,7 @@ function loadGsi(){
 async function gsiTokenSetup(){
   await loadGsi();
   if(gsiInited) return; gsiInited=true;
-  google.accounts.id.initialize({client_id:CONFIG.GOOGLE_CLIENT_ID, auto_select:true, callback:(resp)=>{
+  google.accounts.id.initialize({client_id:CONFIG.GOOGLE_CLIENT_ID, auto_select:true, use_fedcm_for_prompt:true, use_fedcm_for_button:true, itp_support:true, callback:(resp)=>{
     try{
       sessionStorage.setItem("blpmgr.idtok",resp.credential);
       const p=JSON.parse(atob(resp.credential.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));

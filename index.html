@@ -905,7 +905,7 @@ function initGateGsi(){
     const s=document.createElement("script"); s.src="https://accounts.google.com/gsi/client"; s.async=true;
     s.onload=()=>initGateGsi(); document.head.appendChild(s); return;
   }
-  if(!gsiReady){ google.accounts.id.initialize({ client_id:CONFIG.GOOGLE_CLIENT_ID, callback:onCredential, auto_select:true }); gsiReady=true; }
+  if(!gsiReady){ google.accounts.id.initialize({ client_id:CONFIG.GOOGLE_CLIENT_ID, callback:onCredential, auto_select:true, use_fedcm_for_prompt:true, use_fedcm_for_button:true, itp_support:true }); gsiReady=true; }
   const el=$("#gsiGate");
   if(el&&!el.hasChildNodes()) google.accounts.id.renderButton(el,{theme:"filled_black",size:"large",shape:"pill"});
   try{ google.accounts.id.prompt(); }catch(e){}
@@ -945,7 +945,7 @@ let gsiReady=false;
 function initGsi(){
   if(!window.google||!google.accounts){ setTimeout(initGsi,300); return; }
   if(!gsiReady){
-    google.accounts.id.initialize({ client_id:CONFIG.GOOGLE_CLIENT_ID, callback:onCredential, auto_select:true });
+    google.accounts.id.initialize({ client_id:CONFIG.GOOGLE_CLIENT_ID, callback:onCredential, auto_select:true, use_fedcm_for_prompt:true, use_fedcm_for_button:true, itp_support:true });
     gsiReady=true;
   }
   const el=$("#gsiBtn");
