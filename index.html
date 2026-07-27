@@ -805,8 +805,6 @@ async function boot(){
   DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
   applyI18n();
-  // signed-in but not an admin and not on the roster → not a technician
-  if(USER&&!devBypass()&&!isOwner()&&!matchTech(USER)){ showGateNoMatch(); return; }
   renderAll();
   handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
@@ -970,8 +968,7 @@ function signOut(){
   localStorage.removeItem("blp-shop-reports.user");
   localStorage.removeItem("blp-shop-reports.me");
   sessionStorage.removeItem("blpshop.idtok");
-  $("#gateMsg").textContent=t("gate_msg");
-  showGate();
+  renderAll();
 }
 
 /* ---------- navigation ---------- */
@@ -1539,11 +1536,11 @@ if(CONFIG.GOOGLE_CLIENT_ID){
   document.head.appendChild(s);
 }
 
-/* entry: the app only opens with a Google identity (dev bypass on localhost ?dev=1) */
+/* entry: sign-in is optional (the mandatory gate is disabled) — the sidebar
+   still offers Google sign-in so reports and actions carry a name */
 applyI18n();
-if(devBypass()){ USER=USER||{email:"brighamlarson@gmail.com",name:"Dev Preview"}; hideGate(); boot(); }
-else if(USER){ hideGate(); boot(); initGateGsi(); }   // known user: enter, refresh the token silently
-else showGate();
+if(devBypass()) USER=USER||{email:"brighamlarson@gmail.com",name:"Dev Preview"};
+hideGate(); boot();
 </script>
 </body>
 </html>
