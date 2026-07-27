@@ -571,6 +571,10 @@ const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_
 /* ================= SHELL ================= */
 const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["curtis","nav_curtis"]];
 let ACTIVE = location.hash.slice(1) || "review";
+// deep link from the Store Map: #client-<serial> opens Client Reports
+// with that piano's panel expanded
+let CLI_DEEP = null;
+if(ACTIVE.startsWith("client-")){ CLI_DEEP = decodeURIComponent(ACTIVE.slice(7)); ACTIVE = "client"; }
 function renderShell(){
   $("#langEn").classList.toggle("on",LANG==="en"); $("#langEs").classList.toggle("on",LANG==="es");
   $("#nav").innerHTML = TABS.map(([id,key])=>`<button data-v="${id}" class="${ACTIVE===id?"on":""}">${t(key)}</button>`).join("");
@@ -1176,6 +1180,7 @@ function wireQcSheet(){
 const PHASE_COLS={KEYWORK:51,CAP:52,"SOUNDBOARD / BRIDGE":53,RESTRINGING:54,DHRT:55,REFINISHING:56,PLATING:57,QC:58};
 const CLI_LOG="blpmgr.clientlog", CLI_FLAG="blpmgr.cliflag";
 let CLI_OPEN=null; const CLI_DRAFTS={};
+if(typeof CLI_DEEP==="string"&&CLI_DEEP){ try{ CLI_OPEN=skey(CLI_DEEP)||CLI_DEEP.toLowerCase(); }catch(e){ CLI_OPEN=CLI_DEEP.toLowerCase(); } }
 
 function clientPianos(){
   const flags=store.get(CLI_FLAG,{}), log=store.get(CLI_LOG,{});
