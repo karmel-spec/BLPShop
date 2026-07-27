@@ -764,6 +764,15 @@ const DOCVIEWS={
 function handleDocHash(){
   const m=location.hash.match(/^#(handbook|policies)(?:-(.+))?$/);
   if(m){ showView(m[1]); DOCVIEWS[m[1]].ensure(m[2]); }
+  // deep link from the Store Map's "Read Reports" button: #history=<serial>
+  const h=location.hash.match(/^#history=(.+)$/);
+  if(h){
+    const q=decodeURIComponent(h[1]);
+    const qi=$("#q"); if(qi) qi.value=q;
+    const ft=$("#fTech"); if(ft) ft.value="";
+    const fy=$("#fYear"); if(fy) fy.value="";
+    showView("history"); runSearch();
+  }
 }
 window.addEventListener("hashchange",handleDocHash);
 
