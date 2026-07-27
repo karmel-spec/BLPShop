@@ -328,6 +328,7 @@ const I18N = {
   cur_rows:["%1 rows · synced %2","%1 filas · sincronizado %2"],
   cur_pass:["BLP app passcode (asked once on this device)","Código de acceso BLP (una vez en este dispositivo)"],
   cur_unlock:["Unlock","Entrar"],
+  cur_added:["Work order added (row %1) — fill in the details.","Orden agregada (fila %1) — completa los detalles."],
   cur_wrongpass:["Wrong passcode — click Refresh to try again.","Código incorrecto — toca Actualizar para reintentar."],
   cur_err:["Couldn't reach the work-orders bridge: %1","No se pudo conectar con el puente de órdenes: %1"],
   cur_saved:["Saved ✓","Guardado ✓"],
@@ -765,16 +766,33 @@ const CUR_TABS=["Requested","Completed, paid, received"];
 let CUR={tab:CUR_TABS[0], tabs:null, fetchedAt:null, loading:false, err:null, needKey:false};
 
 function curKey(){ return (localStorage.getItem("blp.appkey")||"").trim(); }
+// Google ID token from the manager's sign-in (stored by the auth gate);
+// discarded when within 2 min of expiry.
+function curToken(){
+  const tok=sessionStorage.getItem("blpmgr.idtok")||"";
+  if(!tok) return "";
+  try{
+    const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    if(p.exp && p.exp*1000 < Date.now()+120000) return "";
+  }catch(e){ return ""; }
+  return tok;
+}
+const curAuthed=()=>!!(curToken()||curKey());
+function curHeaders(json){
+  const h=json?{"content-type":"application/json"}:{};
+  const tok=curToken(); if(tok) h["authorization"]="Bearer "+tok;
+  return h;
+}
 function curMsg(s,err){ const m=$("#curMsg"); if(m){ m.textContent=s; m.className="curmsg"+(err?" err":""); } }
 
 async function curFetch(){
   if(CUR.loading) return;
-  const key=curKey(); if(!key){ CUR.needKey=true; renderCurtis(); return; }
+  if(!curAuthed()){ CUR.needKey=true; renderCurtis(); return; }
   CUR.loading=true; CUR.err=null; renderCurtis();
   try{
-    const r=await fetch(CONFIG.CURTIS_API+"?key="+encodeURIComponent(key));
+    const r=await fetch(CONFIG.CURTIS_API+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; CUR.err=t("cur_wrongpass"); }
+    if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; CUR.err=j.error||t("cur_wrongpass"); }
     else if(j.error){ CUR.err=t("cur_err",j.error); }
     else { CUR.tabs=j.tabs; CUR.fetchedAt=j.fetchedAt; CUR.needKey=false; }
   }catch(e){ CUR.err=t("cur_err",String(e.message||e)); }
@@ -782,10 +800,10 @@ async function curFetch(){
 }
 
 async function curSave(tab,row,col,value,td){
-  if(!curKey()){ CUR.needKey=true; renderCurtis(); return; }
+  if(!curAuthed()){ CUR.needKey=true; renderCurtis(); return; }
   td.classList.remove("saved","savefail"); td.classList.add("saving");
   try{
-    const r=await fetch(CONFIG.CURTIS_API,{method:"POST",headers:{"content-type":"application/json"},
+    const r=await fetch(CONFIG.CURTIS_API,{method:"POST",headers:curHeaders(true),
       body:JSON.stringify({key:curKey(),tab,updates:[{row,col,value}]})});
     const j=await r.json();
     td.classList.remove("saving");
@@ -803,16 +821,16 @@ async function curSave(tab,row,col,value,td){
 }
 
 async function curAdd(){
-  if(!curKey()){ CUR.needKey=true; renderCurtis(); return; }
+  if(!curAuthed()){ CUR.needKey=true; renderCurtis(); return; }
   const tab=CUR.tab, hdr=(CUR.tabs&&CUR.tabs[tab]&&CUR.tabs[tab][0])||[];
   const row=new Array(Math.max(hdr.length,14)).fill("");
   const di=hdr.findIndex(h=>/date requested/i.test(h||""));
   if(di>=0) row[di]=new Date().toLocaleDateString("en-US");
   try{
-    const r=await fetch(CONFIG.CURTIS_API,{method:"POST",headers:{"content-type":"application/json"},
+    const r=await fetch(CONFIG.CURTIS_API,{method:"POST",headers:curHeaders(true),
       body:JSON.stringify({key:curKey(),tab,append:row})});
     const j=await r.json();
-    if(j.ok){ CUR.tabs=null; await curFetch(); }
+    if(j.ok){ CUR.flashRow=j.row||null; CUR.tabs=null; await curFetch(); }
     else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); CUR.needKey=true; renderCurtis(); } curMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
   }catch(e){ curMsg(t("cur_savefail",String(e.message||e)),true); }
 }
@@ -829,7 +847,7 @@ function renderCurtis(){
       </span></div>
     <div class="cats">${CUR_TABS.map(x=>`<button class="cat ${CUR.tab===x?"on":""}" data-ct="${esc(x)}">${esc(x)}</button>`).join("")}</div>
     <div class="curmsg${CUR.err?" err":""}" id="curMsg">${CUR.err?esc(CUR.err):(CUR.loading?t("cur_loading"):(rows?t("cur_rows",Math.max(rows.length-1,0),CUR.fetchedAt?new Date(CUR.fetchedAt).toLocaleTimeString():""):""))}</div>
-    ${CUR.needKey||!curKey()?`<div class="card" style="padding:16px;max-width:460px;display:flex;gap:9px;align-items:center;margin-bottom:14px">
+    ${CUR.needKey&&!curAuthed()?`<div class="card" style="padding:16px;max-width:460px;display:flex;gap:9px;align-items:center;margin-bottom:14px">
         <input type="password" id="curPass" placeholder="${t("cur_pass")}" autocomplete="current-password"
           style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;font-size:14px">
         <button class="btn" id="curPassGo">${t("cur_unlock")}</button>
@@ -873,6 +891,17 @@ function renderCurtis(){
     ck.dataset.b=nv; ck.textContent=nv==="TRUE"?"☑":"☐";
     curSave(CUR.tab,+td.dataset.r,+td.dataset.c,nv,td);
   });
+  // a just-added row: scroll it into view and flash it so the add is visible
+  if(CUR.flashRow){
+    const cell=v.querySelector(`td[data-r="${CUR.flashRow}"]`);
+    if(cell){
+      cell.parentElement.querySelectorAll("td").forEach(x=>x.classList.add("saved"));
+      cell.scrollIntoView({block:"center"});
+      setTimeout(((tr)=>()=>tr.querySelectorAll("td").forEach(x=>x.classList.remove("saved")))(cell.parentElement),2500);
+    }
+    curMsg(t("cur_added",CUR.flashRow));
+    CUR.flashRow=null;
+  }
   if(ACTIVE==="curtis"&&!CUR.tabs&&!CUR.loading&&!CUR.err) curFetch();
 }
 // sheet-side edits flow in: gentle poll while the view is open (paused mid-edit)
