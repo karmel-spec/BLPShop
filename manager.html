@@ -189,6 +189,7 @@
     <section class="view" id="view-client"></section>
     <section class="view" id="view-team"></section>
     <section class="view" id="view-curtis"></section>
+    <section class="view" id="view-brigham"></section>
   </main>
 </div>
 
@@ -209,6 +210,7 @@ const CONFIG = {
   HANDBOOK_URL: "https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit",
   HANDBOOK_APP: "index.html#handbook",   // in-app handbook (Shop Reports → Shop Handbook view)
   CURTIS_API: "https://blpsalesapp.netlify.app/.netlify/functions/curtis-orders",  // two-way sync bridge (sales app service account)
+  BRIGHAM_API: "https://blpsalesapp.netlify.app/.netlify/functions/brigham-tasks", // Brigham priority list bridge
   CURTIS_SHEET_URL: "https://docs.google.com/spreadsheets/d/1DxvDQ9WlhxXfiZaKGpdJLOOPNMBfVA9PsHGuLe55pmc/edit",
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
   ADMINS: ["brighamlarson@gmail.com","brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"],
@@ -329,6 +331,18 @@ const I18N = {
   cur_pass:["BLP app passcode (asked once on this device)","Código de acceso BLP (una vez en este dispositivo)"],
   cur_unlock:["Unlock","Entrar"],
   cur_added:["Work order added (row %1) — fill in the details.","Orden agregada (fila %1) — completa los detalles."],
+  /* brigham task list */
+  nav_brigham:["Brigham","Brigham"],
+  brig_title:["Brigham — Priority List","Brigham — Lista de prioridades"],
+  brig_sub:["Tasks requested for Brigham — from the Store Map's “Request Brigham Task” button or added here. Set the priority number, check off what's done. Everything lives on the “Brigham Tasks” tab of the report sheet.","Tareas solicitadas para Brigham — desde el botón “Request Brigham Task” del Store Map o agregadas aquí. Asigna prioridad y marca lo terminado. Todo vive en la pestaña “Brigham Tasks” de la hoja de reportes."],
+  brig_add:["+ Add task","+ Agregar tarea"],
+  brig_note_ph:["What does Brigham need to do?","¿Qué necesita hacer Brigham?"],
+  brig_piano_ph:["Piano / subject (optional)","Piano / asunto (opcional)"],
+  brig_save:["Add to the list","Agregar a la lista"],
+  brig_open:["Open","Pendientes"],
+  brig_done:["Done","Terminadas"],
+  brig_none:["Nothing on the list — enjoy it while it lasts.","Nada en la lista — disfrútalo mientras dure."],
+  brig_pri:["priority","prioridad"],
   cur_wrongpass:["Wrong passcode — click Refresh to try again.","Código incorrecto — toca Actualizar para reintentar."],
   cur_err:["Couldn't reach the work-orders bridge: %1","No se pudo conectar con el puente de órdenes: %1"],
   cur_saved:["Saved ✓","Guardado ✓"],
@@ -570,7 +584,7 @@ const store = {
 const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_KEY="blpmgr.qc", PH_KEY="blpmgr.phase";
 
 /* ================= SHELL ================= */
-const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["curtis","nav_curtis"]];
+const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -589,7 +603,7 @@ function renderShell(){
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderCurtis();
+  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderCurtis(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -910,6 +924,93 @@ setInterval(()=>{
      !(document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".curgrid"))) curFetch();
 },60000);
 
+/* ================= BRIGHAM PRIORITY LIST =================
+   Tasks for Brigham on the report sheet's "Brigham Tasks" tab, fed by the
+   Store Map's "Request Brigham Task" button and this view. Same auth as
+   the Curtis view (manager Google sign-in; passcode fallback). */
+let BRIG={rows:null, loading:false, err:null, showAdd:false};
+
+async function brigFetch(){
+  if(BRIG.loading) return;
+  if(!curAuthed()){ CUR.needKey=true; BRIG.err=t("cur_wrongpass"); renderBrigham(); return; }
+  BRIG.loading=true; BRIG.err=null; renderBrigham();
+  try{
+    const r=await fetch(CONFIG.BRIGHAM_API+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
+    const j=await r.json();
+    if(r.status===401){ localStorage.removeItem("blp.appkey"); BRIG.err=j.error||t("cur_wrongpass"); }
+    else if(j.error){ BRIG.err=t("cur_err",j.error); }
+    else BRIG.rows=j.rows||[];
+  }catch(e){ BRIG.err=t("cur_err",String(e.message||e)); }
+  BRIG.loading=false; renderBrigham();
+}
+
+async function brigPost(body,after){
+  try{
+    const r=await fetch(CONFIG.BRIGHAM_API,{method:"POST",headers:curHeaders(true),
+      body:JSON.stringify({key:curKey(),...body})});
+    const j=await r.json();
+    if(j.ok){ if(after) after(); BRIG.rows=null; brigFetch(); }
+    else{ BRIG.err=t("cur_savefail",j.error||("HTTP "+r.status)); renderBrigham(); }
+  }catch(e){ BRIG.err=t("cur_savefail",String(e.message||e)); renderBrigham(); }
+}
+
+function brigTasks(){
+  const rows=BRIG.rows||[];
+  return rows.slice(1).map((r,i)=>({row:i+2, when:r[0]||"", piano:r[1]||"", note:r[2]||"",
+    from:r[3]||"", pri:r[4]||"", status:(r[5]||"open").toLowerCase(), doneAt:r[6]||""}))
+    .filter(x=>x.note);
+}
+
+function renderBrigham(){
+  const v=$("#view-brigham"); if(!v) return;
+  const tasks=BRIG.rows?brigTasks():null;
+  const byPri=(a,b)=>((+a.pri||999)-(+b.pri||999))||a.row-b.row;
+  const open=tasks?tasks.filter(x=>x.status!=="done").sort(byPri):[];
+  const done=tasks?tasks.filter(x=>x.status==="done").slice(-40).reverse():[];
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("brig_title")}</h2><div class="sub">${t("brig_sub")}</div></div>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn" id="brigAddBtn">${t("brig_add")}</button>
+        <button class="btn2" id="brigRefresh">${t("cur_refresh")}</button>
+      </span></div>
+    <div class="curmsg${BRIG.err?" err":""}" id="brigMsg">${BRIG.err?esc(BRIG.err):(BRIG.loading?t("cur_loading"):"")}</div>
+    ${BRIG.showAdd?`<div class="card" style="padding:16px;display:flex;flex-direction:column;gap:9px;max-width:560px;margin-bottom:16px">
+      <input id="brigPiano" placeholder="${t("brig_piano_ph")}" style="border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit">
+      <textarea id="brigNote" rows="3" placeholder="${t("brig_note_ph")}" style="border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;resize:vertical"></textarea>
+      <button class="btn" id="brigSave" style="align-self:flex-start">${t("brig_save")}</button>
+    </div>`:""}
+    ${tasks?`
+      <h3 style="font-family:Georgia,serif;margin:14px 0 8px">${t("brig_open")} <span class="num" style="color:var(--mut2)">(${open.length})</span></h3>
+      <div class="card">${open.length?open.map(x=>`
+        <div style="display:flex;gap:12px;align-items:flex-start;padding:12px 16px;border-bottom:1px solid var(--line-soft)">
+          <input type="number" min="1" value="${esc(x.pri)}" data-row="${x.row}" class="brigPri" title="${t("brig_pri")}"
+            style="width:58px;border:1px solid var(--line);border-radius:6px;padding:6px;font:inherit;text-align:center">
+          <div style="flex:1">
+            <div style="font-size:14px;line-height:1.5">${x.piano?`<b>${esc(x.piano)}</b> — `:""}${esc(x.note)}</div>
+            <div style="font-size:11.5px;color:var(--mut2);margin-top:3px">${esc(x.from)}${x.when?` · ${esc(x.when)}`:""}</div>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--mut);white-space:nowrap;cursor:pointer">
+            <input type="checkbox" class="brigDone" data-row="${x.row}"> ${t("brig_done")}</label>
+        </div>`).join(""):`<div style="padding:16px;color:var(--mut)">${t("brig_none")}</div>`}
+      </div>
+      ${done.length?`<details style="margin-top:16px"><summary style="cursor:pointer;color:var(--mut);font-size:13.5px">${t("brig_done")} (${done.length})</summary>
+        <div class="card" style="margin-top:10px">${done.map(x=>`
+          <div style="padding:10px 16px;border-bottom:1px solid var(--line-soft);color:var(--mut);font-size:13px">
+            <s>${x.piano?`${esc(x.piano)} — `:""}${esc(x.note)}</s>
+            <span style="font-size:11px;color:var(--mut2)"> · ${esc(x.doneAt)}</span></div>`).join("")}
+        </div></details>`:""}`:""}`;
+  $("#brigRefresh").onclick=()=>{ BRIG.rows=null; BRIG.err=null; brigFetch(); };
+  $("#brigAddBtn").onclick=()=>{ BRIG.showAdd=!BRIG.showAdd; renderBrigham(); if(BRIG.showAdd) setTimeout(()=>$("#brigNote")?.focus(),50); };
+  const sv=$("#brigSave");
+  if(sv) sv.onclick=()=>{
+    const note=$("#brigNote").value.trim(); if(!note) return;
+    brigPost({add:{piano:$("#brigPiano").value.trim(),note,from:(USER&&(USER.name||USER.email))||"Manager"}},()=>{ BRIG.showAdd=false; });
+  };
+  v.querySelectorAll(".brigPri").forEach(inp=>inp.onchange=()=>brigPost({update:{row:+inp.dataset.row,priority:inp.value.trim()}}));
+  v.querySelectorAll(".brigDone").forEach(cb=>cb.onchange=()=>brigPost({update:{row:+cb.dataset.row,status:cb.checked?"done":"open"}}));
+  if(ACTIVE==="brigham"&&!BRIG.rows&&!BRIG.loading&&!BRIG.err) brigFetch();
+}
+
 /* ================= WEEK BOARD ================= */
 function currentWeekColumn(){
   if(!NOTES.length) return {label:null, byCat:{}};
@@ -1215,10 +1316,12 @@ function clientPianos(){
   const flags=store.get(CLI_FLAG,{}), log=store.get(CLI_LOG,{});
   const recentCut=new Date(); recentCut.setDate(recentCut.getDate()-120);
   const out=[];
+  const crCol=(PLOG[1]||[]).findIndex(h=>String(h||"").trim().toUpperCase()==="CLIENT REPORTS");
   PLOG.slice(2).forEach(r=>{
     if(r.length<20) return;
     const owner=(r[1]||"").trim(), serial=(r[2]||"").trim();
     if(!owner||!serial||/blp\s*owned/i.test(owner)) return;
+    if(crCol>=0&&/^no$/i.test(String(r[crCol]||"").trim())) return;   // client reports switched off on the Store Map
     const key=skey(serial)||serial.toLowerCase();
     const lines=owner.split("\n").map(s=>s.trim()).filter(Boolean);
     const ownerName=(lines.find(l=>!l.includes("@")&&!/\d{3}/.test(l))||lines[0]||"").slice(0,60);
