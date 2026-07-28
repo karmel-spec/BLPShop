@@ -1143,10 +1143,9 @@ function wireShipPanel(v,G){
       const stamp=shipStamp(), updates=[];
       batch.filter(p=>!p.mailed).forEach(p=>updates.push({row:p.row,col:6,value:"TRUE"},{row:p.row,col:7,value:stamp}));
       if(updates.length) await shipPost({updates});
-      let stamped=0;
-      for(const p of batch) if(await shipTaskStamp(p.serial,1,"Mailed")) stamped++;
+      // card step 1 is "Submitted" (set by the plating request form) — mailed
+      // status lives on the Shipments tab; only Received stamps the card
       refresh();
-      if(stamped) gridMsg("plating",t("ship_stamped"));
     }catch(e){ gridMsg("plating",t("cur_savefail",String(e.message||e)),true); SHIP_BUSY=false; renderGrid("plating"); return; }
     SHIP_BUSY=false;
   });
