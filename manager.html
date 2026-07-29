@@ -232,6 +232,7 @@ const I18N = {
   nav_week:["Week Board","Tablero semanal"], nav_sequence:["Sequence","Secuencia"],
   nav_pipeline:["Pipeline","Flujo de pianos"], nav_qc:["Quality Control","Control de calidad"],
   sign_out:["Sign out","Cerrar sesión"], open_app:["Open Shop Reports","Abrir Reportes del Taller"],
+  open_sales:["Open Sales App","Abrir App de Ventas"],
   loading:["Loading shop data…","Cargando datos del taller…"],
   wk_ending:["Week ending","Semana que termina"],
   connect_cal:["Connect Google Calendar","Conectar Google Calendar"],
@@ -626,7 +627,7 @@ function renderShell(){
   $("#nav").innerHTML = TABS.map(([id,key])=>`<button data-v="${id}" class="${ACTIVE===id?"on":""}">${t(key)}</button>`).join("");
   document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{ACTIVE=b.dataset.v;location.hash=ACTIVE;renderAll();});
   $("#whoBox").innerHTML = `<b>${esc(USER?.name||USER?.email||"")}</b><br>
-    <a href="index.html">${t("open_app")}</a> · <a href="#" id="soLink">${t("sign_out")}</a>`;
+    <a href="index.html">${t("open_app")}</a> · <a target="_blank" rel="noreferrer" href="https://blpsalesapp.netlify.app">${t("open_sales")}</a> · <a href="#" id="soLink">${t("sign_out")}</a>`;
   $("#soLink").onclick=(e)=>{e.preventDefault();localStorage.removeItem("blp-shop-reports.user");location.reload();};
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
