@@ -263,6 +263,7 @@
       <button data-view="calendars"><span class="dot"></span><span data-i18n="nav_calendars">Calendars</span></button>
       <button data-view="handbook"><span class="dot"></span><span data-i18n="nav_handbook">Shop Handbook</span></button>
       <button data-view="policies"><span class="dot"></span><span data-i18n="nav_policies">Shop Policies</span></button>
+      <button data-view="bassstrings"><span class="dot"></span><span data-i18n="nav_bassstrings">Bass Strings</span></button>
       <a class="ext" href="https://pianologapp.netlify.app/" target="_blank" rel="noreferrer"><span class="dot"></span>Piano Log ↗</a>
       <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
     </nav>
@@ -457,6 +458,25 @@
         <div id="polStatus" style="padding:26px 0;color:var(--mut);font-size:14px" data-i18n="hb_loading">Loading…</div>
       </section>
 
+      <!-- ============ BASS STRING ORDERING (Heller-Bass) ============ -->
+      <section class="view" id="view-bassstrings">
+        <div class="row1">
+          <div>
+            <h2 class="page" data-i18n="bass_title">Ordering Bass Strings — Heller-Bass</h2>
+            <div class="sub" id="bassSub">How to measure and order custom bass strings.</div>
+          </div>
+          <span style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+            <input class="hbsearch" id="bassSearch" type="search" data-i18n-ph="bass_search" placeholder="Search these instructions…">
+            <a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" id="bassSource" data-i18n="bass_source">hellerbass.de ↗</a>
+          </span>
+        </div>
+        <div class="hbwrap" id="bassWrap" style="display:none">
+          <nav class="hbtoc"><h4 data-i18n="hb_sections">Sections</h4><div class="toclist" id="bassToc"></div></nav>
+          <div id="bassBody"></div>
+        </div>
+        <div id="bassStatus" style="padding:26px 0;color:var(--mut);font-size:14px" data-i18n="hb_loading">Loading…</div>
+      </section>
+
     </main>
     <footer>
       <span data-i18n="footer_tag">Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).</span>
@@ -616,6 +636,11 @@ const I18N = {
   hb_error:["Could not load data/handbook.json — regenerate it with scripts/fetch_handbook.py.","No se pudo cargar data/handbook.json — regenéralo con scripts/fetch_handbook.py."],
   doc_error:["Could not load this document — regenerate its snapshot with the matching scripts/fetch_*.py.","No se pudo cargar este documento — regenera su captura con el scripts/fetch_*.py correspondiente."],
   pol_title:["Shop Policies","Políticas del Taller"],
+  nav_bassstrings:["Bass Strings","Cuerdas Graves"],
+  bass_title:["Ordering Bass Strings — Heller-Bass","Pedir Cuerdas Graves — Heller-Bass"],
+  bass_sub:["How to measure and order custom bass strings from Heller-Bass (Germany) — instructions from hellerbass.de plus the shop's forms and examples (updated %1).","Cómo medir y pedir cuerdas graves a medida de Heller-Bass (Alemania) — instrucciones de hellerbass.de más los formularios y ejemplos del taller (actualizado %1)."],
+  bass_search:["Search these instructions…","Buscar en estas instrucciones…"],
+  bass_source:["hellerbass.de ↗","hellerbass.de ↗"],
   pol_sub:["Shop conduct & standards — snapshot of the Google Doc from %1.","Conducta y normas del taller — captura del Google Doc del %1."],
   pol_search:["Search the policies…","Buscar en las políticas…"],
   pol_source:["Source doc ↗","Documento original ↗"],
@@ -694,7 +719,7 @@ const docSeen=()=>{ try{ return JSON.parse(localStorage.getItem(DOC_SEEN_KEY))||
 function makeDocView(view, subKey){
   // view is the hash prefix + data-file stem ("handbook"/"policies");
   // DOM ids use a short prefix so both views can coexist.
-  const idp = view==="handbook" ? "hb" : "pol";
+  const idp = {handbook:"hb", policies:"pol", bassstrings:"bass"}[view];
   const cache={}, loading={};
   let CUR=null, pendingScroll=null;
   const $id=s=>document.getElementById(idp+s);
@@ -779,9 +804,10 @@ function makeDocView(view, subKey){
 const DOCVIEWS={
   handbook: makeDocView("handbook","hb_sub"),
   policies: makeDocView("policies","pol_sub"),
+  bassstrings: makeDocView("bassstrings","bass_sub"),
 };
 function handleDocHash(){
-  const m=location.hash.match(/^#(handbook|policies)(?:-(.+))?$/);
+  const m=location.hash.match(/^#(handbook|policies|bassstrings)(?:-(.+))?$/);
   if(m){ showView(m[1]); DOCVIEWS[m[1]].ensure(m[2]); }
   // deep link from the Store Map's "Read Reports" button: #history=<serial>
   const h=location.hash.match(/^#history=(.+)$/);
