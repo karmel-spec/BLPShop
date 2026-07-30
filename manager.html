@@ -20,10 +20,19 @@
 
   /* ---------- shell ---------- */
   .shell{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
-  @media(max-width:900px){div.shell{grid-template-columns:1fr}aside.side{position:fixed;z-index:50;height:auto!important;bottom:auto;width:100%;flex-direction:row!important;align-items:center;padding:6px 10px!important;overflow-x:auto}
-    aside.side .badge{display:none}aside.side .lang{margin:0 8px 0 0!important;flex:none}aside.side nav{flex-direction:row!important;flex:1;margin-top:0!important}aside.side nav button{padding:8px 10px!important;font-size:12.5px!important;border-left:none!important;border-bottom:3px solid transparent;white-space:nowrap}
-    aside.side nav button.on{border-bottom-color:var(--red)}aside.side .who{margin:0 0 0 auto!important;padding:0 6px!important;border:none!important;white-space:nowrap}
-    main{padding-top:74px!important}}
+  .mbar{display:none}
+  .mscrim{display:none}
+  @media(max-width:900px){
+    div.shell{grid-template-columns:1fr}
+    .mbar{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:70;background:var(--side2,#17171b);padding:9px 14px;gap:12px;border-bottom:1px solid #26262c}
+    .mbar img{height:30px;width:auto;display:block}
+    .mbar button{background:none;border:1px solid #3a3a42;color:#fff;font-size:20px;line-height:1;border-radius:8px;padding:6px 12px;cursor:pointer}
+    .mscrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;opacity:0;pointer-events:none;transition:opacity .18s}
+    .mscrim.on{opacity:1;pointer-events:auto}
+    aside.side{position:fixed;top:0;left:0;z-index:90;height:100vh;width:min(78vw,300px);transform:translateX(-100%);transition:transform .2s ease;box-shadow:2px 0 24px rgba(0,0,0,.35)}
+    aside.side.open{transform:translateX(0)}
+    aside.side nav{overflow-y:auto;flex:1}
+  }
   .side{background:linear-gradient(180deg,var(--side2),var(--side));color:#c9c3ba;display:flex;flex-direction:column;padding:16px 0;position:sticky;top:0;height:100vh}
   .badge{align-self:center;padding:0 16px}
   .badge img{width:100%;max-width:170px;display:block;height:auto}
@@ -207,7 +216,12 @@
 </div>
 
 <div class="shell" id="app" style="display:none">
-  <aside class="side">
+  <div class="mbar">
+    <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
+    <button id="mbarBtn" aria-label="Menu" aria-expanded="false">☰</button>
+  </div>
+  <div class="mscrim" id="navScrim"></div>
+  <aside class="side" id="sideNav">
     <div class="badge"><img src="assets/blp-logo.png" alt="Brigham Larson Pianos"></div>
     <div class="lang"><button id="langEn" onclick="setLang('en')">EN</button><button id="langEs" onclick="setLang('es')">ES</button></div>
     <nav id="nav" style="margin-top:12px"></nav>
@@ -695,13 +709,24 @@ function renderShell(){
         <span>🎹 ${t("nav_apps")}</span><span aria-hidden>${APPS_OPEN?"▾":"▸"}</span></button>
       ${APPS_OPEN?BLP_APPS.map(a=>`<a class="apps-link" target="_blank" rel="noreferrer" href="${a.href}">${a.label} <span aria-hidden>↗</span></a>`).join(""):""}</div>`;
   document.querySelectorAll("#nav button[data-v]").forEach(b=>b.onclick=()=>{
-    ACTIVE=b.dataset.v;location.hash=ACTIVE;renderAll();});
+    ACTIVE=b.dataset.v;location.hash=ACTIVE;navDrawer(false);renderAll();});
   $("#appsToggle").onclick=()=>{ APPS_OPEN=!APPS_OPEN; renderShell(); };
+  document.querySelectorAll("#nav .apps-link").forEach(a=>a.addEventListener("click",()=>navDrawer(false)));
   $("#whoBox").innerHTML = `<b>${esc(USER?.name||USER?.email||"")}</b><br>
     <a href="index.html">${t("open_app")}</a> · <a href="#" id="soLink">${t("sign_out")}</a>`;
   $("#soLink").onclick=(e)=>{e.preventDefault();localStorage.removeItem("blp-shop-reports.user");location.reload();};
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
+
+/* ---- mobile hamburger drawer ---- */
+function navDrawer(open){
+  const s=$("#sideNav"); if(!s) return;
+  s.classList.toggle("open",open);
+  $("#navScrim").classList.toggle("on",open);
+  $("#mbarBtn").setAttribute("aria-expanded",String(open));
+}
+$("#mbarBtn").onclick=()=>navDrawer(!$("#sideNav").classList.contains("open"));
+$("#navScrim").onclick=()=>navDrawer(false);
 
 function renderAll(){
   renderShell();
