@@ -19,17 +19,26 @@
   input,select,textarea{font:inherit}
   .num{font-variant-numeric:tabular-nums}
 
-  .shell{display:grid;grid-template-columns:212px 1fr;min-height:100vh}
+  .shell{display:grid;grid-template-columns:212px 1fr;grid-template-rows:auto 1fr;min-height:100vh}
+  .mbar{grid-column:1/-1;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:70;background:#17171b;padding:9px 16px;border-bottom:1px solid #26262c}
+  .mbar img{height:32px;width:auto;display:block}
+  .mbar #mbarBtn{display:none;background:none;border:1px solid #3a3a42;color:#fff;font-size:20px;line-height:1;border-radius:8px;padding:6px 12px;cursor:pointer}
+  #barLogin{display:flex;align-items:center;gap:9px;color:#e8e4dd;font-size:13px}
+  #barLogin .loginlbl{color:#c9c3ba;font-weight:700;letter-spacing:.04em;white-space:nowrap}
+  #barLogin .uchip{display:flex;align-items:center;gap:8px}
+  #barLogin .uchip img{width:28px;height:28px;border-radius:50%}
+  #barLogin .avatar{width:28px;height:28px;border-radius:50%;background:var(--red);color:#fff;display:grid;place-items:center;font-weight:700;font-size:11px}
+  .side .badge{display:none}
+  .scrim{display:none}
+  .side{top:51px;height:calc(100vh - 51px)}
   @media (max-width:840px){
     .shell{grid-template-columns:1fr}
-    aside.side{position:sticky;top:0;z-index:60;height:auto;min-height:0;flex-direction:row;align-items:center;overflow-x:auto;padding:2px 6px;-webkit-overflow-scrolling:touch}
-    aside.side .badge{display:none}
-    aside.side nav{flex-direction:row;margin:0;flex:none}
-    aside.side nav button,aside.side nav a.ext{padding:12px 11px;font-size:13.5px;white-space:nowrap;border-left:none;border-bottom:3px solid transparent}
-    aside.side nav button.on{border-bottom-color:var(--red);background:none}
-    aside.side nav .dot{display:none}
-    aside.side .who{margin:0 0 0 auto;border-top:0;padding:4px 10px;flex:none;max-width:230px;font-size:11.5px}
-    aside.side .lang{margin:0 8px 0 0;flex:none;align-self:center}
+    .mbar #mbarBtn{display:block}
+    .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:80;opacity:0;pointer-events:none;transition:opacity .18s}
+    .scrim.on{opacity:1;pointer-events:auto}
+    aside.side{position:fixed;top:0;left:0;z-index:90;height:100vh;width:min(78vw,300px);transform:translateX(-100%);transition:transform .2s ease;box-shadow:2px 0 24px rgba(0,0,0,.35)}
+    aside.side.open{transform:translateX(0)}
+    aside.side nav{overflow-y:auto;flex:1}
     main{padding:16px 12px 60px}
   }
 
@@ -278,7 +287,15 @@
 </div>
 <div class="shell">
 
-  <aside class="side">
+  <div class="mbar">
+    <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
+    <span style="flex:1"></span>
+    <div id="barLogin"></div>
+    <button id="mbarBtn" aria-label="Menu" aria-expanded="false">☰</button>
+  </div>
+  <div class="scrim" id="navScrim"></div>
+
+  <aside class="side" id="sideNav">
     <div class="badge">
       <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
     </div>
@@ -513,6 +530,7 @@ const I18N = {
   nav_pianos:["Current Shop Pianos","Pianos Actuales del Taller"],
   nav_calendars:["My Calendar","Mi Calendario"],
   nav_paylogics:["Paylogics Payroll ↗","Paylogics Nómina ↗"],
+  bar_login:["Log In","Iniciar sesión"],
   /* plating view (moved from the Shop Manager) */
   nav_plating:["Plating","Galvanoplastia"],
   plat_title:["Plating & Hardware","Galvanoplastia y herrajes"],
@@ -1419,6 +1437,20 @@ function renderWho(){
   }
   const sel=$("#whoSelect");
   if(sel) sel.onchange=()=>{ ME=sel.value; localStorage.setItem("blp-shop-reports.me",ME); renderAll(); };
+  renderBarLogin();
+}
+
+/* top-bar login: "Log In" + Google button when signed out; user chip when in */
+function renderBarLogin(){
+  const bar=$("#barLogin"); if(!bar) return;
+  if(USER){
+    bar.innerHTML=`<span class="uchip">
+      ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
+      <span>${esc(USER.given||USER.name||USER.email)}</span></span>`;
+  }else if(CONFIG.GOOGLE_CLIENT_ID){
+    bar.innerHTML=`<span class="loginlbl">${t("bar_login")}</span><div id="gsiTop"></div>`;
+    initGsi();
+  }else bar.innerHTML="";
 }
 
 let gsiReady=false;
@@ -1430,6 +1462,8 @@ function initGsi(){
   }
   const el=$("#gsiBtn");
   if(el) google.accounts.id.renderButton(el,{theme:"filled_black",size:"medium",shape:"pill",text:"signin_with"});
+  const top=$("#gsiTop");
+  if(top&&!top.hasChildNodes()) google.accounts.id.renderButton(top,{theme:"outline",size:"medium",shape:"pill",text:"signin"});
 }
 function onCredential(resp){
   try{
@@ -1463,6 +1497,16 @@ function showView(name){
   if(name==="cleaning") renderCleaning();
 }
 $("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&b.dataset.view) showView(b.dataset.view); });
+
+/* ---- mobile hamburger drawer ---- */
+function navDrawer(open){
+  $("#sideNav").classList.toggle("open",open);
+  $("#navScrim").classList.toggle("on",open);
+  $("#mbarBtn").setAttribute("aria-expanded",String(open));
+}
+$("#mbarBtn").onclick=()=>navDrawer(!$("#sideNav").classList.contains("open"));
+$("#navScrim").onclick=()=>navDrawer(false);
+$("#tabs").addEventListener("click",e=>{ if(e.target.closest("button,a")) navDrawer(false); });
 
 function renderAll(){
   renderWho();
