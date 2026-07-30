@@ -276,6 +276,8 @@ const I18N = {
   review_title:["Weekly Review","Revisión semanal"],
   review_sub:["Go technician by technician: read the Friday report, review the work, make sure next week is assigned. Nothing gets forgotten — the list stays red until everyone is done.","Técnico por técnico: lee el reporte del viernes, revisa el trabajo y asegúrate de asignar la próxima semana. Nada se olvida: la lista sigue en rojo hasta terminar con todos."],
   review_progress:["Weekly review: %1 of %2 technicians complete","Revisión semanal: %1 de %2 técnicos completados"],
+  fr_all:["FRIDAY REPORTS — all %1 in 🎉","REPORTES DEL VIERNES — los %1 entregados 🎉"],
+  fr_some:["FRIDAY REPORTS — %1 of %2 in","REPORTES DEL VIERNES — %1 de %2 entregados"],
   ck_report:["Report in","Reporte recibido"], ck_reviewed:["Reviewed","Revisado"], ck_assigned:["Week assigned","Semana asignada"],
   mark_reviewed:["Mark reviewed ✓","Marcar revisado ✓"], unmark:["Un-mark","Desmarcar"],
   this_week_report:["This week's report","Reporte de esta semana"], no_report:["No report submitted yet.","Aún no hay reporte."],
@@ -718,7 +720,11 @@ function renderTopbar(){
     const s=st[tech]||{};
     return wk && s.reviewed && (s.assigned || s.assignedManual);
   }).length;
-  $("#topbar").innerHTML = `<span>${t("review_progress",done,ROSTER.length)}</span><span><b>${t("wk_ending")} ${fmtShort(FRI_ISO)}</b></span>`;
+  const inSet=new Set(weekReports().map(e=>e.tech));
+  const frTxt=inSet.size>=ROSTER.length
+    ? t("fr_all",ROSTER.length)
+    : t("fr_some",inSet.size,ROSTER.length);
+  $("#topbar").innerHTML = `<span>${frTxt} · ${t("review_progress",done,ROSTER.length)}</span><span><b>${t("wk_ending")} ${fmtShort(FRI_ISO)}</b></span>`;
 }
 
 /* ================= WEEKLY REVIEW ================= */

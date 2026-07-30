@@ -319,7 +319,6 @@
   </aside>
 
   <div class="content">
-    <div class="bar" id="topBar">Loading shop reports…</div>
     <main>
 
       <!-- ============ MY WEEK ============ -->
@@ -1300,7 +1299,7 @@ let BOOTED=false;
 async function boot(){
   BOOTED=true;
   try{ DATA = await (await fetch("./data/report-history.json")).json(); }
-  catch(e){ $("#topBar").textContent="Could not load data/report-history.json."; return; }
+  catch(e){ document.querySelector("main").insertAdjacentHTML("afterbegin",`<div class="notice err">Could not load data/report-history.json.</div>`); return; }
   await tryLiveRefresh();
   DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
@@ -1514,22 +1513,12 @@ function renderAll(){
   if(histBtn) histBtn.style.display=isOwner()?"":"none";
   const bg=$("#briggptBtn");
   if(bg&&CONFIG.BRIGGPT_URL){ bg.href=CONFIG.BRIGGPT_URL; bg.style.display="inline-block"; }
-  updateTopBar(); renderMyWeek(); renderReportForm();
+  renderMyWeek(); renderReportForm();
   renderHistoryControls(); runSearch(); renderPianos(); renderCalReport();
   $("#dataStamp").textContent=t("stamp",DATA.entries.length.toLocaleString(),new Date().getFullYear())+(DATA.live?t("stamp_live"):t("stamp_snap",DATA.generated||""));
 }
 
 const weekEntries=(fISO)=>DATA.entries.filter(e=>e.date===fISO);
-
-/* ---------- top bar (report progress; dashboard itself lives in the Shop Manager) ---------- */
-function updateTopBar(){
-  const fri=reportFriday(), friISO=iso(fri);
-  const wk=weekEntries(friISO), inSet=new Set(wk.map(e=>e.tech));
-  const missing=ROSTER.filter(t=>!inSet.has(t));
-  $("#topBar").innerHTML=missing.length
-    ? t("topbar_missing",inSet.size,ROSTER.length,fmtShort(friISO),esc(missing.slice(0,5).join(", "))+(missing.length>5?"…":""))
-    : t("topbar_all",ROSTER.length,fmtShort(friISO));
-}
 
 function complianceHTML(){
   const fri=reportFriday();
@@ -1736,7 +1725,6 @@ $("#submitBtn").onclick=async()=>{
     if(!out.ok) throw new Error(out.error||"unknown error");
     $("#submitNotice").innerHTML=`<div class="notice ok">${t("submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
     DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
-    updateTopBar();
   }catch(e){
     $("#submitNotice").innerHTML=`<div class="notice err">${t("submit_fail",esc(String(e.message||e)))}</div>`;
   }
