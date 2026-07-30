@@ -97,6 +97,12 @@
   .curmsg{font-size:12.5px;color:var(--mut);margin:8px 2px;min-height:15px}
   .curmsg.err{color:var(--red);font-weight:700}
 
+  /* ---------- BLP Apps dropdown (sidebar) ---------- */
+  .apps-menu{margin-top:10px;border-top:1px solid rgba(255,255,255,.12);padding-top:8px}
+  .apps-toggle{display:flex;justify-content:space-between;align-items:center;width:100%;background:none;border:none;color:rgba(243,239,233,.78);font:inherit;font-size:14px;padding:9px 12px;border-radius:8px;cursor:pointer}
+  .apps-toggle:hover{background:rgba(255,255,255,.08);color:#fff}
+  .apps-link{display:block;padding:7px 12px 7px 26px;border-radius:8px;color:rgba(243,239,233,.66);font-size:13.5px;text-decoration:none}
+  .apps-link:hover{background:rgba(255,255,255,.08);color:#fff}
   /* ---------- dashboard + planner (moved from the tech app) ---------- */
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
   .stat{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:#fff}
@@ -260,7 +266,7 @@ const I18N = {
   nav_week:["Week Board","Tablero semanal"], nav_sequence:["Sequence","Secuencia"],
   nav_pipeline:["Pipeline","Flujo de pianos"], nav_qc:["Quality Control","Control de calidad"],
   sign_out:["Sign out","Cerrar sesión"], open_app:["Open Shop Reports","Abrir Reportes del Taller"],
-  nav_sales:["Sales App ↗","App de Ventas ↗"],
+  nav_apps:["BLP Apps","Apps BLP"],
   loading:["Loading shop data…","Cargando datos del taller…"],
   wk_ending:["Week ending","Semana que termina"],
   connect_cal:["Connect Google Calendar","Conectar Google Calendar"],
@@ -663,6 +669,17 @@ const store = {
 const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_KEY="blpmgr.qc", PH_KEY="blpmgr.phase";
 
 /* ================= SHELL ================= */
+/* the rest of the BLP app family — external links in a collapsible group
+   (mirrors the sales app's sidebar "BLP Apps" dropdown) */
+const BLP_APPS=[
+  {href:"https://blpsalesapp.netlify.app", label:"Sales App"},
+  {href:"https://blpcrm.netlify.app", label:"CRM"},
+  {href:"https://blpstoremap.netlify.app", label:"Store Map"},
+  {href:"https://blpmap.netlify.app", label:"US Marketing Map"},
+  {href:"https://pianologapp.netlify.app", label:"Piano Log App"},
+  {href:"https://pianotechnologylibrary.com", label:"PTL"},
+];
+let APPS_OPEN=false;
 const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
@@ -672,10 +689,12 @@ if(ACTIVE.startsWith("client-")){ CLI_DEEP = decodeURIComponent(ACTIVE.slice(7))
 function renderShell(){
   $("#langEn").classList.toggle("on",LANG==="en"); $("#langEs").classList.toggle("on",LANG==="es");
   $("#nav").innerHTML = TABS.map(([id,key])=>`<button data-v="${id}" class="${ACTIVE===id?"on":""}">${t(key)}</button>`).join("")
-    +`<button id="navSales">${t("nav_sales")}</button>`;
-  document.querySelectorAll("#nav button").forEach(b=>b.onclick=()=>{
-    if(!b.dataset.v){ window.open("https://blpsalesapp.netlify.app","_blank","noreferrer"); return; }
+    +`<div class="apps-menu"><button class="apps-toggle" id="appsToggle" aria-expanded="${APPS_OPEN}">
+        <span>🎹 ${t("nav_apps")}</span><span aria-hidden>${APPS_OPEN?"▾":"▸"}</span></button>
+      ${APPS_OPEN?BLP_APPS.map(a=>`<a class="apps-link" target="_blank" rel="noreferrer" href="${a.href}">${a.label} <span aria-hidden>↗</span></a>`).join(""):""}</div>`;
+  document.querySelectorAll("#nav button[data-v]").forEach(b=>b.onclick=()=>{
     ACTIVE=b.dataset.v;location.hash=ACTIVE;renderAll();});
+  $("#appsToggle").onclick=()=>{ APPS_OPEN=!APPS_OPEN; renderShell(); };
   $("#whoBox").innerHTML = `<b>${esc(USER?.name||USER?.email||"")}</b><br>
     <a href="index.html">${t("open_app")}</a> · <a href="#" id="soLink">${t("sign_out")}</a>`;
   $("#soLink").onclick=(e)=>{e.preventDefault();localStorage.removeItem("blp-shop-reports.user");location.reload();};
