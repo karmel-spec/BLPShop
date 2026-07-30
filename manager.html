@@ -97,6 +97,36 @@
   .curmsg{font-size:12.5px;color:var(--mut);margin:8px 2px;min-height:15px}
   .curmsg.err{color:var(--red);font-weight:700}
 
+  /* ---------- dashboard + planner (moved from the tech app) ---------- */
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
+  .stat{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:#fff}
+  .stat .k{font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut2);font-weight:700}
+  .stat .v{font-family:Georgia,serif;font-size:28px;margin-top:5px;font-weight:700}
+  .stat .v small{font-size:16px;color:var(--mut2)}
+  .stat .d{font-size:12.5px;margin-top:4px;color:var(--mut)}
+  .stat .d.good{color:var(--good)} .stat .d.warn{color:var(--red)}
+  .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;margin-top:18px}
+  #view-dash .card>h4{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#57524b;display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:10px}
+  #view-dash .card>h4 .lite{font-weight:400;letter-spacing:0;text-transform:none;color:var(--mut2);font-size:12px}
+  #view-dash table.list{width:100%;border-collapse:collapse;font-size:13.5px}
+  #view-dash table.list td{padding:10px 16px;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.5}
+  #view-dash table.list tr:last-child td{border-bottom:0}
+  .pill.in{background:var(--good-bg);color:var(--good)} .pill.out{background:var(--bad-bg);color:var(--red-deep)} .pill.mid{background:var(--warn-bg);color:#8a6d1d}
+  .excerpt{color:#3d3a35}
+  .tech-name{font-weight:700;white-space:nowrap}
+  .date-cell{color:var(--mut2);font-size:12px;white-space:nowrap;font-family:ui-monospace,Menlo,monospace}
+  .brow{display:grid;grid-template-columns:84px 1fr 44px;align-items:center;gap:10px;font-size:12.5px;padding:4px 16px}
+  .btrack{background:var(--line-soft);border-radius:3px;height:12px;position:relative}
+  .bfill{position:absolute;inset:0 auto 0 0;background:#191919;border-radius:3px}
+  .bfill.hot{background:var(--red)}
+  .brow b{text-align:right}
+  .notice{margin-top:14px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:6px;padding:12px 15px;font-size:13.5px;color:#57524b;line-height:1.55;background:#fffdf7}
+  .notice.ok{border-left-color:var(--good);background:#f7fbf8}
+  .tcard{border:1px solid var(--line);border-radius:6px;background:#fff;margin-top:14px;overflow:hidden}
+  .tcard h4{margin:0;padding:11px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;font-size:14px;gap:10px}
+  .tcard h4 .st{font-size:11.5px}
+  .tcard ul{margin:0;padding:8px 16px 12px 32px;font-size:13.5px;line-height:1.7;color:#3d3a35}
+  .tcard .none{padding:10px 16px;color:var(--mut2);font-size:13px}
   /* ---------- walk-around ---------- */
   .cats{display:flex;gap:7px;flex-wrap:wrap;margin:12px 0}
   .cat{border:1px solid var(--line);border-radius:99px;background:#fff;padding:8px 15px;font-size:13.5px;color:#57524b}
@@ -180,7 +210,9 @@
   <main>
     <div class="banner" id="topbar"></div>
 
+    <section class="view" id="view-dash"></section>
     <section class="view" id="view-review"></section>
+    <section class="view" id="view-planner"></section>
     <section class="view" id="view-walk"></section>
     <section class="view" id="view-week"></section>
     <section class="view" id="view-sequence"></section>
@@ -190,7 +222,6 @@
     <section class="view" id="view-team"></section>
     <section class="view" id="view-schedule"></section>
     <section class="view" id="view-curtis"></section>
-    <section class="view" id="view-plating"></section>
     <section class="view" id="view-brigham"></section>
   </main>
 </div>
@@ -214,11 +245,8 @@ const CONFIG = {
   CURTIS_API: "https://blpsalesapp.netlify.app/.netlify/functions/curtis-orders",  // two-way sync bridge (sales app service account)
   BRIGHAM_API: "https://blpsalesapp.netlify.app/.netlify/functions/brigham-tasks", // Brigham priority list bridge
   CURTIS_SHEET_URL: "https://docs.google.com/spreadsheets/d/1DxvDQ9WlhxXfiZaKGpdJLOOPNMBfVA9PsHGuLe55pmc/edit",
-  PLATING_API: "https://blpsalesapp.netlify.app/.netlify/functions/plating-orders", // buffing & electroplating grid bridge
-  PLATING_SHEET_URL: "https://docs.google.com/spreadsheets/d/1lIGUxeI-Em3CxhBTSHTrlVM7VFTgjwFCzNxFZNwPTWE/edit",
   SCHEDULE_API: "https://blpsalesapp.netlify.app/.netlify/functions/team-schedule", // Team Schedule tab bridge
   SCHEDULE_SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit#gid=1355785595",
-  PIANO_TASKS_API: "https://blpsalesapp.netlify.app/.netlify/functions/piano-tasks", // per-piano concurrent-task stamps (shared with Store Map)
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
   ADMINS: ["brighamlarson@gmail.com","brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"],
   ADMIN_DOMAIN: "brighamlarsonpianos.com",
@@ -341,24 +369,43 @@ const I18N = {
   auth_need:["Sign in with Google to edit — or enter the BLP app passcode:","Inicia sesión con Google para editar — o escribe el código de acceso BLP:"],
   cur_added:["Work order added (row %1) — fill in the details.","Orden agregada (fila %1) — completa los detalles."],
   /* brigham task list */
-  nav_plating:["Plating","Galvanoplastia"],
-  plat_title:["Plating & Hardware","Galvanoplastia y herrajes"],
-  plat_sub:["Two-way sync with the “BLP buffing and electroplating” sheet — in-house polishing log, the Category 3b send-out inventory, and completed pianos. Click any cell to edit.","Sincronización con la hoja “BLP buffing and electroplating” — pulido interno, inventario Category 3b para envío y pianos terminados. Toca cualquier celda para editar."],
-  plat_addrow:["+ Add row","+ Agregar fila"],
-  /* plating send-out shipments */
-  ship_title:["Send-out shipments — New England Chrome","Envíos — New England Chrome"],
-  ship_new:["+ New shipment","+ Nuevo envío"],
-  ship_pick:["Check the pianos going in this box (from Category 3b):","Marca los pianos que van en esta caja (de Category 3b):"],
-  ship_create:["Create shipment","Crear envío"],
-  ship_cancel:["Cancel","Cancelar"],
-  ship_packing:["Packing list","Lista de empaque"],
-  ship_mailall:["Mark batch mailed","Marcar lote enviado"],
-  ship_received:["Received","Recibido"],
-  ship_none:["No shipments yet — create one when a box is ready to send out.","Aún no hay envíos — crea uno cuando una caja esté lista para enviar."],
-  ship_share:["Shipments activate once the plating sheet is shared with the sales service account as Editor.","Los envíos se activan cuando la hoja se comparta con la cuenta de servicio como Editor."],
-  ship_items:["items/notes (pedals, rods, hinges…)","artículos/notas (pedales, varillas, bisagras…)"],
-  ship_nopick:["No unshipped Category 3b pianos found.","No hay pianos de Category 3b sin enviar."],
-  ship_stamped:["Stamped on the piano card too (Store Map).","También marcado en la ficha del piano (Store Map)."],
+  /* shop dashboard + assignment planner (moved from the tech app) */
+  nav_dashboard:["Shop Dashboard","Panel del Taller"],
+  nav_planner:["Assignment Planner","Planificador"],
+  week_ending:["Week ending %1","Semana que termina %1"],
+  dash_sub:["Shop overview · %1 active technicians · %2 reports on file since 2017","Resumen del taller · %1 técnicos activos · %2 reportes archivados desde 2017"],
+  st_reports_in:["Reports in","Reportes entregados"],
+  st_pending:["%1 pending","faltan: %1"],
+  st_everyone:["everyone reported","todos reportaron"],
+  st_lastweek:["Last week","Semana pasada"],
+  st_reports_for:["reports for %1","reportes del %1"],
+  st_pianos:["Pianos mentioned","Pianos mencionados"],
+  st_pianos_d:["distinct pianos, last 4 weeks","pianos distintos, últimas 4 semanas"],
+  st_hours:["Hours logged","Horas registradas"],
+  st_hours_d:["parsed from reports, last 4 weeks","extraídas de los reportes, últimas 4 semanas"],
+  st_year:["Reports in %1","Reportes en %1"],
+  st_year_d:["%1 technicians","%1 técnicos"],
+  card_week:["This week's reports","Reportes de esta semana"],
+  card_12w:["Reports submitted","Reportes entregados"],
+  lite_12w:["last 12 weeks","últimas 12 semanas"],
+  card_activity:["Latest activity","Actividad reciente"],
+  pill_in:["Submitted","Entregado"],
+  pill_out:["Missing","Falta"],
+  planner_title:["Monday assignment planner","Planificador de asignaciones del lunes"],
+  planner_sub:["Carry-overs and unfinished work from this week's reports, grouped per technician — draft material for next week's calendar assignments.","Pendientes y trabajo sin terminar de los reportes de esta semana, agrupados por técnico — borrador para las asignaciones de la próxima semana."],
+  copy_plan:["Copy full plan","Copiar plan completo"],
+  copied:["Copied ✓","Copiado ✓"],
+  planner_status:["<b>%1 of %2</b> reports in for %3. ","<b>%1 de %2</b> reportes entregados para %3. "],
+  planner_good:["Most reports are in — good time to plan next week.","La mayoría de los reportes están — buen momento para planear la próxima semana."],
+  planner_wait:["The plan fills in as Friday reports arrive; technicians without a report this week fall back to last week's.","El plan se llena conforme llegan los reportes del viernes; los técnicos sin reporte esta semana usan el de la semana pasada."],
+  no_recent:["No recent report","Sin reporte reciente"],
+  nothing_carry:["Nothing to carry over — assign fresh work.","Nada pendiente — asignar trabajo nuevo."],
+  from_date:["from %1","del %1"],
+  carry_one:["1 carry-over","1 pendiente"],
+  carry_many:["%1 carry-overs","%1 pendientes"],
+  nothing_flagged:["nothing flagged","nada marcado"],
+  no_carry_found:["No carry-over language found — likely finished assignments","No se detectaron pendientes — probablemente terminó sus asignaciones"],
+  in_flight:[" (pianos in flight: %1)"," (pianos en proceso: %1)"],
   /* team schedules */
   nav_schedule:["Schedules","Horarios"],
   sched_title:["Team Schedules","Horarios del equipo"],
@@ -616,7 +663,7 @@ const store = {
 const REV_KEY=`blpmgr.review.${FRI_ISO}`, WALK_KEY=`blpmgr.walk.${FRI_ISO}`, QC_KEY="blpmgr.qc", PH_KEY="blpmgr.phase";
 
 /* ================= SHELL ================= */
-const TABS=[["review","nav_review"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["curtis","nav_curtis"],["plating","nav_plating"],["brigham","nav_brigham"]];
+const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -638,7 +685,7 @@ function renderShell(){
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderReview(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderCurtis(); renderPlating(); renderBrigham();
+  renderDash(); renderReview(); renderPlanner(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderCurtis(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -807,17 +854,114 @@ function suggest(q){
   list.querySelectorAll("div").forEach(d=>d.onclick=()=>{ WA_PIANO=PIANOS.get(d.dataset.k); $("#waPiano").value=WA_PIANO.label; list.style.display="none"; });
 }
 
-/* ================= SHEET GRIDS (Curtis Harper · Plating) =================
+/* ============ SHOP DASHBOARD + ASSIGNMENT PLANNER (moved from tech app) ============ */
+function extractPianos(text){
+  const found=[]; let m; BRAND_RE.lastIndex=0;
+  while((m=BRAND_RE.exec(text))){
+    const brand=m[1].replace(/\s+/g," ");
+    const serial=m[2]||null;
+    found.push({brand,serial,label:serial?`${brand} ${serial}`:brand});
+  }
+  return found;
+}
+function sumHours(text){
+  let s=0,m; const re=/(\d+(?:\.\d+)?)\s*(?:hrs?\b|hours?\b)/gi;
+  while((m=re.exec(text))){ const v=parseFloat(m[1]); if(v>0&&v<200) s+=v; }
+  return s;
+}
+const weekEntries=isoD=>REPORTS.entries.filter(e=>e.date===isoD);
+function fmtLong(d){ return d.toLocaleDateString(LANG==="es"?"es-MX":"en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
+function complianceHTML(){
+  const weeks=[]; for(let i=0;i<12;i++){ const d=new Date(FRI); d.setDate(d.getDate()-7*i); weeks.push(iso(d)); }
+  return ROSTER.map(tc=>({tc,n:weeks.filter(w=>REPORTS.entries.some(e=>e.tech===tc&&e.date===w)).length}))
+    .sort((a,b)=>b.n-a.n)
+    .map(c=>`<div class="brow"><span>${esc(c.tc)}</span><div class="btrack"><i class="bfill ${c.n<6?"hot":""}" style="width:${Math.round(c.n/12*100)}%"></i></div><b class="num">${c.n}/12</b></div>`).join("");
+}
+function renderDash(){
+  const v=$("#view-dash"); if(!v) return;
+  if(!REPORTS.entries.length){ v.innerHTML=`<div class="curmsg">${t("cur_loading")}</div>`; return; }
+  const wk=weekEntries(FRI_ISO), inSet=new Set(wk.map(e=>e.tech));
+  const missing=ROSTER.filter(x=>!inSet.has(x));
+  const year=new Date().getFullYear();
+  const yearEntries=REPORTS.entries.filter(e=>e.year===year);
+  const prevFri=new Date(FRI); prevFri.setDate(prevFri.getDate()-7);
+  const prevCount=weekEntries(iso(prevFri)).length;
+  const monthAgo=new Date(FRI); monthAgo.setDate(monthAgo.getDate()-28);
+  const pianosMo=new Set();
+  REPORTS.entries.filter(e=>e.date&&e.date>=iso(monthAgo)).forEach(e=>extractPianos(e.text).forEach(p=>pianosMo.add(p.serial||p.label)));
+  const hrsMo=REPORTS.entries.filter(e=>e.date&&e.date>=iso(monthAgo)).reduce((s,e)=>s+sumHours(e.text),0);
+  const recent=[...REPORTS.entries].filter(e=>e.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("week_ending",fmtLong(FRI))}</h2>
+      <div class="sub">${t("dash_sub",ROSTER.length,REPORTS.entries.length.toLocaleString())}</div></div></div>
+    <div class="stats">
+      <div class="stat"><div class="k">${t("st_reports_in")}</div><div class="v num">${inSet.size}<small>/${ROSTER.length}</small></div>
+        <div class="d ${missing.length?"warn":"good"}">${missing.length?t("st_pending",esc(missing.slice(0,4).join(", "))+(missing.length>4?` +${missing.length-4}`:"")):t("st_everyone")}</div></div>
+      <div class="stat"><div class="k">${t("st_lastweek")}</div><div class="v num">${prevCount}</div><div class="d">${t("st_reports_for",fmtShort(iso(prevFri)))}</div></div>
+      <div class="stat"><div class="k">${t("st_pianos")}</div><div class="v num">${pianosMo.size}</div><div class="d">${t("st_pianos_d")}</div></div>
+      <div class="stat"><div class="k">${t("st_hours")}</div><div class="v num">${hrsMo?hrsMo.toFixed(0):"—"}</div><div class="d">${t("st_hours_d")}</div></div>
+      <div class="stat"><div class="k">${t("st_year",year)}</div><div class="v num">${yearEntries.length}</div><div class="d">${t("st_year_d",new Set(yearEntries.map(e=>e.tech)).size)}</div></div>
+    </div>
+    <div class="cols">
+      <div class="card"><h4><span>${t("card_week")}</span> <span class="lite num">${fmtShort(FRI_ISO)}</span></h4>
+        <table class="list"><tbody>${ROSTER.map(tc=>{
+          const e=wk.find(x=>x.tech===tc);
+          return e
+            ? `<tr><td class="tech-name">${esc(tc)}</td><td class="excerpt">${esc(e.text.slice(0,160))}${e.text.length>160?"…":""}</td><td><span class="pill in">${t("pill_in")}</span></td></tr>`
+            : `<tr><td class="tech-name">${esc(tc)}</td><td class="excerpt" style="color:var(--mut2)">—</td><td><span class="pill out">${t("pill_out")}</span></td></tr>`;
+        }).join("")}</tbody></table></div>
+      <div>
+        <div class="card"><h4><span>${t("card_12w")}</span> <span class="lite">${t("lite_12w")}</span></h4>
+          <div style="padding:8px 0">${complianceHTML()}</div></div>
+        <div class="card" style="margin-top:18px"><h4>${t("card_activity")}</h4>
+          <table class="list"><tbody>${recent.map(e=>`
+            <tr><td class="date-cell">${fmtShort(e.date)}</td><td><span class="tech-name">${esc(e.tech)}</span>
+            <div class="excerpt" style="font-size:12.5px;color:var(--mut)">${esc(e.text.slice(0,90))}${e.text.length>90?"…":""}</div></td></tr>`).join("")}</tbody></table></div>
+      </div>
+    </div>`;
+}
+function renderPlanner(){
+  const v=$("#view-planner"); if(!v) return;
+  if(!REPORTS.entries.length){ v.innerHTML=`<div class="curmsg">${t("cur_loading")}</div>`; return; }
+  const wk=weekEntries(FRI_ISO);
+  const prevISO=iso(new Date(FRI.getTime()-7*864e5));
+  const inCount=new Set(wk.map(e=>e.tech)).size;
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("planner_title")}</h2><div class="sub">${t("planner_sub")}</div></div>
+      <button class="btn2" id="copyPlanBtn">${t("copy_plan")}</button></div>
+    <div class="notice ${inCount>=Math.ceil(ROSTER.length*0.6)?"ok":""}">
+      ${t("planner_status",inCount,ROSTER.length,fmtShort(FRI_ISO))}${inCount>=Math.ceil(ROSTER.length*0.6)?t("planner_good"):t("planner_wait")}</div>
+    ${ROSTER.map(tech=>{
+      const cur=wk.find(e=>e.tech===tech) || REPORTS.entries.find(e=>e.tech===tech&&e.date===prevISO);
+      if(!cur) return `<div class="tcard"><h4>${esc(tech)} <span class="pill out st">${t("no_recent")}</span></h4><div class="none">${t("nothing_carry")}</div></div>`;
+      const carries=carryLines(cur.text);
+      const pianos=[...new Set(extractPianos(cur.text).filter(p=>p.serial).map(p=>p.label))];
+      return `<div class="tcard">
+        <h4>${esc(tech)} <span class="lite" style="font-weight:400;color:var(--mut2)">${t("from_date",fmtShort(cur.date))}</span>
+          <span style="margin-left:auto" class="pill ${carries.length?"mid":"in"} st">${carries.length?(carries.length===1?t("carry_one"):t("carry_many",carries.length)):t("nothing_flagged")}</span></h4>
+        ${carries.length?`<ul>${carries.map(c=>`<li>${esc(c.slice(0,220))}</li>`).join("")}</ul>`:`<div class="none">${t("no_carry_found")}${pianos.length?t("in_flight",esc(pianos.join(", "))):""}.</div>`}
+      </div>`;
+    }).join("")}`;
+  const btn=v.querySelector("#copyPlanBtn");
+  btn.onclick=async()=>{
+    const txt=ROSTER.map(tc=>{
+      const cur=wk.find(e=>e.tech===tc)||REPORTS.entries.find(e=>e.tech===tc&&e.date===prevISO);
+      const carries=cur?carryLines(cur.text):[];
+      return `${tc}:\n${carries.length?carries.map(c=>"  • "+c).join("\n"):"  • (no carry-overs — assign fresh work)"}`;
+    }).join("\n\n");
+    await navigator.clipboard.writeText(`BLP next-week assignment draft — from reports of ${fmtShort(FRI_ISO)}\n\n${txt}`);
+    btn.textContent=t("copied");
+    setTimeout(()=>{ btn.textContent=t("copy_plan"); },1600);
+  };
+}
+
+/* ================= SHEET GRIDS (Curtis Harper · Schedules) =================
    Editable grids over team Google Sheets, two-way synced through the
    sales-app bridges (service account). One factory, one instance per sheet. */
 const GRID_CFGS={
   curtis:{ api:()=>CONFIG.CURTIS_API, sheet:()=>CONFIG.CURTIS_SHEET_URL,
     tabs:["Requested","Completed, paid, received"],
     title:"cur_title", sub:"cur_sub", addLabel:"cur_addrow", dateHeader:/date requested/i },
-  plating:{ api:()=>CONFIG.PLATING_API, sheet:()=>CONFIG.PLATING_SHEET_URL,
-    tabs:["In-house polishing: cat 2 & 3a","Category 3b","Completed Pianos"],
-    title:"plat_title", sub:"plat_sub", addLabel:"plat_addrow", dateHeader:null,
-    topPanel:G=>shipPanelHTML(G), wireTop:(v,G)=>wireShipPanel(v,G) },
   schedule:{ api:()=>CONFIG.SCHEDULE_API, sheet:()=>CONFIG.SCHEDULE_SHEET_URL,
     tabs:["Team Schedule"],
     title:"sched_title", sub:"sched_sub", addLabel:"sched_addrow", dateHeader:null },
@@ -1022,169 +1166,8 @@ function renderGrid(id){
   if(ACTIVE===id&&!G.tabs&&!G.loading&&!G.err) gridFetch(id);
 }
 const renderCurtis=()=>renderGrid("curtis");
-const renderPlating=()=>renderGrid("plating");
 const renderSchedule=()=>renderGrid("schedule");
 
-/* ---- Plating v2: send-out shipment batches (New England Chrome) ----
-   One row per piano per batch on the plating sheet's "Shipments" tab
-   (auto-created by the bridge). Mailed/Received stamps also post to the
-   Piano Log's Task Status tab so the Store Map card pills and the
-   bottleneck report clear on their own. */
-const SHIP_TAB="Shipments";
-const PLATE_TASK="pedals/cabinetry hardware electroplating and polishing";
-let SHIP_PICKING=false, SHIP_BUSY=false;
-const shipStamp=()=>new Date().toLocaleDateString("en-US")+" · "+((USER&&(USER.name||USER.email))||"Team");
-function shipBatches(G){
-  const rows=(G.tabs&&G.tabs[SHIP_TAB])||[];
-  const by={};
-  rows.forEach((r,i)=>{ if(i===0||!(r[0]||"").trim()) return;
-    (by[r[0]]=by[r[0]]||[]).push({row:i+1,batch:r[0],created:r[1]||"",serial:r[2]||"",piano:r[3]||"",
-      items:r[4]||"",mailed:(r[5]||"").trim()==="TRUE",mailedAt:r[6]||"",received:(r[7]||"").trim()==="TRUE",receivedAt:r[8]||"",notes:r[9]||""}); });
-  return by;
-}
-function shipCandidates(G){
-  const out=[], seen=new Set();
-  Object.values(shipBatches(G)).forEach(b=>b.forEach(p=>{ if(!p.received) seen.add((p.serial||"").trim()); }));
-  const cat=(G.tabs&&G.tabs["Category 3b"])||[];
-  for(let i=3;i<cat.length;i++){
-    const r=cat[i]||[], serial=(r[1]||"").trim(), brand=(r[0]||"").trim();
-    if(!serial||seen.has(serial)) continue;
-    if(r.join(" ").toLowerCase().includes("plating complete")) continue;
-    out.push({serial,label:brand||serial});
-  }
-  return out;
-}
-function shipPanelHTML(G){
-  const ship=G.tabs?G.tabs[SHIP_TAB]:null;
-  let body;
-  if(ship===null||ship===undefined){ body=`<div class="curmsg">${t("ship_share")}</div>`; }
-  else{
-    const by=shipBatches(G), keys=Object.keys(by).sort().reverse();
-    body=keys.length?keys.map(k=>{
-      const b=by[k], allMailed=b.every(p=>p.mailed), allBack=b.every(p=>p.received);
-      return `<div style="border:1px solid #e2ddd3;border-radius:8px;padding:10px 12px;margin-bottom:10px${allBack?";opacity:.55":""}">
-        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px">
-          <b>${esc(k)}</b><span style="color:var(--mut);font-size:12.5px">${esc(b[0].created)}</span>
-          <span style="flex:1"></span>
-          <button class="btn2 shipPack" data-b="${esc(k)}">${t("ship_packing")}</button>
-          ${allMailed?"":`<button class="btn2 shipMail" data-b="${esc(k)}">${t("ship_mailall")}</button>`}
-        </div>
-        ${b.map(p=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0;font-size:13.5px;flex-wrap:wrap">
-          <span style="min-width:200px">${esc(p.piano)} <span style="color:var(--mut)">#${esc(p.serial)}</span></span>
-          <span style="color:var(--mut);flex:1">${esc(p.items)}</span>
-          <span style="font-size:12px;color:${p.mailed?"var(--ok,#2e7d32)":"var(--mut)"}">${p.mailed?"✓ "+esc(p.mailedAt):"not mailed"}</span>
-          ${p.received?`<span style="font-size:12px;color:var(--ok,#2e7d32)">✓ ${t("ship_received")} ${esc(p.receivedAt)}</span>`
-            :(p.mailed?`<button class="btn2 shipRecv" data-row="${p.row}" data-serial="${esc(p.serial)}">${t("ship_received")}</button>`:"")}
-        </div>`).join("")}
-      </div>`;
-    }).join(""):`<div class="curmsg">${t("ship_none")}</div>`;
-    if(SHIP_PICKING){
-      const cands=shipCandidates(G);
-      body+=`<div style="border:2px dashed #cfc9bf;border-radius:8px;padding:12px;margin-top:6px">
-        <div style="margin-bottom:8px;font-size:13.5px">${t("ship_pick")}</div>
-        ${cands.length?cands.map(c=>`<div style="display:flex;gap:8px;align-items:center;padding:3px 0">
-          <label style="display:flex;gap:7px;align-items:center;min-width:220px;font-size:13.5px">
-            <input type="checkbox" class="shipCk" value="${esc(c.serial)}"> ${esc(c.label)} <span style="color:var(--mut)">#${esc(c.serial)}</span></label>
-          <input class="shipItems" data-serial="${esc(c.serial)}" placeholder="${t("ship_items")}" maxlength="120"
-            style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:6px 9px;font:inherit;font-size:13px">
-        </div>`).join(""):`<div class="curmsg">${t("ship_nopick")}</div>`}
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button class="btn2 shipCreate">${t("ship_create")}</button>
-          <button class="btn2 shipCancel">${t("ship_cancel")}</button>
-        </div></div>`;
-    }
-  }
-  return `<div class="card" style="padding:14px 16px;margin-bottom:16px">
-    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
-      <h3 style="margin:0;font-size:15.5px">${t("ship_title")}</h3><span style="flex:1"></span>
-      ${ship?`<button class="btn2 shipNew">${t("ship_new")}</button>`:""}
-    </div>${body}</div>`;
-}
-async function shipPost(body){
-  const r=await fetch(CONFIG.PLATING_API,{method:"POST",headers:curHeaders(true),
-    body:JSON.stringify({key:curKey(),tab:SHIP_TAB,...body})});
-  const j=await r.json();
-  if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
-  return j;
-}
-async function shipTaskStamp(serial,step,label){
-  try{
-    const r=await fetch(CONFIG.PIANO_TASKS_API,{method:"POST",headers:curHeaders(true),
-      body:JSON.stringify({key:curKey(),serial,task:PLATE_TASK,part:"",step,label,on:true,
-        by:(USER&&(USER.name||USER.email))||"Team"})});
-    const j=await r.json();
-    return !!j.ok;
-  }catch(e){ return false; }
-}
-function wireShipPanel(v,G){
-  const $q=s=>v.querySelector(s), $$q=s=>[...v.querySelectorAll(s)];
-  const refresh=()=>{ G.tabs=null; gridFetch("plating"); };
-  const nb=$q(".shipNew"); if(nb) nb.onclick=()=>{ SHIP_PICKING=!SHIP_PICKING; renderGrid("plating"); };
-  const cc=$q(".shipCancel"); if(cc) cc.onclick=()=>{ SHIP_PICKING=false; renderGrid("plating"); };
-  const cr=$q(".shipCreate"); if(cr) cr.onclick=async()=>{
-    if(SHIP_BUSY) return;
-    const picked=$$q(".shipCk").filter(c=>c.checked).map(c=>c.value);
-    if(!picked.length) return;
-    SHIP_BUSY=true; cr.disabled=true; cr.textContent="…";
-    try{
-      const nums=Object.keys(shipBatches(G)).map(k=>+String(k).replace(/\D/g,"")||0);
-      const batch="B"+(Math.max(0,...nums)+1);
-      const cat=G.tabs["Category 3b"]||[];
-      const created=new Date().toLocaleDateString("en-US");
-      for(const serial of picked){
-        const row=cat.find(r=>(r&&(r[1]||"").trim())===serial)||[];
-        const items=($$q(`.shipItems[data-serial="${serial}"]`)[0]||{}).value||"";
-        await shipPost({append:[batch,created,serial,(row[0]||"").trim(),items.trim(),"FALSE","","FALSE","",""]});
-      }
-      SHIP_PICKING=false; refresh();
-    }catch(e){ gridMsg("plating",t("cur_savefail",String(e.message||e)),true); }
-    SHIP_BUSY=false;
-  };
-  $$q(".shipMail").forEach(b=>b.onclick=async()=>{
-    if(SHIP_BUSY) return; SHIP_BUSY=true; b.disabled=true; b.textContent="…";
-    try{
-      const batch=shipBatches(G)[b.dataset.b]||[];
-      const stamp=shipStamp(), updates=[];
-      batch.filter(p=>!p.mailed).forEach(p=>updates.push({row:p.row,col:6,value:"TRUE"},{row:p.row,col:7,value:stamp}));
-      if(updates.length) await shipPost({updates});
-      // card step 1 is "Submitted" (set by the plating request form) — mailed
-      // status lives on the Shipments tab; only Received stamps the card
-      refresh();
-    }catch(e){ gridMsg("plating",t("cur_savefail",String(e.message||e)),true); SHIP_BUSY=false; renderGrid("plating"); return; }
-    SHIP_BUSY=false;
-  });
-  $$q(".shipRecv").forEach(b=>b.onclick=async()=>{
-    if(SHIP_BUSY) return; SHIP_BUSY=true; b.disabled=true; b.textContent="…";
-    try{
-      await shipPost({updates:[{row:+b.dataset.row,col:8,value:"TRUE"},{row:+b.dataset.row,col:9,value:shipStamp()}]});
-      const ok=await shipTaskStamp(b.dataset.serial,2,"Received");
-      refresh();
-      if(ok) gridMsg("plating",t("ship_stamped"));
-    }catch(e){ gridMsg("plating",t("cur_savefail",String(e.message||e)),true); SHIP_BUSY=false; renderGrid("plating"); return; }
-    SHIP_BUSY=false;
-  });
-  $$q(".shipPack").forEach(b=>b.onclick=()=>{
-    const batch=shipBatches(G)[b.dataset.b]||[];
-    const w=window.open("","_blank");
-    if(!w) return;
-    w.document.write(`<!doctype html><title>Packing list ${esc(b.dataset.b)}</title>
-      <style>body{font:14px/1.5 Georgia,serif;max-width:720px;margin:40px auto;color:#222}
-      h1{font-size:20px;margin:0} .m{color:#666} table{border-collapse:collapse;width:100%;margin:18px 0}
-      td,th{border:1px solid #999;padding:7px 10px;text-align:left;font-size:13.5px}
-      .sig{margin-top:44px;display:flex;gap:40px} .sig div{flex:1;border-top:1px solid #333;padding-top:5px;font-size:12.5px}
-      @media print{.np{display:none}}</style>
-      <h1>Brigham Larson Pianos — Electroplating Shipment</h1>
-      <div class="m">Batch ${esc(b.dataset.b)} · ${esc(batch[0]?batch[0].created:"")} · ${batch.length} piano(s)</div>
-      <div style="margin-top:10px"><b>To:</b> New England Chrome &nbsp;·&nbsp; <b>From:</b> Brigham Larson Pianos, American Fork, UT</div>
-      <table><tr><th>#</th><th>Piano</th><th>Serial</th><th>Items in box</th></tr>
-      ${batch.map((p,i)=>`<tr><td>${i+1}</td><td>${esc(p.piano)}</td><td>${esc(p.serial)}</td><td>${esc(p.items)}</td></tr>`).join("")}
-      </table>
-      <div>Please tag every part with its serial number so pieces return to the right piano.</div>
-      <div class="sig"><div>Packed by / date</div><div>Received by / date</div></div>
-      <button class="np" onclick="print()" style="margin-top:24px;padding:8px 18px">Print</button>`);
-    w.document.close();
-  });
-}
 // sheet-side edits flow in: gentle poll while a grid view is open (paused mid-edit)
 setInterval(()=>{
   if(GRID_CFGS[ACTIVE]&&gridState(ACTIVE).tabs&&!gridState(ACTIVE).loading&&
