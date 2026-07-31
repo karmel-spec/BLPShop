@@ -573,6 +573,8 @@ const I18N = {
   cl_unassigned:["— unassigned —","— sin asignar —"],
   cl_suggest:["Suggested rotation shown — press “Save assignments” to lock it in for the week.","Rotación sugerida — pulsa “Guardar asignaciones” para fijarla esta semana."],
   cl_saveassign:["Save assignments","Guardar asignaciones"],
+  cl_suggested:["suggested","sugerido"],
+  cl_print:["🖨 Print team report","🖨 Imprimir reporte"],
   cl_saving:["Saving…","Guardando…"],
   cl_done:["%1 of %2 done","%1 de %2 listos"],
   cl_signin:["Enter the shop password (lock icon → re-enter) and pick your name in the sidebar so check-offs are saved under it.","Escribe la contraseña del taller y elige tu nombre en la barra lateral para guardar bajo tu nombre."],
@@ -1063,8 +1065,9 @@ function renderPlating(){
 
 /* ================= FRIDAY CLEANING (replaces the laminated cards) ==========
    Card checklists come from the report sheet's "Cleaning Cards" tab; weekly
-   assignments + check-offs live on "Cleaning Log". Assignments rotate by
-   week automatically until someone saves/edits them. */
+   assignments + check-offs live on "Cleaning Log". Unassigned cards show the
+   weekly rotation as a suggestion until a name is saved. All updates are
+   optimistic + in place — no full reload, no scroll jump. */
 const CL={cards:null,log:null,fetchedAt:null,loading:false,err:null,needKey:false,busy:false};
 const clWeek=()=>iso(reportFriday());
 function clAssigned(){
@@ -1080,17 +1083,18 @@ function clRotation(cards){
   cards.forEach((c,i)=>{ out[c]=roster[(i+weekIdx)%roster.length]; });
   return out;
 }
-async function clFetch(){
+async function clFetch(bg){
   if(CL.loading) return;
   if(!shopAuthed()){ CL.needKey=true; renderCleaning(); return; }
-  CL.loading=true; CL.err=null; renderCleaning();
+  CL.loading=true; CL.err=null;
+  if(!bg) renderCleaning();               // only flash "loading" on first load
   try{
     const r=await fetch(CONFIG.CLEANING_API+"?week="+clWeek()+"&key="+encodeURIComponent(shopKey()),{headers:shopHeaders(false)});
     const j=await r.json();
     if(r.status===401){ localStorage.removeItem("blp.appkey"); CL.needKey=true; CL.err=j.error||""; }
     else if(j.error){ CL.err=t("cur_err",j.error); }
     else { CL.cards=j.cards; CL.log=j.log; CL.fetchedAt=j.fetchedAt; CL.needKey=false; }
-  }catch(e){ CL.err=t("cur_err",String(e.message||e)); }
+  }catch(e){ if(!bg) CL.err=t("cur_err",String(e.message||e)); }
   CL.loading=false; renderCleaning();
 }
 async function clPost(body){
@@ -1099,31 +1103,74 @@ async function clPost(body){
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
 }
+// optimistic local assignment (an assign row is a log row with an empty item)
+function clSetLocalAssign(card,assignee){
+  CL.log=(CL.log||[]).filter(r=>!(r.card===card&&!r.item));
+  if(assignee) CL.log.push({week:clWeek(),card,item:"",assignee,doneAt:"",by:shopWho()});
+}
+function clPrintReport(){
+  if(!CL.cards) return;
+  const assigned=clAssigned(), doneMap={};
+  (CL.log||[]).forEach(r=>{ if(r.item&&r.doneAt) doneMap[r.card+"\u0000"+r.item.toLowerCase()]={at:r.doneAt,by:r.by}; });
+  const cards=Object.keys(CL.cards).sort();
+  let total=0, totalDone=0;
+  const rows=cards.map(c=>{
+    const items=CL.cards[c]||[];
+    const done=items.filter(it=>doneMap[c+"\u0000"+it.toLowerCase()]).length;
+    total+=items.length; totalDone+=done;
+    return `<h3>${esc(c)} <small>— ${esc(assigned[c]||"unassigned")} · ${done}/${items.length} done</small></h3>
+      <table><tr><th style="width:34px"></th><th>Task</th><th style="width:190px">Completed</th></tr>
+      ${items.map(it=>{const d=doneMap[c+"\u0000"+it.toLowerCase()];
+        return `<tr><td style="text-align:center">${d?"✓":"—"}</td><td>${esc(it)}</td><td>${d?esc(d.at)+" · "+esc(d.by):""}</td></tr>`;}).join("")}
+      </table>`;
+  }).join("");
+  const w=window.open("","_blank");
+  if(!w) return;
+  w.document.write(`<!doctype html><title>Team Cleaning Report — ${esc(fmtShort(clWeek()))}</title>
+    <style>body{font:13px/1.5 Georgia,serif;max-width:760px;margin:36px auto;color:#222}
+    h1{font-size:20px;margin:0} .m{color:#666;margin-bottom:6px}
+    h3{margin:22px 0 6px;font-size:15px} h3 small{font-weight:400;color:#666;font-size:12.5px}
+    table{border-collapse:collapse;width:100%} td,th{border:1px solid #bbb;padding:5px 9px;text-align:left;font-size:12px}
+    th{background:#f2efe8;text-transform:uppercase;font-size:10px;letter-spacing:.06em}
+    @media print{.np{display:none}}</style>
+    <h1>Brigham Larson Pianos — Friday Shop Organization</h1>
+    <div class="m">Team cleaning report · week ending ${esc(fmtShort(clWeek()))} · ${totalDone} of ${total} tasks completed · printed ${new Date().toLocaleString("en-US")}</div>
+    ${rows}
+    <button class="np" onclick="print()" style="margin-top:24px;padding:8px 18px">Print / Save as PDF</button>`);
+  w.document.close();
+}
 function renderCleaning(){
   const v=$("#view-cleaning"); if(!v) return;
+  // don't re-render under an open dropdown / focused field — it would eat the interaction
+  if(document.activeElement&&v.contains(document.activeElement)&&
+     /^(SELECT|INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  const y=window.scrollY;
   const cards=CL.cards?Object.keys(CL.cards):[];
   const assigned=clAssigned();
-  const noAssigns=cards.length&&!Object.keys(assigned).length;
-  const suggest=noAssigns?clRotation(cards):{};
+  const suggest=clRotation(cards);                       // always available as the default
   const who=c=>assigned[c]||suggest[c]||"";
+  const unsaved=cards.filter(c=>!assigned[c]).length;    // cards still on the suggested rotation
   const doneMap={};
-  (CL.log||[]).forEach(r=>{ if(r.item&&r.doneAt) doneMap[r.card+""+r.item.toLowerCase()]={at:r.doneAt,by:r.by}; });
+  (CL.log||[]).forEach(r=>{ if(r.item&&r.doneAt) doneMap[r.card+"\u0000"+r.item.toLowerCase()]={at:r.doneAt,by:r.by}; });
   const meFirst=[...cards].sort((a,b)=>((who(b)===ME)-(who(a)===ME))||a.localeCompare(b));
   v.innerHTML=`
     <div class="row1"><div><h2 class="page">${t("cl_title")}</h2><div class="sub">${t("cl_sub",fmtShort(clWeek()))}</div></div>
-      <button class="btn2 clRefresh">${t("cur_refresh")}</button></div>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn2 clPrint">${t("cl_print")}</button>
+        <button class="btn2 clRefresh">${t("cur_refresh")}</button>
+      </span></div>
     <div class="notice">${t("cl_steps")}</div>
-    <div class="curmsg clmsg${CL.err?" err":""}">${CL.err?esc(CL.err):(CL.loading?t("cur_loading"):"")}</div>
+    <div class="curmsg clmsg${CL.err?" err":""}">${CL.err?esc(CL.err):(CL.loading&&!CL.cards?t("cur_loading"):"")}</div>
     ${CL.needKey&&!shopAuthed()?authCardHTML():""}
-    ${noAssigns?`<div class="notice ok" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${t("cl_suggest")}
+    ${cards.length&&unsaved?`<div class="notice ok" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">${t("cl_suggest")}
       <button class="btn2 clSaveAssign">${t("cl_saveassign")}</button></div>`:""}
     ${meFirst.map(c=>{
       const items=CL.cards[c]||[];
-      const done=items.filter(it=>doneMap[c+""+it.toLowerCase()]).length;
+      const done=items.filter(it=>doneMap[c+"\u0000"+it.toLowerCase()]).length;
       const mine=who(c)===ME&&!!ME;
       return `<div class="clcard ${mine?"mine":""}">
         <h4><b>${esc(c)}</b>${mine?`<span class="pill mid st">${t("cl_yours")}</span>`:""}
-          <span style="font-size:12px;color:var(--mut2)">${t("cl_assignee")}</span>
+          <span style="font-size:12px;color:var(--mut2)">${t("cl_assignee")}${assigned[c]?"":" <i>("+t("cl_suggested")+")</i>"}</span>
           <select class="clWho" data-card="${esc(c)}" style="border:1px solid var(--line);border-radius:5px;padding:5px 8px;font:inherit;font-size:12.5px">
             <option value="">${t("cl_unassigned")}</option>
             ${ROSTER.map(n=>`<option ${who(c)===n?"selected":""}>${esc(n)}</option>`).join("")}
@@ -1131,7 +1178,7 @@ function renderCleaning(){
           <span class="clbar"><i style="width:${items.length?Math.round(done/items.length*100):0}%"></i></span>
           <span style="font-size:12px;color:var(--mut2);white-space:nowrap" class="num">${t("cl_done",done,items.length)}</span></h4>
         ${items.map(it=>{
-          const d=doneMap[c+""+it.toLowerCase()];
+          const d=doneMap[c+"\u0000"+it.toLowerCase()];
           return `<div class="clitem ${d?"done":""}" data-card="${esc(c)}" data-item="${esc(it)}">
             <span class="box">✓</span><span class="txt">${esc(it)}</span>
             ${d?`<span class="stamp">${esc(d.at)} · ${esc(d.by)}</span>`:""}
@@ -1139,45 +1186,53 @@ function renderCleaning(){
         }).join("")}
       </div>`;
     }).join("")}`;
-  v.querySelector(".clRefresh").onclick=()=>{ CL.cards=null; CL.log=null; CL.err=null; clFetch(); };
+  window.scrollTo(0,y);                                  // keep the reader where they were
+  v.querySelector(".clRefresh").onclick=()=>{ CL.err=null; clFetch(true); };
+  v.querySelector(".clPrint").onclick=clPrintReport;
   if(CL.needKey&&!shopAuthed()) wireAuthCard(v,()=>{ CL.err=null; clFetch(); });
   const sa=v.querySelector(".clSaveAssign");
   if(sa) sa.onclick=async()=>{
     sa.disabled=true; sa.textContent=t("cl_saving");
     try{
-      for(const c of cards) await clPost({action:"assign",card:c,assignee:suggest[c]||""});
-      CL.cards=null; clFetch();
+      for(const c of cards){ if(!assigned[c]&&who(c)) { await clPost({action:"assign",card:c,assignee:who(c)}); clSetLocalAssign(c,who(c)); } }
+      renderCleaning();
     }catch(e){ v.querySelector(".clmsg").textContent="✗ "+(e.message||e); sa.disabled=false; sa.textContent=t("cl_saveassign"); }
   };
   v.querySelectorAll(".clWho").forEach(sel=>sel.onchange=async()=>{
-    try{ await clPost({action:"assign",card:sel.dataset.card,assignee:sel.value}); CL.cards=null; clFetch(); }
-    catch(e){ v.querySelector(".clmsg").textContent="✗ "+(e.message||e); }
+    const card=sel.dataset.card, val=sel.value, prev=clAssigned()[card]||"";
+    clSetLocalAssign(card,val);            // optimistic — the board never resets
+    sel.blur(); renderCleaning();
+    try{ await clPost({action:"assign",card,assignee:val}); }
+    catch(e){
+      clSetLocalAssign(card,prev); renderCleaning();
+      const m=$("#view-cleaning .clmsg"); if(m) m.textContent="✗ "+(e.message||e);
+    }
   });
   v.querySelectorAll(".clitem").forEach(el=>el.onclick=async()=>{
     if(!shopAuthed()){ CL.needKey=true; renderCleaning(); v.querySelector(".clmsg").textContent=t("cl_signin"); return; }
     if(CL.busy) return; CL.busy=true;
     const on=!el.classList.contains("done");
-    el.classList.toggle("done",on);
-    try{
-      await clPost({action:"mark",card:el.dataset.card,item:el.dataset.item,on});
-      const key=el.dataset.card+""+el.dataset.item.toLowerCase();
-      CL.log=(CL.log||[]).filter(r=>!(r.card===el.dataset.card&&r.item.toLowerCase()===el.dataset.item.toLowerCase()));
-      if(on) CL.log.push({week:clWeek(),card:el.dataset.card,item:el.dataset.item,assignee:"",doneAt:new Date().toLocaleDateString("en-US"),by:shopWho()});
+    const card=el.dataset.card, item=el.dataset.item;
+    CL.log=(CL.log||[]).filter(r=>!(r.card===card&&r.item.toLowerCase()===item.toLowerCase()));
+    if(on) CL.log.push({week:clWeek(),card,item,assignee:"",doneAt:new Date().toLocaleDateString("en-US"),by:shopWho()});
+    renderCleaning();
+    try{ await clPost({action:"mark",card,item,on}); }
+    catch(e){
+      CL.log=(CL.log||[]).filter(r=>!(r.card===card&&r.item.toLowerCase()===item.toLowerCase()));
       renderCleaning();
-    }catch(e){
-      el.classList.toggle("done",!on);
-      v.querySelector(".clmsg").textContent="✗ "+(e.message||e);
+      const m=$("#view-cleaning .clmsg"); if(m) m.textContent="✗ "+(e.message||e);
     }
     CL.busy=false;
   });
   if(!CL.cards&&!CL.loading&&!CL.err&&!CL.needKey) clFetch();
 }
-// sheet-side edits flow in while these views are open
+// sheet-side edits flow in while these views are open (quiet background refresh)
 setInterval(()=>{
   const on=id=>document.querySelector(`#view-${id}.on`);
+  const busyEl=document.activeElement&&/^(SELECT|INPUT|TEXTAREA)$/.test(document.activeElement.tagName);
   if(on("plating")&&PL.tabs&&!PL.loading&&
      !(document.activeElement&&document.activeElement.closest&&document.activeElement.closest(".curgrid"))) platFetch();
-  if(on("cleaning")&&CL.cards&&!CL.loading&&!CL.busy){ CL.cards=null; CL.log=null; clFetch(); }
+  if(on("cleaning")&&CL.cards&&!CL.loading&&!CL.busy&&!busyEl) clFetch(true);
 },60000);
 
 const DOC_SEEN_KEY="blp-shop-reports.hbseen";   // shared "watched" state, keyed by video id
@@ -1300,6 +1355,7 @@ async function boot(){
   applyI18n();
   renderAll();
   handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
+  if(/^#(cleaning|plating)$/.test(location.hash)) showView(location.hash.slice(1));  // e.g. the 3:30 cleaning text
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
   loadLivePhases();   // CURRENT PHASE from the Piano Log via the Store Map API
 }
