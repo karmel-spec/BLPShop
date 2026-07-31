@@ -170,6 +170,21 @@
   .clitem .stamp{margin-left:auto;font-size:11px;color:var(--mut2);white-space:nowrap}
   .clbar{height:7px;background:var(--line-soft);border-radius:99px;overflow:hidden;flex:1;min-width:90px}
   .clbar i{display:block;height:100%;background:var(--good);border-radius:99px}
+  .wbgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px;align-items:start}
+  @media (max-width:900px){.wbgrid{grid-template-columns:1fr}}
+  .wbcol{background:#fff;border:2px solid var(--ink);border-radius:8px;overflow:hidden}
+  .wbcol>h3{margin:0;padding:13px 16px 9px;font-family:Georgia,serif;font-size:17px;letter-spacing:.16em;text-transform:uppercase;border-bottom:2px solid var(--ink);display:flex;justify-content:space-between;align-items:baseline}
+  .wbcol>h3 small{font-size:11px;letter-spacing:.03em;text-transform:none;color:var(--mut2);font-family:var(--sans,inherit)}
+  .wbitem{padding:10px 14px;border-bottom:1px solid var(--line-soft);display:flex;gap:10px;align-items:flex-start;cursor:pointer}
+  .wbitem .box{width:19px;height:19px;border:1.5px solid var(--line);border-radius:4px;display:grid;place-items:center;flex:none;color:transparent;margin-top:1px}
+  .wbitem.done .box{background:var(--good);border-color:var(--good);color:#fff}
+  .wbitem.done .wtxt{color:var(--mut2);text-decoration:line-through}
+  .wbitem .wnote{display:block;font-size:11.5px;color:var(--red-deep);font-weight:600}
+  .wbitem .wmeta{display:block;font-size:10.5px;color:var(--mut2)}
+  .wbadd{display:flex;gap:7px;padding:10px 12px;background:#faf8f4}
+  .wbadd input{flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:8px 10px;font:inherit;font-size:13px;min-width:0}
+  .wbadd button{flex:none}
+  .wbnone{padding:16px 14px;color:var(--mut2);font-size:12.5px;font-style:italic}
   .notice{margin-top:14px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:6px;padding:12px 15px;font-size:13.5px;color:#57524b;line-height:1.55;background:#fffdf7}
   .notice.err{border-left-color:var(--red);background:#fdf7f7}
   .notice.ok{border-left-color:var(--good);background:#f7fbf8}
@@ -281,12 +296,8 @@
   <div class="gatecard">
     <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
     <h1 data-i18n="gate_title">SHOP REPORTS</h1>
-    <div style="display:flex;gap:8px;width:100%">
-      <input type="password" id="gatePw" data-i18n-ph="gate_pw" placeholder="Shop password" autocomplete="current-password"
-        style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:11px 13px;font:inherit;font-size:15px">
-      <button class="btn" id="gateGo" data-i18n="gate_enter">Enter</button>
-    </div>
-    <div class="msg" id="gateMsg" data-i18n="gate_msg">Enter the shop password, then pick your name in the sidebar — your reports and check-offs are logged under it.</div>
+    <button class="btn" id="gateGo" data-i18n="gate_enter" style="font-size:15px;padding:12px 22px;width:100%">Sign in with Google</button>
+    <div class="msg" id="gateMsg" data-i18n="gate_msg">Sign in with your BLP Google account — your reports and check-offs are logged under your name.</div>
   </div>
 </div>
 <div class="shell">
@@ -314,6 +325,7 @@
       <button data-view="policies"><span class="dot"></span><span data-i18n="nav_policies">Shop Policies</span></button>
       <button data-view="bassstrings"><span class="dot"></span><span data-i18n="nav_bassstrings">Bass Strings</span></button>
       <button data-view="cleaning"><span class="dot"></span><span data-i18n="nav_cleaning">Friday Cleaning</span></button>
+      <button data-view="whiteboard"><span class="dot"></span><span data-i18n="nav_whiteboard">Whiteboard</span></button>
       <button data-view="plating"><span class="dot"></span><span data-i18n="nav_plating">Plating</span></button>
       <a class="ext" href="https://pianologapp.netlify.app/" target="_blank" rel="noreferrer"><span class="dot"></span>Piano Log ↗</a>
       <a class="ext" href="https://blpstoremap.netlify.app" target="_blank" rel="noreferrer"><span class="dot"></span>Store Map ↗</a>
@@ -471,6 +483,9 @@
       <!-- ============ FRIDAY CLEANING ============ -->
       <section class="view" id="view-cleaning"></section>
 
+      <!-- ============ WHITEBOARD (parts / supplies / tools requests) ============ -->
+      <section class="view" id="view-whiteboard"></section>
+
       <!-- ============ PLATING & HARDWARE ============ -->
       <section class="view" id="view-plating"></section>
 
@@ -517,6 +532,7 @@ const CONFIG = {
   PLATING_SHEET_URL: "https://docs.google.com/spreadsheets/d/1lIGUxeI-Em3CxhBTSHTrlVM7VFTgjwFCzNxFZNwPTWE/edit",
   PIANO_TASKS_API: "https://blpsalesapp.netlify.app/.netlify/functions/piano-tasks",  // per-piano concurrent-task stamps (shared with Store Map)
   CLEANING_API: "https://blpsalesapp.netlify.app/.netlify/functions/cleaning",        // Friday cleaning cards + log
+  WHITEBOARD_API: "https://blpsalesapp.netlify.app/.netlify/functions/whiteboard",     // parts/supplies/tools request board
   ACTIVE_WEEKS: 8,
   SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit"
 };
@@ -539,7 +555,7 @@ const I18N = {
   plat_title:["Plating & Hardware","Galvanoplastia y herrajes"],
   plat_sub:["Two-way sync with the “BLP buffing and electroplating” sheet — in-house polishing log, the Category 3b send-out inventory, and completed pianos. Click any cell to edit.","Sincronización con la hoja “BLP buffing and electroplating” — pulido interno, inventario Category 3b para envío y pianos terminados. Toca cualquier celda para editar."],
   plat_addrow:["+ Add row","+ Agregar fila"],
-  plat_auth:["Enter the shop password to edit:","Escribe la contraseña del taller para editar:"],
+  plat_auth:["Your session expired — sign in again to keep editing:","Tu sesión expiró — inicia sesión de nuevo para seguir editando:"],
   cur_open_sheet:["Open sheet ↗","Abrir hoja ↗"],
   cur_refresh:["Refresh","Actualizar"],
   cur_loading:["Loading…","Cargando…"],
@@ -575,9 +591,20 @@ const I18N = {
   cl_saveassign:["Save assignments","Guardar asignaciones"],
   cl_suggested:["suggested","sugerido"],
   cl_print:["🖨 Print team report","🖨 Imprimir reporte"],
+  /* whiteboard */
+  nav_whiteboard:["Whiteboard","Pizarrón"],
+  wb_title:["Shop Whiteboard","Pizarrón del Taller"],
+  wb_sub:["The wall board, digital — put ordering requests in the right column and tap the box when something is ordered/received. Everything lives on the report sheet's “Whiteboard” tab.","El pizarrón de la pared, digital — pon pedidos en la columna correcta y toca la casilla cuando algo se ordene/reciba. Todo vive en la pestaña “Whiteboard”."],
+  wb_parts_note:["running low on","se está acabando"],
+  wb_tools_note:["suggestions & upgrades","sugerencias y mejoras"],
+  wb_add:["+ add","+ agregar"],
+  wb_item_ph:["what do we need?","¿qué necesitamos?"],
+  wb_none:["nothing on the board","nada en el pizarrón"],
+  wb_showdone:["Show handled items","Ver artículos atendidos"],
+  wb_hidedone:["Hide handled items","Ocultar atendidos"],
   cl_saving:["Saving…","Guardando…"],
   cl_done:["%1 of %2 done","%1 de %2 listos"],
-  cl_signin:["Enter the shop password (lock icon → re-enter) and pick your name in the sidebar so check-offs are saved under it.","Escribe la contraseña del taller y elige tu nombre en la barra lateral para guardar bajo tu nombre."],
+  cl_signin:["Sign in again so check-offs are saved under your name.","Inicia sesión de nuevo para guardar bajo tu nombre."],
   nav_handbook:["Shop Handbook","Manual del Taller"],
   nav_policies:["Shop Policies","Políticas del Taller"],
   topbar_missing:["FRIDAY REPORTS — <b>%1 of %2</b> submitted for %3 · waiting on %4","REPORTES DEL VIERNES — <b>%1 de %2</b> entregados para %3 · faltan %4"],
@@ -724,11 +751,8 @@ const I18N = {
   stamp_live:[" · live from sheet"," · en vivo desde la hoja"],
   stamp_snap:[" · snapshot %1"," · captura %1"],
   gate_title:["SHOP REPORTS","REPORTES DEL TALLER"],
-  gate_pw:["Shop password","Contraseña del taller"],
-  gate_enter:["Enter","Entrar"],
-  gate_wrong:["Wrong password — ask the shop manager.","Contraseña incorrecta — pregunta al gerente del taller."],
-  who_lock:["Lock app (sign out)","Bloquear la app (salir)"],
-  gate_msg:["Enter the shop password, then pick your name in the sidebar — your reports and check-offs are logged under it.","Escribe la contraseña del taller y elige tu nombre en la barra lateral — tus reportes y tareas quedan registrados con tu nombre."],
+  gate_enter:["Sign in with Google","Iniciar sesión con Google"],
+  gate_msg:["Sign in with your BLP Google account — your reports and check-offs are logged under your name.","Inicia sesión con tu cuenta Google de BLP — tus reportes y tareas quedan registrados con tu nombre."],
   gate_nomatch:["This Google account doesn't match a technician on the roster. Ask the office to add you, or sign in with your work account.","Esta cuenta de Google no coincide con ningún técnico del roster. Pide a la oficina que te agregue, o usa tu cuenta de trabajo."],
 };
 const t = (k, ...args) => {
@@ -757,7 +781,8 @@ function setLang(l){
 
 let DATA = { entries: [], tabs: {} };
 let ME = localStorage.getItem("blp-shop-reports.me") || "";
-let USER = null;   // legacy Google identity — always null now (password gate)
+let USER = null;   // Google identity {email,name,given,picture}
+try{ USER = JSON.parse(localStorage.getItem("blp-shop-reports.user")||"null"); }catch(e){}
 const OWNERS = ["brighamlarson@gmail.com","brigham@brighamlarsonpianos.com",
                 "walter@brighamlarsonpianos.com","karmel@brighamlarsonpianos.com"];
 let calToken = null;
@@ -782,29 +807,34 @@ function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return 
 /* ---------- in-app documents (Shop Handbook + Shop Policies) ----------
    Both render the same way: a snapshot JSON ({generated,source,sections})
    per language, a searchable TOC, and click-to-play video embeds. */
-/* ================= SHARED AUTH for the sheet bridges (plating · cleaning) ===
-   The shop password IS the bridge passcode (localStorage blp.appkey, same
-   key the Store Map + Shop Manager use). Attribution = the sidebar name. */
-const shopKey=()=>((localStorage.getItem("blp.appkey")||"").trim());
-const shopAuthed=()=>!!shopKey();
-const shopHeaders=json=>json?{"content-type":"application/json"}:{};
-const shopWho=()=>(ME||"Team");
+/* ================= SHARED AUTH for the sheet bridges =================
+   Every bridge call carries the signed-in Google ID token; attribution is
+   the Google identity (server-verified), with the sidebar name as backup. */
+function shopToken(){
+  const tok=sessionStorage.getItem("blpshop.idtok")||"";
+  if(!tok) return "";
+  try{
+    const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    if(p.exp && p.exp*1000 < Date.now()+120000) return "";
+  }catch(e){ return ""; }
+  return tok;
+}
+const shopKey=()=>"";
+const shopAuthed=()=>{ if(shopToken()) return true; renewSession(); return false; };
+function shopHeaders(json){
+  const h=json?{"content-type":"application/json"}:{};
+  const tok=shopToken(); if(tok) h.authorization="Bearer "+tok;
+  return h;
+}
+const shopWho=()=>((USER&&(USER.name||USER.email))||ME||"Team");
 function authCardHTML(){
   return `<div class="card" style="padding:16px;max-width:520px;display:flex;flex-direction:column;gap:10px;margin:14px 0">
     <div style="font-size:13.5px;color:var(--mut)">${t("plat_auth")}</div>
-    <div style="display:flex;gap:9px;align-items:center">
-      <input type="password" class="passIn" placeholder="${t("cur_pass")}" autocomplete="current-password"
-        style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;font-size:14px">
-      <button class="btn2 passGo">${t("cur_unlock")}</button>
-    </div></div>`;
+    <button class="btn passGo" style="align-self:flex-start">${t("gate_enter")}</button></div>`;
 }
 function wireAuthCard(v,onUnlocked){
-  const inp=v.querySelector(".passIn"), go=v.querySelector(".passGo");
-  if(!inp) return;
-  const unlock=()=>{ const k=inp.value.trim(); if(!k) return;
-    localStorage.setItem("blp.appkey",k); onUnlocked(); };
-  go.onclick=unlock;
-  inp.onkeydown=e=>{ if(e.key==="Enter") unlock(); };
+  const go=v.querySelector(".passGo");
+  if(go) go.onclick=()=>googleLogin(false);
 }
 
 /* ================= PLATING & HARDWARE (moved from the Shop Manager) =========
@@ -826,9 +856,9 @@ async function platFetch(){
   if(!shopAuthed()){ PL.needKey=true; renderPlating(); return; }
   PL.loading=true; PL.err=null; renderPlating();
   try{
-    const r=await fetch(CONFIG.PLATING_API+"?key="+encodeURIComponent(shopKey()),{headers:shopHeaders(false)});
+    const r=await fetch(CONFIG.PLATING_API,{headers:shopHeaders(false)});
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); PL.needKey=true; PL.err=j.error||""; }
+    if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); PL.needKey=true; PL.err=j.error||""; renewSession(); }
     else if(j.error){ PL.err=t("cur_err",j.error); }
     else { PL.tabs=j.tabs; PL.fetchedAt=j.fetchedAt; PL.needKey=false; }
   }catch(e){ PL.err=t("cur_err",String(e.message||e)); }
@@ -839,7 +869,7 @@ async function platSave(tab,row,col,value,td){
   td.classList.remove("saved","savefail"); td.classList.add("saving");
   try{
     const r=await fetch(CONFIG.PLATING_API,{method:"POST",headers:shopHeaders(true),
-      body:JSON.stringify({key:shopKey(),tab,updates:[{row,col,value}]})});
+      body:JSON.stringify({tab,updates:[{row,col,value}]})});
     const j=await r.json();
     td.classList.remove("saving");
     if(j.ok){
@@ -849,7 +879,7 @@ async function platSave(tab,row,col,value,td){
       platMsg(t("cur_saved"));
     }else{
       td.classList.add("savefail");
-      if(r.status===401){ localStorage.removeItem("blp.appkey"); PL.needKey=true; renderPlating(); }
+      if(r.status===401){ PL.needKey=true; renderPlating(); renewSession(); }
       platMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true);
     }
   }catch(e){ td.classList.remove("saving"); td.classList.add("savefail"); platMsg(t("cur_savefail",String(e.message||e)),true); }
@@ -860,10 +890,10 @@ async function platAdd(){
   const row=new Array(Math.max(hdr.length,4)).fill("");
   try{
     const r=await fetch(CONFIG.PLATING_API,{method:"POST",headers:shopHeaders(true),
-      body:JSON.stringify({key:shopKey(),tab,append:row})});
+      body:JSON.stringify({tab,append:row})});
     const j=await r.json();
     if(j.ok){ PL.flashRow=j.row||null; PL.tabs=null; await platFetch(); }
-    else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); PL.needKey=true; renderPlating(); } platMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
+    else{ if(r.status===401){ PL.needKey=true; renderPlating(); renewSession(); } platMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
   }catch(e){ platMsg(t("cur_savefail",String(e.message||e)),true); }
 }
 function shipBatches(){
@@ -942,7 +972,7 @@ async function shipPost(body){
 async function shipTaskStamp(serial,step,label){
   try{
     const r=await fetch(CONFIG.PIANO_TASKS_API,{method:"POST",headers:shopHeaders(true),
-      body:JSON.stringify({key:shopKey(),serial,task:PLATE_TASK,part:"",step,label,on:true,by:shopWho()})});
+      body:JSON.stringify({serial,task:PLATE_TASK,part:"",step,label,on:true,by:shopWho()})});
     const j=await r.json();
     return !!j.ok;
   }catch(e){ return false; }
@@ -1089,9 +1119,9 @@ async function clFetch(bg){
   CL.loading=true; CL.err=null;
   if(!bg) renderCleaning();               // only flash "loading" on first load
   try{
-    const r=await fetch(CONFIG.CLEANING_API+"?week="+clWeek()+"&key="+encodeURIComponent(shopKey()),{headers:shopHeaders(false)});
+    const r=await fetch(CONFIG.CLEANING_API+"?week="+clWeek(),{headers:shopHeaders(false)});
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); CL.needKey=true; CL.err=j.error||""; }
+    if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); CL.needKey=true; CL.err=j.error||""; renewSession(); }
     else if(j.error){ CL.err=t("cur_err",j.error); }
     else { CL.cards=j.cards; CL.log=j.log; CL.fetchedAt=j.fetchedAt; CL.needKey=false; }
   }catch(e){ if(!bg) CL.err=t("cur_err",String(e.message||e)); }
@@ -1099,7 +1129,7 @@ async function clFetch(bg){
 }
 async function clPost(body){
   const r=await fetch(CONFIG.CLEANING_API,{method:"POST",headers:shopHeaders(true),
-    body:JSON.stringify({key:shopKey(),week:clWeek(),by:shopWho(),...body})});
+    body:JSON.stringify({week:clWeek(),by:shopWho(),...body})});
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
 }
@@ -1235,6 +1265,94 @@ setInterval(()=>{
   if(on("cleaning")&&CL.cards&&!CL.loading&&!CL.busy&&!busyEl) clFetch(true);
 },60000);
 
+/* ================= WHITEBOARD (parts / supplies / tools requests) ==========
+   Digital twin of the wall board. Rows live on the report sheet's
+   "Whiteboard" tab; tap an item's box when it has been ordered/received. */
+const WB={rows:null,loading:false,err:null,needKey:false,busy:false,showDone:false};
+const WB_COLS=[["Parts","wb_parts_note"],["Supplies",""],["Tools","wb_tools_note"]];
+async function wbFetch(bg){
+  if(WB.loading) return;
+  if(!shopAuthed()){ WB.needKey=true; renderWhiteboard(); return; }
+  WB.loading=true; WB.err=null;
+  if(!bg) renderWhiteboard();
+  try{
+    const r=await fetch(CONFIG.WHITEBOARD_API,{headers:shopHeaders(false)});
+    const j=await r.json();
+    if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); WB.needKey=true; WB.err=j.error||""; renewSession(); }
+    else if(j.error){ WB.err=t("cur_err",j.error); }
+    else { WB.rows=j.rows; WB.needKey=false; }
+  }catch(e){ if(!bg) WB.err=t("cur_err",String(e.message||e)); }
+  WB.loading=false; renderWhiteboard();
+}
+async function wbPost(body){
+  const r=await fetch(CONFIG.WHITEBOARD_API,{method:"POST",headers:shopHeaders(true),
+    body:JSON.stringify({by:shopWho(),...body})});
+  const j=await r.json();
+  if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
+}
+function renderWhiteboard(){
+  const v=$("#view-whiteboard"); if(!v) return;
+  if(document.activeElement&&v.contains(document.activeElement)&&
+     /^(SELECT|INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  const y=window.scrollY;
+  const rows=WB.rows||[];
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("wb_title")}</h2><div class="sub">${t("wb_sub")}</div></div>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn2 wbToggleDone">${WB.showDone?t("wb_hidedone"):t("wb_showdone")}</button>
+        <button class="btn2 wbRefresh">${t("cur_refresh")}</button>
+      </span></div>
+    <div class="curmsg wbmsg${WB.err?" err":""}">${WB.err?esc(WB.err):(WB.loading&&!WB.rows?t("cur_loading"):"")}</div>
+    ${WB.needKey&&!shopAuthed()?authCardHTML():""}
+    <div class="wbgrid">
+      ${WB_COLS.map(([col,noteKey])=>{
+        const items=rows.filter(r=>r.column.toLowerCase()===col.toLowerCase()&&(WB.showDone||!r.done));
+        return `<div class="wbcol"><h3>${esc(col)}${noteKey?`<small>${t(noteKey)}</small>`:""}</h3>
+          ${items.map(r=>`<div class="wbitem ${r.done?"done":""}" data-row="${r.row}" data-on="${r.done?"1":""}">
+            <span class="box">✓</span>
+            <span style="flex:1"><span class="wtxt">${esc(r.item)}</span>
+              ${r.note?`<span class="wnote">${esc(r.note)}</span>`:""}
+              <span class="wmeta">${esc(r.by)}${r.added?" · "+esc(r.added):""}${r.done&&r.doneAt?" · ✓ "+esc(r.doneAt):""}</span></span>
+          </div>`).join("")||`<div class="wbnone">${t("wb_none")}</div>`}
+          <div class="wbadd"><input maxlength="200" placeholder="${t("wb_item_ph")}" data-col="${esc(col)}">
+            <button class="btn2" data-col="${esc(col)}">${t("wb_add")}</button></div>
+        </div>`;
+      }).join("")}
+    </div>`;
+  window.scrollTo(0,y);
+  v.querySelector(".wbRefresh").onclick=()=>{ WB.err=null; wbFetch(true); };
+  v.querySelector(".wbToggleDone").onclick=()=>{ WB.showDone=!WB.showDone; renderWhiteboard(); };
+  if(WB.needKey&&!shopAuthed()) wireAuthCard(v,()=>{ WB.err=null; wbFetch(); });
+  v.querySelectorAll(".wbadd button").forEach(b=>b.onclick=async()=>{
+    const inp=v.querySelector(`.wbadd input[data-col="${b.dataset.col}"]`);
+    const item=inp.value.trim(); if(!item){ inp.focus(); return; }
+    b.disabled=true;
+    try{
+      await wbPost({action:"add",column:b.dataset.col,item});
+      WB.rows.push({row:0,column:b.dataset.col,item,note:"",by:shopWho(),
+        added:new Date().toLocaleDateString("en-US"),done:false,doneAt:""});
+      inp.value=""; renderWhiteboard(); wbFetch(true);
+    }catch(e){ const m=$("#view-whiteboard .wbmsg"); if(m) m.textContent="✗ "+(e.message||e); b.disabled=false; }
+  });
+  v.querySelectorAll(".wbitem").forEach(el=>el.onclick=async()=>{
+    if(WB.busy) return;
+    const row=+el.dataset.row; if(!row) return;
+    WB.busy=true;
+    const rec=WB.rows.find(r=>r.row===row);
+    const on=!(rec&&rec.done);
+    if(rec){ rec.done=on; rec.doneAt=on?new Date().toLocaleDateString("en-US")+" · "+shopWho():""; }
+    renderWhiteboard();
+    try{ await wbPost({action:"done",row,on}); }
+    catch(e){
+      if(rec){ rec.done=!on; rec.doneAt=""; }
+      renderWhiteboard();
+      const m=$("#view-whiteboard .wbmsg"); if(m) m.textContent="✗ "+(e.message||e);
+    }
+    WB.busy=false;
+  });
+  if(!WB.rows&&!WB.loading&&!WB.err&&!WB.needKey) wbFetch();
+}
+
 const DOC_SEEN_KEY="blp-shop-reports.hbseen";   // shared "watched" state, keyed by video id
 const docSeen=()=>{ try{ return JSON.parse(localStorage.getItem(DOC_SEEN_KEY))||{}; }catch(e){ return {}; } };
 
@@ -1355,7 +1473,7 @@ async function boot(){
   applyI18n();
   renderAll();
   handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
-  if(/^#(cleaning|plating)$/.test(location.hash)) showView(location.hash.slice(1));  // e.g. the 3:30 cleaning text
+  if(/^#(cleaning|plating|whiteboard)$/.test(location.hash)) showView(location.hash.slice(1));  // e.g. the 3:30 cleaning text
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
   loadLivePhases();   // CURRENT PHASE from the Piano Log via the Store Map API
 }
@@ -1435,25 +1553,41 @@ function matchTech(user){
     return n===given || local===n || local.startsWith(n) || given.startsWith(n);
   })||"";
 }
-/* Google login removed (Brigham, 7/31) — the whole app sits behind the shop
-   password ("pianoman"), which doubles as the bridge passcode for writes.
-   Identity for the activity trail = the name picked in the sidebar. */
-const isOwner=()=>true;   // one shared password — every view is available
-const SHOP_PW="pianoman";
+/* ================= GOOGLE SIGN-IN (full-page redirect — no popups, no
+   One Tap, no FedCM: those were the glitchy parts. The whole flow is a
+   plain browser navigation to Google and back to /auth.html.) ================= */
+const OAUTH_CLIENT="110628682621-v65mkaoanv87sp75ggdfcrglfr7bkr8p.apps.googleusercontent.com";
+const isOwner=()=>!!USER&&(OWNERS.includes((USER.email||"").toLowerCase())||(USER.email||"").toLowerCase().endsWith("@brighamlarsonpianos.com"));
 const isLocal=["localhost","127.0.0.1"].includes(location.hostname);
 const devBypass=()=>isLocal&&new URLSearchParams(location.search).get("dev")==="1";
-const pwOk=()=>((localStorage.getItem("blp.appkey")||"").trim().toLowerCase()===SHOP_PW);
-function showGate(){ $("#gate").style.display=""; document.querySelector(".shell").style.display="none";
-  const go=$("#gateGo"), inp=$("#gatePw");
-  const enter=()=>{
-    if(inp.value.trim().toLowerCase()!==SHOP_PW){ $("#gateMsg").textContent=t("gate_wrong"); inp.select(); return; }
-    localStorage.setItem("blp.appkey",inp.value.trim());
-    hideGate();
-    if(!BOOTED) boot(); else renderAll();
-  };
-  go.onclick=enter;
-  inp.onkeydown=e=>{ if(e.key==="Enter") enter(); };
-  inp.focus();
+function rnd(){ return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2); }
+function googleLogin(silent){
+  const state=rnd(), nonce=rnd();
+  sessionStorage.setItem("blp.oauth.state",state);
+  sessionStorage.setItem("blp.oauth.nonce",nonce);
+  sessionStorage.setItem("blp.oauth.return",location.pathname.split("/").pop()||"index.html");
+  const p=new URLSearchParams({
+    client_id:OAUTH_CLIENT,
+    redirect_uri:location.origin+"/auth.html",
+    response_type:"id_token",
+    scope:"openid email profile",
+    state, nonce,
+  });
+  if(silent){ p.set("prompt","none"); if(USER&&USER.email) p.set("login_hint",USER.email); }
+  else p.set("prompt","select_account");
+  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+p.toString();
+}
+/* renew quietly when we know who you are but the hour-long token lapsed;
+   guarded so a failed renewal can never loop */
+function renewSession(){
+  if(!USER||shopToken()||devBypass()) return;
+  if(sessionStorage.getItem("blp.oauth.silent")) return;
+  sessionStorage.setItem("blp.oauth.silent","1");
+  googleLogin(true);
+}
+function showGate(){
+  $("#gate").style.display=""; document.querySelector(".shell").style.display="none";
+  $("#gateGo").onclick=()=>googleLogin(false);
 }
 function hideGate(){ $("#gate").style.display="none"; document.querySelector(".shell").style.display="grid"; }
 
@@ -1464,25 +1598,36 @@ function rosterSelectHTML(label){
 }
 function renderWho(){
   const area=$("#whoArea");
-  area.innerHTML=`
-    ${ME?`<div class="uchip"><span class="avatar">${esc(ME.slice(0,2).toUpperCase())}</span>
-      <span><span class="un">${esc(ME)}</span><br><span class="ur">${t("who_tech",esc(ME))}</span></span></div>`:""}
-    ${rosterSelectHTML(t("who_signedas"))}
-    <a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>
-    <button class="signout" id="signOutBtn">${t("who_lock")}</button>`;
-  $("#signOutBtn").onclick=signOut;
+  const tech=USER?matchTech(USER):"";
+  if(tech&&!isOwner()){ ME=tech; localStorage.setItem("blp-shop-reports.me",ME); }
+  area.innerHTML=USER?`
+    <div class="uchip">
+      ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
+      <span><span class="un">${esc(USER.name||USER.email)}</span><br>
+      <span class="ur">${isOwner()?t("who_owner"):tech?t("who_tech",esc(tech)):t("who_nomatch")}</span></span>
+    </div>
+    ${isOwner()||!tech?rosterSelectHTML(isOwner()?t("who_acting"):t("who_which")):""}
+    ${isOwner()?`<a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>`:""}
+    <button class="signout" id="signOutBtn">${t("who_signout")}</button>`
+  :`<button class="btn" id="whoSignIn" style="width:100%">${t("gate_enter")}</button>`;
+  const so=$("#signOutBtn"); if(so) so.onclick=signOut;
+  const si=$("#whoSignIn"); if(si) si.onclick=()=>googleLogin(false);
   const sel=$("#whoSelect");
   if(sel) sel.onchange=()=>{ ME=sel.value; localStorage.setItem("blp-shop-reports.me",ME); renderAll(); };
   renderBarLogin();
 }
 function renderBarLogin(){
   const bar=$("#barLogin"); if(!bar) return;
-  bar.innerHTML=ME?`<span class="uchip"><span class="avatar">${esc(ME.slice(0,2).toUpperCase())}</span><span>${esc(ME)}</span></span>`:"";
+  bar.innerHTML=USER?`<span class="uchip">
+    ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
+    <span>${esc(USER.given||USER.name||USER.email)}</span></span>`:"";
 }
 function signOut(){
-  ME="";
+  USER=null; ME="";
+  localStorage.removeItem("blp-shop-reports.user");
   localStorage.removeItem("blp-shop-reports.me");
-  localStorage.removeItem("blp.appkey");
+  sessionStorage.removeItem("blpshop.idtok");
+  sessionStorage.removeItem("blp.oauth.silent");
   showGate();
 }
 
@@ -1494,6 +1639,7 @@ function showView(name){
   if(DOCVIEWS[name]) DOCVIEWS[name].ensure();
   if(name==="plating") renderPlating();
   if(name==="cleaning") renderCleaning();
+  if(name==="whiteboard") renderWhiteboard();
 }
 $("#tabs").addEventListener("click",e=>{ const b=e.target.closest("button"); if(b&&b.dataset.view) showView(b.dataset.view); });
 
@@ -1985,9 +2131,11 @@ function renderCalReport(){
   $("#calReport").textContent=mine?mine.text:(ME?(composeText()?"Draft: "+composeText():"No report yet for this week."):"Select your name in the sidebar.");
 }
 
-/* entry: shop password once per device, then straight in */
+/* entry: Google session on this device → straight in (token renews
+   quietly); otherwise the sign-in gate */
 applyI18n();
-if(pwOk()||devBypass()){ hideGate(); boot(); }
+if(location.hash==="#signin"){ history.replaceState(null,"",location.pathname); showGate(); }
+else if(USER||devBypass()){ hideGate(); boot(); renewSession(); }
 else showGate();
 </script>
 </body>

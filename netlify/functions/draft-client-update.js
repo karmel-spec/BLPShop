@@ -52,7 +52,7 @@ async function verifyAdmin(idToken) {
   const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(idToken));
   if (!r.ok) return null;
   const info = await r.json();
-  if (info.aud !== GOOGLE_CLIENT_ID) return null;
+  if (info.aud !== GOOGLE_CLIENT_ID && info.aud !== '110628682621-v65mkaoanv87sp75ggdfcrglfr7bkr8p.apps.googleusercontent.com') return null;
   if (info.email_verified !== 'true' && info.email_verified !== true) return null;
   const email = String(info.email || '').toLowerCase();
   if (email.endsWith('@' + ADMIN_DOMAIN) || ADMIN_EMAILS.includes(email)) return email;
@@ -66,9 +66,8 @@ exports.handler = async (event) => {
   let req;
   try { req = JSON.parse(event.body || '{}'); } catch (e) { return json(400, { error: 'bad json' }); }
 
-  const teamPw = String(req.key || '').trim().toLowerCase() === 'pianoman';  // shop password (Google login removed 7/31)
-  const admin = (await verifyAdmin(req.idToken)) || (teamPw ? 'shop' : null);
-  if (!admin) return json(401, { error: 'shop password required' });
+  const admin = await verifyAdmin(req.idToken);
+  if (!admin) return json(401, { error: 'admin sign-in required' });
 
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return json(503, { error: 'no-key' });

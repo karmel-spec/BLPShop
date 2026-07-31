@@ -209,14 +209,8 @@
     <img src="assets/blp-logo.png" alt="Brigham Larson Pianos">
     <div class="rule"><i></i><s></s><i></i></div>
     <h1>SHOP MANAGER</h1>
-    <div style="display:flex;flex-direction:column;gap:9px;width:100%">
-      <input type="password" id="gatePw" placeholder="Shop password" autocomplete="current-password"
-        style="border:1px solid #cfc9bf;border-radius:6px;padding:11px 13px;font:inherit;font-size:15px">
-      <input id="gateName" placeholder="Your name (for the activity log)" maxlength="40"
-        style="border:1px solid #cfc9bf;border-radius:6px;padding:11px 13px;font:inherit;font-size:15px">
-      <button class="btn" id="gateGo" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:11px;font-weight:700;font-size:14px;cursor:pointer">Enter</button>
-    </div>
-    <div class="msg" id="gateMsg">Management view — enter the shop password.</div>
+    <button class="btn" id="gateGo" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">Sign in with Google</button>
+    <div class="msg" id="gateMsg">Management access only. Sign in with your BLP Google account.</div>
   </div>
 </div>
 
@@ -396,7 +390,7 @@ const I18N = {
   cur_rows:["%1 rows · synced %2","%1 filas · sincronizado %2"],
   cur_pass:["BLP app passcode (asked once on this device)","Código de acceso BLP (una vez en este dispositivo)"],
   cur_unlock:["Unlock","Entrar"],
-  auth_need:["Enter the shop password to edit:","Escribe la contraseña del taller para editar:"],
+  auth_need:["Your session expired — sign in again to keep editing:","Tu sesión expiró — inicia sesión de nuevo para seguir editando:"],
   cur_added:["Work order added (row %1) — fill in the details.","Orden agregada (fila %1) — completa los detalles."],
   /* brigham task list */
   /* shop dashboard + assignment planner (moved from the tech app) */
@@ -502,32 +496,39 @@ function enter(){
   $("#gate").style.display="none"; $("#app").style.display="grid";
   boot();
 }
-/* Google login removed (Brigham, 7/31) — the manager sits behind the shop
-   password ("pianoman"), which is also the bridge passcode for writes. */
-const SHOP_PW="pianoman";
-const pwOk=()=>((localStorage.getItem("blp.appkey")||"").trim().toLowerCase()===SHOP_PW);
+/* Google sign-in via full-page redirect (shared /auth.html with the tech
+   app) — no popups, no One Tap, no FedCM. Management emails only. */
+const OAUTH_CLIENT="110628682621-v65mkaoanv87sp75ggdfcrglfr7bkr8p.apps.googleusercontent.com";
+function rnd(){ return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2); }
+function googleLogin(silent){
+  const state=rnd(), nonce=rnd();
+  sessionStorage.setItem("blp.oauth.state",state);
+  sessionStorage.setItem("blp.oauth.nonce",nonce);
+  sessionStorage.setItem("blp.oauth.return","manager.html");
+  const p=new URLSearchParams({
+    client_id:OAUTH_CLIENT, redirect_uri:location.origin+"/auth.html",
+    response_type:"id_token", scope:"openid email profile", state, nonce,
+  });
+  if(silent){ p.set("prompt","none"); if(USER&&USER.email) p.set("login_hint",USER.email); }
+  else p.set("prompt","select_account");
+  location.href="https://accounts.google.com/o/oauth2/v2/auth?"+p.toString();
+}
+function renewSession(){
+  if(!USER||curToken()) return;
+  if(isLocal&&new URLSearchParams(location.search).get("dev")==="1") return;
+  if(sessionStorage.getItem("blp.oauth.silent")) return;
+  sessionStorage.setItem("blp.oauth.silent","1");
+  googleLogin(true);
+}
 function checkGate(){
-  if(pwOk() || (isLocal && new URLSearchParams(location.search).get("dev")==="1")){
-    USER = USER || {email:"", name:localStorage.getItem("blpmgr.name")||"Manager"};
+  if(isLocal && new URLSearchParams(location.search).get("dev")==="1"){
+    USER = USER || {email:"brighamlarson@gmail.com", name:"Dev Preview"};
     enter(); return;
   }
-  const nameIn=$("#gateName");
-  if(USER&&USER.name) nameIn.value=USER.name;
-  const go=()=>{
-    if($("#gatePw").value.trim().toLowerCase()!==SHOP_PW){
-      $("#gateMsg").textContent=LANG==="es"?"Contraseña incorrecta.":"Wrong password — ask Brigham."; return;
-    }
-    const nm=nameIn.value.trim()||"Manager";
-    localStorage.setItem("blp.appkey",$("#gatePw").value.trim());
-    localStorage.setItem("blpmgr.name",nm);
-    USER={email:"",name:nm};
-    localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
-    enter();
-  };
-  $("#gateGo").onclick=go;
-  $("#gatePw").onkeydown=e=>{ if(e.key==="Enter") go(); };
-  nameIn.onkeydown=e=>{ if(e.key==="Enter") go(); };
-  $("#gatePw").focus();
+  if(location.hash==="#signin") history.replaceState(null,"",location.pathname);
+  else if(isAdmin(USER)){ enter(); renewSession(); return; }
+  else if(USER){ $("#gateMsg").textContent = `${USER.email} — ${LANG==="es"?"esta sección es solo para administración.":"this section is management-only."}`; }
+  $("#gateGo").onclick=()=>googleLogin(false);
 }
 
 /* ================= DATA ================= */
@@ -1041,9 +1042,16 @@ const GRIDS={};
 function gridState(id){
   return GRIDS[id]||(GRIDS[id]={tab:GRID_CFGS[id].tabs[0],tabs:null,fetchedAt:null,loading:false,err:null,flashRow:null,needKey:false});
 }
-function curKey(){ return (localStorage.getItem("blp.appkey")||"").trim(); }
-const curToken=()=>"";   // Google tokens removed — passcode only
-const curAuthed=()=>!!(curToken()||curKey());
+function curToken(){
+  const tok=sessionStorage.getItem("blpshop.idtok")||"";
+  if(!tok) return "";
+  try{
+    const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
+    if(p.exp && p.exp*1000 < Date.now()+120000) return "";
+  }catch(e){ return ""; }
+  return tok;
+}
+const curAuthed=()=>{ if(curToken()) return true; renewSession(); return false; };
 function curHeaders(json){
   const h=json?{"content-type":"application/json"}:{};
   const tok=curToken(); if(tok) h["authorization"]="Bearer "+tok;
@@ -1054,19 +1062,11 @@ function curHeaders(json){
 function authCardHTML(){
   return `<div class="card" style="padding:16px;max-width:520px;display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
     <div style="font-size:13.5px;color:var(--mut)">${t("auth_need")}</div>
-    <div style="display:flex;gap:9px;align-items:center">
-      <input type="password" class="passIn" placeholder="${t("cur_pass")}" autocomplete="current-password"
-        style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:10px 12px;font:inherit;font-size:14px">
-      <button class="btn2 passGo">${t("cur_unlock")}</button>
-    </div></div>`;
+    <button class="btn2 passGo" style="align-self:flex-start">Sign in with Google</button></div>`;
 }
 function wireAuthCard(v,onUnlocked){
-  const inp=v.querySelector(".passIn"), go=v.querySelector(".passGo");
-  if(!inp) return;
-  const unlock=()=>{ const k=inp.value.trim(); if(!k) return;
-    localStorage.setItem("blp.appkey",k); onUnlocked(); };
-  go.onclick=unlock;
-  inp.onkeydown=e=>{ if(e.key==="Enter") unlock(); };
+  const go=v.querySelector(".passGo");
+  if(go) go.onclick=()=>googleLogin(false);
 }
 
 async function gridFetch(id){
@@ -1075,9 +1075,9 @@ async function gridFetch(id){
   if(!curAuthed()){ G.needKey=true; renderGrid(id); return; }
   G.loading=true; G.err=null; renderGrid(id);
   try{
-    const r=await fetch(cfg.api()+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
+    const r=await fetch(cfg.api(),{headers:curHeaders(false)});
     const j=await r.json();
-    if(r.status===401){ localStorage.removeItem("blp.appkey"); G.needKey=true; G.err=j.error||t("cur_wrongpass"); }
+    if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); G.needKey=true; G.err=j.error||""; renewSession(); }
     else if(j.error){ G.err=t("cur_err",j.error); }
     else { G.tabs=j.tabs; G.fetchedAt=j.fetchedAt; G.needKey=false; }
   }catch(e){ G.err=t("cur_err",String(e.message||e)); }
@@ -1090,7 +1090,7 @@ async function gridSave(id,tab,row,col,value,td){
   td.classList.remove("saved","savefail"); td.classList.add("saving");
   try{
     const r=await fetch(cfg.api(),{method:"POST",headers:curHeaders(true),
-      body:JSON.stringify({key:curKey(),tab,updates:[{row,col,value}]})});
+      body:JSON.stringify({tab,updates:[{row,col,value}]})});
     const j=await r.json();
     td.classList.remove("saving");
     if(j.ok){
@@ -1100,7 +1100,7 @@ async function gridSave(id,tab,row,col,value,td){
       gridMsg(id,t("cur_saved"));
     }else{
       td.classList.add("savefail");
-      if(r.status===401){ localStorage.removeItem("blp.appkey"); G.needKey=true; renderGrid(id); }
+      if(r.status===401){ G.needKey=true; renderGrid(id); renewSession(); }
       gridMsg(id,t("cur_savefail",j.error||("HTTP "+r.status)),true);
     }
   }catch(e){ td.classList.remove("saving"); td.classList.add("savefail"); gridMsg(id,t("cur_savefail",String(e.message||e)),true); }
@@ -1117,10 +1117,10 @@ async function gridAdd(id){
   }
   try{
     const r=await fetch(cfg.api(),{method:"POST",headers:curHeaders(true),
-      body:JSON.stringify({key:curKey(),tab,append:row})});
+      body:JSON.stringify({tab,append:row})});
     const j=await r.json();
     if(j.ok){ G.flashRow=j.row||null; G.tabs=null; await gridFetch(id); }
-    else{ if(r.status===401){ localStorage.removeItem("blp.appkey"); G.needKey=true; renderGrid(id); } gridMsg(id,t("cur_savefail",j.error||("HTTP "+r.status)),true); }
+    else{ if(r.status===401){ G.needKey=true; renderGrid(id); renewSession(); } gridMsg(id,t("cur_savefail",j.error||("HTTP "+r.status)),true); }
   }catch(e){ gridMsg(id,t("cur_savefail",String(e.message||e)),true); }
 }
 
@@ -1210,7 +1210,7 @@ async function brigFetch(){
   if(!curAuthed()){ renderBrigham(); return; }   // the view shows the sign-in card
   BRIG.loading=true; BRIG.err=null; renderBrigham();
   try{
-    const r=await fetch(CONFIG.BRIGHAM_API+(curToken()?"":"?key="+encodeURIComponent(curKey())),{headers:curHeaders(false)});
+    const r=await fetch(CONFIG.BRIGHAM_API,{headers:curHeaders(false)});
     const j=await r.json();
     if(r.status===401){ localStorage.removeItem("blp.appkey"); BRIG.err=j.error||t("cur_wrongpass"); }
     else if(j.error){ BRIG.err=t("cur_err",j.error); }
@@ -1222,7 +1222,7 @@ async function brigFetch(){
 async function brigPost(body,after){
   try{
     const r=await fetch(CONFIG.BRIGHAM_API,{method:"POST",headers:curHeaders(true),
-      body:JSON.stringify({key:curKey(),...body})});
+      body:JSON.stringify({...body})});
     const j=await r.json();
     if(j.ok){ if(after) after(); BRIG.rows=null; brigFetch(); }
     else{ BRIG.err=t("cur_savefail",j.error||("HTTP "+r.status)); renderBrigham(); }
@@ -1741,7 +1741,7 @@ async function generateDraft(c){
   CLI_DRAFTS[c.key]={loading:true}; renderClients();
   try{
     const r=await fetch(CONFIG.DRAFT_FN,{method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({key:curKey(), piano:{serial:c.serial, summary:c.summary, ownerName:c.ownerName, label:c.summary},
+      body:JSON.stringify({idToken:curToken(), piano:{serial:c.serial, summary:c.summary, ownerName:c.ownerName, label:c.summary},
         evidence:evid, phases:c.phases, lastUpdate:c.lastSent?fmtShort(c.lastSent):null})});
     if(r.status===503){ CLI_DRAFTS[c.key]={...localTemplate(c,evid), note:t("cli_template_note")}; }
     else if(r.status===401){ CLI_DRAFTS[c.key]={...localTemplate(c,evid), note:t("cli_signin_needed")}; }

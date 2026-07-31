@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Signing in… — Brigham Larson Pianos</title>
+<style>
+  body{font:15px/1.6 -apple-system,"Segoe UI",Roboto,sans-serif;background:#17171b;color:#e8e4dd;
+    display:grid;place-items:center;min-height:100vh;margin:0;text-align:center}
+  .card{max-width:360px;padding:20px}
+  a{color:#f2b8b8}
+</style>
+</head>
+<body>
+<div class="card" id="msg">Signing you in…</div>
+<script>
+/* OAuth 2.0 redirect landing for the BLP shop apps.
+   Google sends us back here with #id_token=…&state=… (implicit OIDC flow —
+   full-page redirect, so no popups, no One Tap, no FedCM, no third-party
+   cookies; it works in every browser). We stash the token + profile and
+   bounce back to the page that started the login. */
+(function(){
+  var q = new URLSearchParams(location.hash.replace(/^#/, ""));
+  var err = q.get("error");
+  var ret = sessionStorage.getItem("blp.oauth.return") || "index.html";
+  function fail(text){
+    document.getElementById("msg").innerHTML = text +
+      '<br><br><a href="' + ret.replace(/"/g, "") + '">← back to the app</a>';
+  }
+  if (err) {
+    // silent renewals land here with error=login_required / interaction_required
+    sessionStorage.removeItem("blp.oauth.silent");
+    if (err === "login_required" || err === "interaction_required" || err === "consent_required") {
+      location.replace(ret + (ret.indexOf("#") < 0 ? "#signin" : ""));
+    } else {
+      fail("Google sign-in failed: " + err.replace(/[<>]/g, ""));
+    }
+    return;
+  }
+  var tok = q.get("id_token");
+  var state = q.get("state");
+  if (!tok || state !== sessionStorage.getItem("blp.oauth.state")) {
+    fail("Sign-in didn't complete (missing or mismatched response). Please try again.");
+    return;
+  }
+  try {
+    var p = JSON.parse(atob(tok.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (p.nonce !== sessionStorage.getItem("blp.oauth.nonce")) { fail("Sign-in didn't verify. Please try again."); return; }
+    localStorage.setItem("blp-shop-reports.user", JSON.stringify({
+      email: (p.email || "").toLowerCase(), name: p.name || "", given: p.given_name || "", picture: p.picture || ""
+    }));
+    sessionStorage.setItem("blpshop.idtok", tok);
+    sessionStorage.removeItem("blp.oauth.state");
+    sessionStorage.removeItem("blp.oauth.nonce");
+    sessionStorage.removeItem("blp.oauth.silent");
+    location.replace(ret);
+  } catch (e) { fail("Could not read the sign-in response. Please try again."); }
+})();
+</script>
+</body>
+</html>
