@@ -185,6 +185,9 @@
   .wbadd input{flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:8px 10px;font:inherit;font-size:13px;min-width:0}
   .wbadd button{flex:none}
   .wbnone{padding:16px 14px;color:var(--mut2);font-size:12.5px;font-style:italic}
+  .wbsect{padding:7px 14px;background:#f2efe8;border-top:2px solid var(--line);border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57524b;font-weight:700}
+  .tpillw{border:1px solid var(--line);border-radius:99px;background:#fff;padding:3px 10px;font-size:11px;font-weight:700;color:#57524b;cursor:pointer;white-space:nowrap}
+  .tpillw.on{background:var(--good-bg);border-color:var(--good);color:var(--good)}
   .notice{margin-top:14px;border:1px solid var(--line);border-left:4px solid var(--warn);border-radius:6px;padding:12px 15px;font-size:13.5px;color:#57524b;line-height:1.55;background:#fffdf7}
   .notice.err{border-left-color:var(--red);background:#fdf7f7}
   .notice.ok{border-left-color:var(--good);background:#f7fbf8}
@@ -600,8 +603,12 @@ const I18N = {
   wb_add:["+ add","+ agregar"],
   wb_item_ph:["what do we need?","¿qué necesitamos?"],
   wb_none:["nothing on the board","nada en el pizarrón"],
-  wb_showdone:["Show handled items","Ver artículos atendidos"],
-  wb_hidedone:["Hide handled items","Ocultar atendidos"],
+  wb_showdone:["Show arrived items","Ver artículos recibidos"],
+  wb_hidedone:["Hide arrived items","Ocultar recibidos"],
+  wb_ordered:["Ordered","Ordenado"],
+  wb_arrived:["Arrived","Recibido"],
+  wb_waiting:["Ordered — waiting to arrive","Ordenado — esperando llegada"],
+  wb_arrived_sect:["Arrived","Recibido"],
   cl_saving:["Saving…","Guardando…"],
   cl_done:["%1 of %2 done","%1 de %2 listos"],
   cl_signin:["Sign in again so check-offs are saved under your name.","Inicia sesión de nuevo para guardar bajo tu nombre."],
@@ -1266,9 +1273,9 @@ setInterval(()=>{
 },60000);
 
 /* ================= WHITEBOARD (parts / supplies / tools requests) ==========
-   Digital twin of the wall board. Rows live on the report sheet's
-   "Whiteboard" tab; tap an item's box when it has been ordered/received. */
-const WB={rows:null,loading:false,err:null,needKey:false,busy:false,showDone:false};
+   Digital twin of the wall board, shared with the Shop Manager.
+   Lifecycle: requested → Ordered (waiting area) → Arrived. */
+const WB={rows:null,loading:false,err:null,needKey:false,busy:false,showArrived:false};
 const WB_COLS=[["Parts","wb_parts_note"],["Supplies",""],["Tools","wb_tools_note"]];
 async function wbFetch(bg){
   if(WB.loading) return;
@@ -1290,39 +1297,37 @@ async function wbPost(body){
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
 }
-function renderWhiteboard(){
-  const v=$("#view-whiteboard"); if(!v) return;
-  if(document.activeElement&&v.contains(document.activeElement)&&
-     /^(SELECT|INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
-  const y=window.scrollY;
+function wbItemHTML(r){
+  return `<div class="wbitem ${r.arrived?"done":""}" data-row="${r.row}">
+    <span style="flex:1"><span class="wtxt">${esc(r.item)}</span>
+      ${r.note?`<span class="wnote">${esc(r.note)}</span>`:""}
+      <span class="wmeta">${esc(r.by)}${r.added?" · "+esc(r.added):""}</span></span>
+    <span style="display:flex;gap:5px;flex-direction:column;align-items:flex-end">
+      <button class="tpillw ${r.ordered?"on":""}" data-row="${r.row}" data-act="ordered" data-on="${r.ordered?"1":""}"
+        title="${esc(r.orderedAt)}">${t("wb_ordered")}${r.ordered?" ✓":""}</button>
+      <button class="tpillw ${r.arrived?"on":""}" data-row="${r.row}" data-act="arrived" data-on="${r.arrived?"1":""}"
+        title="${esc(r.arrivedAt)}">${t("wb_arrived")}${r.arrived?" ✓":""}</button>
+    </span></div>`;
+}
+function wbBoardHTML(){
   const rows=WB.rows||[];
-  v.innerHTML=`
-    <div class="row1"><div><h2 class="page">${t("wb_title")}</h2><div class="sub">${t("wb_sub")}</div></div>
-      <span style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn2 wbToggleDone">${WB.showDone?t("wb_hidedone"):t("wb_showdone")}</button>
-        <button class="btn2 wbRefresh">${t("cur_refresh")}</button>
-      </span></div>
-    <div class="curmsg wbmsg${WB.err?" err":""}">${WB.err?esc(WB.err):(WB.loading&&!WB.rows?t("cur_loading"):"")}</div>
-    ${WB.needKey&&!shopAuthed()?authCardHTML():""}
-    <div class="wbgrid">
-      ${WB_COLS.map(([col,noteKey])=>{
-        const items=rows.filter(r=>r.column.toLowerCase()===col.toLowerCase()&&(WB.showDone||!r.done));
-        return `<div class="wbcol"><h3>${esc(col)}${noteKey?`<small>${t(noteKey)}</small>`:""}</h3>
-          ${items.map(r=>`<div class="wbitem ${r.done?"done":""}" data-row="${r.row}" data-on="${r.done?"1":""}">
-            <span class="box">✓</span>
-            <span style="flex:1"><span class="wtxt">${esc(r.item)}</span>
-              ${r.note?`<span class="wnote">${esc(r.note)}</span>`:""}
-              <span class="wmeta">${esc(r.by)}${r.added?" · "+esc(r.added):""}${r.done&&r.doneAt?" · ✓ "+esc(r.doneAt):""}</span></span>
-          </div>`).join("")||`<div class="wbnone">${t("wb_none")}</div>`}
-          <div class="wbadd"><input maxlength="200" placeholder="${t("wb_item_ph")}" data-col="${esc(col)}">
-            <button class="btn2" data-col="${esc(col)}">${t("wb_add")}</button></div>
-        </div>`;
-      }).join("")}
-    </div>`;
-  window.scrollTo(0,y);
-  v.querySelector(".wbRefresh").onclick=()=>{ WB.err=null; wbFetch(true); };
-  v.querySelector(".wbToggleDone").onclick=()=>{ WB.showDone=!WB.showDone; renderWhiteboard(); };
-  if(WB.needKey&&!shopAuthed()) wireAuthCard(v,()=>{ WB.err=null; wbFetch(); });
+  return `<div class="wbgrid">
+    ${WB_COLS.map(([col,noteKey])=>{
+      const inCol=rows.filter(r=>r.column.toLowerCase()===col.toLowerCase());
+      const open=inCol.filter(r=>!r.ordered&&!r.arrived);
+      const ordered=inCol.filter(r=>r.ordered&&!r.arrived);
+      const arrived=inCol.filter(r=>r.arrived);
+      return `<div class="wbcol"><h3>${esc(col)}${noteKey?`<small>${t(noteKey)}</small>`:""}</h3>
+        ${open.map(wbItemHTML).join("")||`<div class="wbnone">${t("wb_none")}</div>`}
+        ${ordered.length?`<div class="wbsect">📦 ${t("wb_waiting")}</div>`+ordered.map(wbItemHTML).join(""):""}
+        ${WB.showArrived&&arrived.length?`<div class="wbsect">✓ ${t("wb_arrived_sect")}</div>`+arrived.map(wbItemHTML).join(""):""}
+        <div class="wbadd"><input maxlength="200" placeholder="${t("wb_item_ph")}" data-col="${esc(col)}">
+          <button class="btn2" data-col="${esc(col)}">${t("wb_add")}</button></div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+function wbWire(v,rerender,refetch){
   v.querySelectorAll(".wbadd button").forEach(b=>b.onclick=async()=>{
     const inp=v.querySelector(`.wbadd input[data-col="${b.dataset.col}"]`);
     const item=inp.value.trim(); if(!item){ inp.focus(); return; }
@@ -1330,26 +1335,49 @@ function renderWhiteboard(){
     try{
       await wbPost({action:"add",column:b.dataset.col,item});
       WB.rows.push({row:0,column:b.dataset.col,item,note:"",by:shopWho(),
-        added:new Date().toLocaleDateString("en-US"),done:false,doneAt:""});
-      inp.value=""; renderWhiteboard(); wbFetch(true);
-    }catch(e){ const m=$("#view-whiteboard .wbmsg"); if(m) m.textContent="✗ "+(e.message||e); b.disabled=false; }
+        added:new Date().toLocaleDateString("en-US"),ordered:false,orderedAt:"",arrived:false,arrivedAt:""});
+      inp.value=""; rerender(); refetch();
+    }catch(e){ const m=v.querySelector(".wbmsg"); if(m) m.textContent="✗ "+(e.message||e); b.disabled=false; }
   });
-  v.querySelectorAll(".wbitem").forEach(el=>el.onclick=async()=>{
+  v.querySelectorAll(".tpillw").forEach(btn=>btn.onclick=async ev=>{
+    ev.stopPropagation();
     if(WB.busy) return;
-    const row=+el.dataset.row; if(!row) return;
+    const row=+btn.dataset.row; if(!row) return;
     WB.busy=true;
     const rec=WB.rows.find(r=>r.row===row);
-    const on=!(rec&&rec.done);
-    if(rec){ rec.done=on; rec.doneAt=on?new Date().toLocaleDateString("en-US")+" · "+shopWho():""; }
-    renderWhiteboard();
-    try{ await wbPost({action:"done",row,on}); }
+    const act=btn.dataset.act, on=!btn.dataset.on;
+    const stamp=new Date().toLocaleDateString("en-US")+" · "+shopWho();
+    const prev=rec&&{ordered:rec.ordered,orderedAt:rec.orderedAt,arrived:rec.arrived,arrivedAt:rec.arrivedAt};
+    if(rec){ if(act==="ordered"){ rec.ordered=on; rec.orderedAt=on?stamp:""; } else { rec.arrived=on; rec.arrivedAt=on?stamp:""; } }
+    rerender();
+    try{ await wbPost({action:act,row,on}); }
     catch(e){
-      if(rec){ rec.done=!on; rec.doneAt=""; }
-      renderWhiteboard();
-      const m=$("#view-whiteboard .wbmsg"); if(m) m.textContent="✗ "+(e.message||e);
+      if(rec&&prev) Object.assign(rec,prev);
+      rerender();
+      const m=v.querySelector(".wbmsg"); if(m) m.textContent="✗ "+(e.message||e);
     }
     WB.busy=false;
   });
+}
+function renderWhiteboard(){
+  const v=$("#view-whiteboard"); if(!v) return;
+  if(document.activeElement&&v.contains(document.activeElement)&&
+     /^(SELECT|INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  const y=window.scrollY;
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("wb_title")}</h2><div class="sub">${t("wb_sub")}</div></div>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn2 wbToggleDone">${WB.showArrived?t("wb_hidedone"):t("wb_showdone")}</button>
+        <button class="btn2 wbRefresh">${t("cur_refresh")}</button>
+      </span></div>
+    <div class="curmsg wbmsg${WB.err?" err":""}">${WB.err?esc(WB.err):(WB.loading&&!WB.rows?t("cur_loading"):"")}</div>
+    ${WB.needKey&&!shopAuthed()?authCardHTML():""}
+    ${WB.rows?wbBoardHTML():""}`;
+  window.scrollTo(0,y);
+  v.querySelector(".wbRefresh").onclick=()=>{ WB.err=null; wbFetch(true); };
+  v.querySelector(".wbToggleDone").onclick=()=>{ WB.showArrived=!WB.showArrived; renderWhiteboard(); };
+  if(WB.needKey&&!shopAuthed()) wireAuthCard(v,()=>{ WB.err=null; wbFetch(); });
+  if(WB.rows) wbWire(v,renderWhiteboard,()=>wbFetch(true));
   if(!WB.rows&&!WB.loading&&!WB.err&&!WB.needKey) wbFetch();
 }
 

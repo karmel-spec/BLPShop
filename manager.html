@@ -111,6 +111,23 @@
   .apps-toggle:hover{background:rgba(255,255,255,.08);color:#fff}
   .apps-link{display:block;padding:7px 12px 7px 26px;border-radius:8px;color:rgba(243,239,233,.66);font-size:13.5px;text-decoration:none}
   .apps-link:hover{background:rgba(255,255,255,.08);color:#fff}
+  /* ---------- whiteboard ---------- */
+  .wbgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px;align-items:start}
+  @media (max-width:900px){.wbgrid{grid-template-columns:1fr}}
+  .wbcol{background:#fff;border:2px solid var(--ink);border-radius:8px;overflow:hidden}
+  .wbcol>h3{margin:0;padding:13px 16px 9px;font-family:Georgia,serif;font-size:17px;letter-spacing:.16em;text-transform:uppercase;border-bottom:2px solid var(--ink);display:flex;justify-content:space-between;align-items:baseline}
+  .wbcol>h3 small{font-size:11px;letter-spacing:.03em;text-transform:none;color:var(--mut2)}
+  .wbitem{padding:10px 14px;border-bottom:1px solid var(--line-soft);display:flex;gap:10px;align-items:flex-start}
+  .wbitem.done .wtxt{color:var(--mut2);text-decoration:line-through}
+  .wbitem .wnote{display:block;font-size:11.5px;color:var(--red-deep);font-weight:600}
+  .wbitem .wmeta{display:block;font-size:10.5px;color:var(--mut2)}
+  .wbadd{display:flex;gap:7px;padding:10px 12px;background:#faf8f4}
+  .wbadd input{flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:8px 10px;font:inherit;font-size:13px;min-width:0}
+  .wbnone{padding:16px 14px;color:var(--mut2);font-size:12.5px;font-style:italic}
+  .wbsect{padding:7px 14px;background:#f2efe8;border-top:2px solid var(--line);border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57524b;font-weight:700}
+  .tpillw{border:1px solid var(--line);border-radius:99px;background:#fff;padding:3px 10px;font-size:11px;font-weight:700;color:#57524b;cursor:pointer;white-space:nowrap}
+  .tpillw.on{background:var(--good-bg);border-color:var(--good);color:var(--good)}
+  .wbvendors{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
   /* ---------- dashboard + planner (moved from the tech app) ---------- */
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
   .stat{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:#fff}
@@ -241,6 +258,7 @@
     <section class="view" id="view-team"></section>
     <section class="view" id="view-schedule"></section>
     <section class="view" id="view-roster"></section>
+    <section class="view" id="view-whiteboard"></section>
     <section class="view" id="view-curtis"></section>
     <section class="view" id="view-brigham"></section>
   </main>
@@ -267,6 +285,7 @@ const CONFIG = {
   CURTIS_SHEET_URL: "https://docs.google.com/spreadsheets/d/1DxvDQ9WlhxXfiZaKGpdJLOOPNMBfVA9PsHGuLe55pmc/edit",
   SCHEDULE_API: "https://blpsalesapp.netlify.app/.netlify/functions/team-schedule", // Team Schedule tab bridge
   ROSTER_API: "https://blpsalesapp.netlify.app/.netlify/functions/team-roster",     // BLP TEAM sheet bridge (safe columns only)
+  WHITEBOARD_API: "https://blpsalesapp.netlify.app/.netlify/functions/whiteboard",   // parts/supplies/tools request board (shared with the tech app)
   ROSTER_SHEET_URL: "https://docs.google.com/spreadsheets/d/1j1FP78rRj1jrl2z-_vIg95kN3GuG8TI4dpOheSnIoPc/edit",
   SCHEDULE_SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit#gid=1355785595",
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
@@ -435,6 +454,22 @@ const I18N = {
   ros_title:["Team Roster","Plantilla del equipo"],
   ros_sub:["Two-way sync with the “BLP TEAM” spreadsheet — edit names, positions, phones, uniform sizes and notes right here (sensitive columns like passwords and tax forms stay sheet-only). Click any cell to edit.","Sincronización con la hoja “BLP TEAM” — edita nombres, puestos, teléfonos, tallas y notas aquí (las columnas sensibles como contraseñas quedan solo en la hoja). Toca cualquier celda para editar."],
   ros_addrow:["+ Add person","+ Agregar persona"],
+  /* whiteboard */
+  nav_whiteboard:["Whiteboard","Pizarrón"],
+  wb_title:["Shop Whiteboard","Pizarrón del Taller"],
+  wb_sub:["The technicians' request board (Parts · Supplies · Tools) — mark items Ordered when you place the order (they move to the waiting area) and Arrived when the box shows up. Same board the techs see.","El pizarrón de pedidos de los técnicos — marca Ordenado al hacer el pedido (pasa al área de espera) y Recibido cuando llegue. El mismo pizarrón que ven los técnicos."],
+  wb_parts_note:["running low on","se está acabando"],
+  wb_tools_note:["suggestions & upgrades","sugerencias y mejoras"],
+  wb_add:["+ add","+ agregar"],
+  wb_item_ph:["what do we need?","¿qué necesitamos?"],
+  wb_none:["nothing requested","nada pedido"],
+  wb_showdone:["Show arrived items","Ver artículos recibidos"],
+  wb_hidedone:["Hide arrived items","Ocultar recibidos"],
+  wb_ordered:["Ordered","Ordenado"],
+  wb_arrived:["Arrived","Recibido"],
+  wb_waiting:["Ordered — waiting to arrive","Ordenado — esperando llegada"],
+  wb_arrived_sect:["Arrived","Recibido"],
+  wb_orderat:["Order at:","Ordenar en:"],
   /* team schedules */
   nav_schedule:["Schedules","Horarios"],
   sched_title:["Team Schedules","Horarios del equipo"],
@@ -715,7 +750,7 @@ const BLP_APPS=[
   {href:"https://pianotechnologylibrary.com", label:"PTL"},
 ];
 let APPS_OPEN=false;
-const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
+const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -750,7 +785,7 @@ $("#navScrim").onclick=()=>navDrawer(false);
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderDash(); renderReview(); renderPlanner(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderCurtis(); renderBrigham();
+  renderDash(); renderReview(); renderPlanner(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderWhiteboard(); renderCurtis(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -921,6 +956,111 @@ function suggest(q){
   list.innerHTML=hits.map(p=>`<div data-k="${skey(p.serial)}">${esc(p.label)}${p.spot?` <span style="color:var(--mut2)">· ${esc(p.spot)}</span>`:""}</div>`).join("");
   list.style.display=hits.length?"block":"none";
   list.querySelectorAll("div").forEach(d=>d.onclick=()=>{ WA_PIANO=PIANOS.get(d.dataset.k); $("#waPiano").value=WA_PIANO.label; list.style.display="none"; });
+}
+
+/* ================= WHITEBOARD (shared with the tech app) =================
+   Same board + same bridge; the manager marks items Ordered (they move to
+   the waiting area) and Arrived. Vendor links for placing the orders. */
+const WB={rows:null,loading:false,err:null,needKey:false,busy:false,showArrived:false};
+const WB_COLS=[["Parts","wb_parts_note"],["Supplies",""],["Tools","wb_tools_note"]];
+const WB_VENDORS=[["Amazon","https://www.amazon.com"],["Schaff Piano Supply","https://www.schaffpiano.com"]];
+const wbWho=()=>((USER&&(USER.name||USER.email))||"Manager");
+async function wbFetch(bg){
+  if(WB.loading) return;
+  if(!curAuthed()){ WB.needKey=true; renderWhiteboard(); return; }
+  WB.loading=true; WB.err=null;
+  if(!bg) renderWhiteboard();
+  try{
+    const r=await fetch(CONFIG.WHITEBOARD_API,{headers:curHeaders(false)});
+    const j=await r.json();
+    if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); WB.needKey=true; WB.err=j.error||""; renewSession(); }
+    else if(j.error){ WB.err=t("cur_err",j.error); }
+    else { WB.rows=j.rows; WB.needKey=false; }
+  }catch(e){ if(!bg) WB.err=t("cur_err",String(e.message||e)); }
+  WB.loading=false; renderWhiteboard();
+}
+async function wbPost(body){
+  const r=await fetch(CONFIG.WHITEBOARD_API,{method:"POST",headers:curHeaders(true),
+    body:JSON.stringify({by:wbWho(),...body})});
+  const j=await r.json();
+  if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
+}
+function wbItemHTML(r){
+  return `<div class="wbitem ${r.arrived?"done":""}" data-row="${r.row}">
+    <span style="flex:1"><span class="wtxt">${esc(r.item)}</span>
+      ${r.note?`<span class="wnote">${esc(r.note)}</span>`:""}
+      <span class="wmeta">${esc(r.by)}${r.added?" · "+esc(r.added):""}</span></span>
+    <span style="display:flex;gap:5px;flex-direction:column;align-items:flex-end">
+      <button class="tpillw ${r.ordered?"on":""}" data-row="${r.row}" data-act="ordered" data-on="${r.ordered?"1":""}"
+        title="${esc(r.orderedAt)}">${t("wb_ordered")}${r.ordered?" ✓":""}</button>
+      <button class="tpillw ${r.arrived?"on":""}" data-row="${r.row}" data-act="arrived" data-on="${r.arrived?"1":""}"
+        title="${esc(r.arrivedAt)}">${t("wb_arrived")}${r.arrived?" ✓":""}</button>
+    </span></div>`;
+}
+function renderWhiteboard(){
+  const v=$("#view-whiteboard"); if(!v) return;
+  if(document.activeElement&&v.contains(document.activeElement)&&
+     /^(SELECT|INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+  const rows=WB.rows||[];
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("wb_title")}</h2><div class="sub">${t("wb_sub")}</div></div>
+      <span style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn2 wbToggleDone">${WB.showArrived?t("wb_hidedone"):t("wb_showdone")}</button>
+        <button class="btn2 wbRefresh">${t("cur_refresh")}</button>
+      </span></div>
+    <div class="wbvendors"><b style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#57524b">${t("wb_orderat")}</b>
+      ${WB_VENDORS.map(([n,u])=>`<a class="btn2" style="text-decoration:none" target="_blank" rel="noreferrer" href="${u}">🛒 ${esc(n)} ↗</a>`).join("")}</div>
+    <div class="curmsg wbmsg${WB.err?" err":""}">${WB.err?esc(WB.err):(WB.loading&&!WB.rows?t("cur_loading"):"")}</div>
+    ${WB.needKey&&!curAuthed()?authCardHTML():""}
+    ${WB.rows?`<div class="wbgrid">
+      ${WB_COLS.map(([col,noteKey])=>{
+        const inCol=rows.filter(r=>r.column.toLowerCase()===col.toLowerCase());
+        const open=inCol.filter(r=>!r.ordered&&!r.arrived);
+        const ordered=inCol.filter(r=>r.ordered&&!r.arrived);
+        const arrived=inCol.filter(r=>r.arrived);
+        return `<div class="wbcol"><h3>${esc(col)}${noteKey?`<small>${t(noteKey)}</small>`:""}</h3>
+          ${open.map(wbItemHTML).join("")||`<div class="wbnone">${t("wb_none")}</div>`}
+          ${ordered.length?`<div class="wbsect">📦 ${t("wb_waiting")}</div>`+ordered.map(wbItemHTML).join(""):""}
+          ${WB.showArrived&&arrived.length?`<div class="wbsect">✓ ${t("wb_arrived_sect")}</div>`+arrived.map(wbItemHTML).join(""):""}
+          <div class="wbadd"><input maxlength="200" placeholder="${t("wb_item_ph")}" data-col="${esc(col)}">
+            <button class="btn2" data-col="${esc(col)}">${t("wb_add")}</button></div>
+        </div>`;
+      }).join("")}
+    </div>`:""}`;
+  v.querySelector(".wbRefresh").onclick=()=>{ WB.err=null; wbFetch(true); };
+  v.querySelector(".wbToggleDone").onclick=()=>{ WB.showArrived=!WB.showArrived; renderWhiteboard(); };
+  if(WB.needKey&&!curAuthed()) wireAuthCard(v,()=>{ WB.err=null; wbFetch(); });
+  v.querySelectorAll(".wbadd button").forEach(b=>b.onclick=async()=>{
+    const inp=v.querySelector(`.wbadd input[data-col="${b.dataset.col}"]`);
+    const item=inp.value.trim(); if(!item){ inp.focus(); return; }
+    b.disabled=true;
+    try{
+      await wbPost({action:"add",column:b.dataset.col,item});
+      WB.rows.push({row:0,column:b.dataset.col,item,note:"",by:wbWho(),
+        added:new Date().toLocaleDateString("en-US"),ordered:false,orderedAt:"",arrived:false,arrivedAt:""});
+      inp.value=""; renderWhiteboard(); wbFetch(true);
+    }catch(e){ const m=v.querySelector(".wbmsg"); if(m) m.textContent="✗ "+(e.message||e); b.disabled=false; }
+  });
+  v.querySelectorAll(".tpillw").forEach(btn=>btn.onclick=async ev=>{
+    ev.stopPropagation();
+    if(WB.busy) return;
+    const row=+btn.dataset.row; if(!row) return;
+    WB.busy=true;
+    const rec=WB.rows.find(r=>r.row===row);
+    const act=btn.dataset.act, on=!btn.dataset.on;
+    const stamp=new Date().toLocaleDateString("en-US")+" · "+wbWho();
+    const prev=rec&&{ordered:rec.ordered,orderedAt:rec.orderedAt,arrived:rec.arrived,arrivedAt:rec.arrivedAt};
+    if(rec){ if(act==="ordered"){ rec.ordered=on; rec.orderedAt=on?stamp:""; } else { rec.arrived=on; rec.arrivedAt=on?stamp:""; } }
+    renderWhiteboard();
+    try{ await wbPost({action:act,row,on}); }
+    catch(e){
+      if(rec&&prev) Object.assign(rec,prev);
+      renderWhiteboard();
+      const m=v.querySelector(".wbmsg"); if(m) m.textContent="✗ "+(e.message||e);
+    }
+    WB.busy=false;
+  });
+  if(ACTIVE==="whiteboard"&&!WB.rows&&!WB.loading&&!WB.err&&!WB.needKey) wbFetch();
 }
 
 /* ============ SHOP DASHBOARD + ASSIGNMENT PLANNER (moved from tech app) ============ */
