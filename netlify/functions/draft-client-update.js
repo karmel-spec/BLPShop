@@ -66,8 +66,9 @@ exports.handler = async (event) => {
   let req;
   try { req = JSON.parse(event.body || '{}'); } catch (e) { return json(400, { error: 'bad json' }); }
 
-  const admin = await verifyAdmin(req.idToken);
-  if (!admin) return json(401, { error: 'admin sign-in required' });
+  const teamPw = String(req.key || '').trim().toLowerCase() === 'pianoman';  // shop password (Google login removed 7/31)
+  const admin = (await verifyAdmin(req.idToken)) || (teamPw ? 'shop' : null);
+  if (!admin) return json(401, { error: 'shop password required' });
 
   const key = process.env.ANTHROPIC_API_KEY;
   if (!key) return json(503, { error: 'no-key' });
