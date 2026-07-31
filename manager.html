@@ -246,6 +246,7 @@
     <section class="view" id="view-client"></section>
     <section class="view" id="view-team"></section>
     <section class="view" id="view-schedule"></section>
+    <section class="view" id="view-roster"></section>
     <section class="view" id="view-curtis"></section>
     <section class="view" id="view-brigham"></section>
   </main>
@@ -271,6 +272,8 @@ const CONFIG = {
   BRIGHAM_API: "https://blpsalesapp.netlify.app/.netlify/functions/brigham-tasks", // Brigham priority list bridge
   CURTIS_SHEET_URL: "https://docs.google.com/spreadsheets/d/1DxvDQ9WlhxXfiZaKGpdJLOOPNMBfVA9PsHGuLe55pmc/edit",
   SCHEDULE_API: "https://blpsalesapp.netlify.app/.netlify/functions/team-schedule", // Team Schedule tab bridge
+  ROSTER_API: "https://blpsalesapp.netlify.app/.netlify/functions/team-roster",     // BLP TEAM sheet bridge (safe columns only)
+  ROSTER_SHEET_URL: "https://docs.google.com/spreadsheets/d/1j1FP78rRj1jrl2z-_vIg95kN3GuG8TI4dpOheSnIoPc/edit",
   SCHEDULE_SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit#gid=1355785595",
   QC_DOC_URL: "https://docs.google.com/document/d/1f7AU5PtX1bP4-b48MHMSn1nzpN5FbMmTd1Yh0kaBcVY/edit",
   ADMINS: ["brighamlarson@gmail.com","brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"],
@@ -433,6 +436,11 @@ const I18N = {
   nothing_flagged:["nothing flagged","nada marcado"],
   no_carry_found:["No carry-over language found — likely finished assignments","No se detectaron pendientes — probablemente terminó sus asignaciones"],
   in_flight:[" (pianos in flight: %1)"," (pianos en proceso: %1)"],
+  /* team roster (BLP TEAM sheet) */
+  nav_roster:["Team Roster","Plantilla"],
+  ros_title:["Team Roster","Plantilla del equipo"],
+  ros_sub:["Two-way sync with the “BLP TEAM” spreadsheet — edit names, positions, phones, uniform sizes and notes right here (sensitive columns like passwords and tax forms stay sheet-only). Click any cell to edit.","Sincronización con la hoja “BLP TEAM” — edita nombres, puestos, teléfonos, tallas y notas aquí (las columnas sensibles como contraseñas quedan solo en la hoja). Toca cualquier celda para editar."],
+  ros_addrow:["+ Add person","+ Agregar persona"],
   /* team schedules */
   nav_schedule:["Schedules","Horarios"],
   sched_title:["Team Schedules","Horarios del equipo"],
@@ -706,7 +714,7 @@ const BLP_APPS=[
   {href:"https://pianotechnologylibrary.com", label:"PTL"},
 ];
 let APPS_OPEN=false;
-const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
+const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -741,7 +749,7 @@ $("#navScrim").onclick=()=>navDrawer(false);
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderDash(); renderReview(); renderPlanner(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderCurtis(); renderBrigham();
+  renderDash(); renderReview(); renderPlanner(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderCurtis(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -1025,6 +1033,9 @@ const GRID_CFGS={
   schedule:{ api:()=>CONFIG.SCHEDULE_API, sheet:()=>CONFIG.SCHEDULE_SHEET_URL,
     tabs:["Team Schedule"],
     title:"sched_title", sub:"sched_sub", addLabel:"sched_addrow", dateHeader:null },
+  roster:{ api:()=>CONFIG.ROSTER_API, sheet:()=>CONFIG.ROSTER_SHEET_URL,
+    tabs:["Current Team","Subcontractors/INS"],
+    title:"ros_title", sub:"ros_sub", addLabel:"ros_addrow", dateHeader:null },
 };
 const GRIDS={};
 function gridState(id){
@@ -1180,6 +1191,7 @@ function renderGrid(id){
 }
 const renderCurtis=()=>renderGrid("curtis");
 const renderSchedule=()=>renderGrid("schedule");
+const renderRoster=()=>renderGrid("roster");
 
 // sheet-side edits flow in: gentle poll while a grid view is open (paused mid-edit)
 setInterval(()=>{
