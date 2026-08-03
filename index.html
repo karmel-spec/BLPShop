@@ -301,6 +301,12 @@
     <h1 data-i18n="gate_title">SHOP REPORTS</h1>
     <button class="btn" id="gateGo" data-i18n="gate_enter" style="font-size:15px;padding:12px 22px;width:100%">Sign in with Google</button>
     <div class="msg" id="gateMsg" data-i18n="gate_msg">Sign in with your BLP Google account — your reports and check-offs are logged under your name.</div>
+    <div style="display:flex;gap:8px;width:100%;margin-top:6px;align-items:center">
+      <input type="password" id="gatePw" data-i18n-ph="gate_pw" placeholder="Temporary password" autocomplete="off"
+        style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:9px 12px;font:inherit;font-size:13.5px">
+      <button class="btn2" id="gatePwGo" data-i18n="gate_pw_go">Enter</button>
+    </div>
+    <div class="msg" style="font-size:11.5px" data-i18n="gate_pw_hint">Temporary access while Google sign-in is being fixed — pick your name in the sidebar after entering.</div>
   </div>
 </div>
 <div class="shell">
@@ -759,6 +765,13 @@ const I18N = {
   stamp_snap:[" · snapshot %1"," · captura %1"],
   gate_title:["SHOP REPORTS","REPORTES DEL TALLER"],
   gate_enter:["Sign in with Google","Iniciar sesión con Google"],
+  gate_pw:["Temporary password","Contraseña temporal"],
+  gate_pw_go:["Enter","Entrar"],
+  gate_pw_hint:["Temporary access while Google sign-in is being fixed — pick your name in the sidebar after entering.","Acceso temporal mientras se arregla el inicio de sesión de Google — elige tu nombre en la barra lateral."],
+  gate_pw_wrong:["Wrong temporary password.","Contraseña temporal incorrecta."],
+  gate_wrongacct:["that Google account isn't authorized. Tap the button to pick your BLP account (techs: yourname.blp@gmail.com · managers: @brighamlarsonpianos.com), or use the temporary password below.","esa cuenta de Google no está autorizada. Toca el botón para elegir tu cuenta BLP, o usa la contraseña temporal."],
+  who_switch:["Switch Google account","Cambiar cuenta de Google"],
+  who_temp:["Using the temporary password — pick your name above so your work is logged under it.","Usando la contraseña temporal — elige tu nombre arriba."],
   gate_msg:["Sign in with your BLP Google account — your reports and check-offs are logged under your name.","Inicia sesión con tu cuenta Google de BLP — tus reportes y tareas quedan registrados con tu nombre."],
   gate_nomatch:["This Google account doesn't match a technician on the roster. Ask the office to add you, or sign in with your work account.","Esta cuenta de Google no coincide con ningún técnico del roster. Pide a la oficina que te agregue, o usa tu cuenta de trabajo."],
 };
@@ -815,10 +828,10 @@ function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return 
    Both render the same way: a snapshot JSON ({generated,source,sections})
    per language, a searchable TOC, and click-to-play video embeds. */
 /* ================= SHARED AUTH for the sheet bridges =================
-   Every bridge call carries the signed-in Google ID token; attribution is
-   the Google identity (server-verified), with the sidebar name as backup. */
+   Bearer token when signed in with Google; the TEMPORARY password rides
+   as `key` otherwise. Attribution = Google identity or the sidebar name. */
 function shopToken(){
-  const tok=sessionStorage.getItem("blpshop.idtok")||"";
+  const tok=localStorage.getItem("blpshop.idtok")||sessionStorage.getItem("blpshop.idtok")||"";
   if(!tok) return "";
   try{
     const p=JSON.parse(atob(tok.split(".")[1].replace(/-/g,"+").replace(/_/g,"/")));
@@ -826,14 +839,16 @@ function shopToken(){
   }catch(e){ return ""; }
   return tok;
 }
-const shopKey=()=>"";
-const shopAuthed=()=>{ if(shopToken()) return true; renewSession(); return false; };
+const shopKey=()=>((localStorage.getItem("blp.appkey")||"").trim());
+const shopAuthed=()=>{ if(shopToken()||shopKey()) return true; renewSession(); return false; };
 function shopHeaders(json){
   const h=json?{"content-type":"application/json"}:{};
   const tok=shopToken(); if(tok) h.authorization="Bearer "+tok;
   return h;
 }
 const shopWho=()=>((USER&&(USER.name||USER.email))||ME||"Team");
+const shopQS=extra=>{ const k=shopToken()?"":shopKey(); return extra?(k?extra+"&key="+encodeURIComponent(k):extra):(k?"?key="+encodeURIComponent(k):""); };
+const shopBody=o=>{ const k=shopToken()?"":shopKey(); return JSON.stringify(k?{key:k,...o}:o); };
 function authCardHTML(){
   return `<div class="card" style="padding:16px;max-width:520px;display:flex;flex-direction:column;gap:10px;margin:14px 0">
     <div style="font-size:13.5px;color:var(--mut)">${t("plat_auth")}</div>
@@ -863,7 +878,7 @@ async function platFetch(){
   if(!shopAuthed()){ PL.needKey=true; renderPlating(); return; }
   PL.loading=true; PL.err=null; renderPlating();
   try{
-    const r=await fetch(CONFIG.PLATING_API,{headers:shopHeaders(false)});
+    const r=await fetch(CONFIG.PLATING_API+shopQS(""),{headers:shopHeaders(false)});
     const j=await r.json();
     if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); PL.needKey=true; PL.err=j.error||""; renewSession(); }
     else if(j.error){ PL.err=t("cur_err",j.error); }
@@ -876,7 +891,7 @@ async function platSave(tab,row,col,value,td){
   td.classList.remove("saved","savefail"); td.classList.add("saving");
   try{
     const r=await fetch(CONFIG.PLATING_API,{method:"POST",headers:shopHeaders(true),
-      body:JSON.stringify({tab,updates:[{row,col,value}]})});
+      body:shopBody({tab,updates:[{row,col,value}]})});
     const j=await r.json();
     td.classList.remove("saving");
     if(j.ok){
@@ -897,7 +912,7 @@ async function platAdd(){
   const row=new Array(Math.max(hdr.length,4)).fill("");
   try{
     const r=await fetch(CONFIG.PLATING_API,{method:"POST",headers:shopHeaders(true),
-      body:JSON.stringify({tab,append:row})});
+      body:shopBody({tab,append:row})});
     const j=await r.json();
     if(j.ok){ PL.flashRow=j.row||null; PL.tabs=null; await platFetch(); }
     else{ if(r.status===401){ PL.needKey=true; renderPlating(); renewSession(); } platMsg(t("cur_savefail",j.error||("HTTP "+r.status)),true); }
@@ -979,7 +994,7 @@ async function shipPost(body){
 async function shipTaskStamp(serial,step,label){
   try{
     const r=await fetch(CONFIG.PIANO_TASKS_API,{method:"POST",headers:shopHeaders(true),
-      body:JSON.stringify({serial,task:PLATE_TASK,part:"",step,label,on:true,by:shopWho()})});
+      body:shopBody({serial,task:PLATE_TASK,part:"",step,label,on:true,by:shopWho()})});
     const j=await r.json();
     return !!j.ok;
   }catch(e){ return false; }
@@ -1126,7 +1141,7 @@ async function clFetch(bg){
   CL.loading=true; CL.err=null;
   if(!bg) renderCleaning();               // only flash "loading" on first load
   try{
-    const r=await fetch(CONFIG.CLEANING_API+"?week="+clWeek(),{headers:shopHeaders(false)});
+    const r=await fetch(CONFIG.CLEANING_API+shopQS("?week="+clWeek()),{headers:shopHeaders(false)});
     const j=await r.json();
     if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); CL.needKey=true; CL.err=j.error||""; renewSession(); }
     else if(j.error){ CL.err=t("cur_err",j.error); }
@@ -1136,7 +1151,7 @@ async function clFetch(bg){
 }
 async function clPost(body){
   const r=await fetch(CONFIG.CLEANING_API,{method:"POST",headers:shopHeaders(true),
-    body:JSON.stringify({week:clWeek(),by:shopWho(),...body})});
+    body:shopBody({week:clWeek(),by:shopWho(),...body})});
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
 }
@@ -1283,7 +1298,7 @@ async function wbFetch(bg){
   WB.loading=true; WB.err=null;
   if(!bg) renderWhiteboard();
   try{
-    const r=await fetch(CONFIG.WHITEBOARD_API,{headers:shopHeaders(false)});
+    const r=await fetch(CONFIG.WHITEBOARD_API+shopQS(""),{headers:shopHeaders(false)});
     const j=await r.json();
     if(r.status===401){ sessionStorage.removeItem("blpshop.idtok"); WB.needKey=true; WB.err=j.error||""; renewSession(); }
     else if(j.error){ WB.err=t("cur_err",j.error); }
@@ -1293,7 +1308,7 @@ async function wbFetch(bg){
 }
 async function wbPost(body){
   const r=await fetch(CONFIG.WHITEBOARD_API,{method:"POST",headers:shopHeaders(true),
-    body:JSON.stringify({by:shopWho(),...body})});
+    body:shopBody({by:shopWho(),...body})});
   const j=await r.json();
   if(!j.ok) throw new Error(j.error||("HTTP "+r.status));
 }
@@ -1582,18 +1597,22 @@ function matchTech(user){
   })||"";
 }
 /* ================= GOOGLE SIGN-IN (full-page redirect — no popups, no
-   One Tap, no FedCM: those were the glitchy parts. The whole flow is a
-   plain browser navigation to Google and back to /auth.html.) ================= */
+   One Tap, no FedCM). OAuth state + token live in localStorage so they
+   survive Safari/iOS redirects. A TEMPORARY password ("pianoman") also
+   unlocks the app while sign-in issues are being shaken out. ================= */
 const OAUTH_CLIENT="110628682621-v65mkaoanv87sp75ggdfcrglfr7bkr8p.apps.googleusercontent.com";
+const SHOP_PW="pianoman";   // TEMPORARY bypass — remove once Google sign-in is confirmed solid
+const OWN_OK=e=>{e=(e||"").toLowerCase();return e.endsWith("@brighamlarsonpianos.com")||/\.blp@gmail\.com$/.test(e)||OWNERS.includes(e)||["brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"].includes(e);};
 const isOwner=()=>!!USER&&(OWNERS.includes((USER.email||"").toLowerCase())||(USER.email||"").toLowerCase().endsWith("@brighamlarsonpianos.com"));
 const isLocal=["localhost","127.0.0.1"].includes(location.hostname);
 const devBypass=()=>isLocal&&new URLSearchParams(location.search).get("dev")==="1";
+const pwOk=()=>((localStorage.getItem("blp.appkey")||"").trim().toLowerCase()===SHOP_PW);
 function rnd(){ return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2); }
 function googleLogin(silent){
   const state=rnd(), nonce=rnd();
-  sessionStorage.setItem("blp.oauth.state",state);
-  sessionStorage.setItem("blp.oauth.nonce",nonce);
-  sessionStorage.setItem("blp.oauth.return",location.pathname.split("/").pop()||"index.html");
+  localStorage.setItem("blp.oauth.state",state);
+  localStorage.setItem("blp.oauth.nonce",nonce);
+  localStorage.setItem("blp.oauth.return",location.pathname.split("/").pop()||"index.html");
   const p=new URLSearchParams({
     client_id:OAUTH_CLIENT,
     redirect_uri:location.origin+"/auth.html",
@@ -1605,17 +1624,32 @@ function googleLogin(silent){
   else p.set("prompt","select_account");
   location.href="https://accounts.google.com/o/oauth2/v2/auth?"+p.toString();
 }
-/* renew quietly when we know who you are but the hour-long token lapsed;
-   guarded so a failed renewal can never loop */
+function switchAccount(){
+  USER=null;
+  localStorage.removeItem("blp-shop-reports.user");
+  localStorage.removeItem("blpshop.idtok");
+  sessionStorage.removeItem("blpshop.idtok");
+  googleLogin(false);   // prompt=select_account → Google shows every account + "Use another account"
+}
 function renewSession(){
-  if(!USER||shopToken()||devBypass()) return;
-  if(sessionStorage.getItem("blp.oauth.silent")) return;
-  sessionStorage.setItem("blp.oauth.silent","1");
+  if(!USER||shopToken()||devBypass()||pwOk()) return;
+  const last=+(localStorage.getItem("blp.oauth.silent")||0);
+  if(Date.now()-last<5*60*1000) return;   // at most one quiet renewal per 5 min
+  localStorage.setItem("blp.oauth.silent",String(Date.now()));
   googleLogin(true);
 }
-function showGate(){
+function showGate(msg){
   $("#gate").style.display=""; document.querySelector(".shell").style.display="none";
-  $("#gateGo").onclick=()=>googleLogin(false);
+  if(msg) $("#gateMsg").innerHTML=msg;
+  $("#gateGo").onclick=()=>switchAccount();
+  const pin=$("#gatePw"), pgo=$("#gatePwGo");
+  const tryPw=()=>{
+    if(pin.value.trim().toLowerCase()!==SHOP_PW){ $("#gateMsg").textContent=t("gate_pw_wrong"); pin.select(); return; }
+    localStorage.setItem("blp.appkey",pin.value.trim());
+    hideGate(); if(!BOOTED) boot(); else renderAll();
+  };
+  pgo.onclick=tryPw;
+  pin.onkeydown=e=>{ if(e.key==="Enter") tryPw(); };
 }
 function hideGate(){ $("#gate").style.display="none"; document.querySelector(".shell").style.display="grid"; }
 
@@ -1628,34 +1662,41 @@ function renderWho(){
   const area=$("#whoArea");
   const tech=USER?matchTech(USER):"";
   if(tech&&!isOwner()){ ME=tech; localStorage.setItem("blp-shop-reports.me",ME); }
-  area.innerHTML=USER?`
-    <div class="uchip">
-      ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
-      <span><span class="un">${esc(USER.name||USER.email)}</span><br>
-      <span class="ur">${isOwner()?t("who_owner"):tech?t("who_tech",esc(tech)):t("who_nomatch")}</span></span>
-    </div>
-    ${isOwner()||!tech?rosterSelectHTML(isOwner()?t("who_acting"):t("who_which")):""}
-    ${isOwner()?`<a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>`:""}
-    <button class="signout" id="signOutBtn">${t("who_signout")}</button>`
-  :`<button class="btn" id="whoSignIn" style="width:100%">${t("gate_enter")}</button>`;
-  const so=$("#signOutBtn"); if(so) so.onclick=signOut;
-  const si=$("#whoSignIn"); if(si) si.onclick=()=>googleLogin(false);
+  if(USER){
+    area.innerHTML=`
+      <div class="uchip">
+        ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
+        <span><span class="un">${esc(USER.name||USER.email)}</span><br>
+        <span class="ur">${isOwner()?t("who_owner"):tech?t("who_tech",esc(tech)):t("who_nomatch")}</span></span>
+      </div>
+      ${isOwner()||!tech?rosterSelectHTML(isOwner()?t("who_acting"):t("who_which")):""}
+      ${isOwner()?`<a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>`:""}
+      <button class="signout" id="swBtn">${t("who_switch")}</button>
+      <button class="signout" id="signOutBtn">${t("who_signout")}</button>`;
+    $("#swBtn").onclick=switchAccount;
+    $("#signOutBtn").onclick=signOut;
+  }else{
+    area.innerHTML=`${rosterSelectHTML(t("who_signedas"))}
+      <button class="btn" id="whoSignIn" style="width:100%">${t("gate_enter")}</button>
+      <span class="hint">${t("who_temp")}</span>`;
+    $("#whoSignIn").onclick=()=>googleLogin(false);
+  }
   const sel=$("#whoSelect");
   if(sel) sel.onchange=()=>{ ME=sel.value; localStorage.setItem("blp-shop-reports.me",ME); renderAll(); };
   renderBarLogin();
 }
 function renderBarLogin(){
   const bar=$("#barLogin"); if(!bar) return;
-  bar.innerHTML=USER?`<span class="uchip">
-    ${USER.picture?`<img src="${esc(USER.picture)}" alt="" referrerpolicy="no-referrer">`:`<span class="avatar">${esc((USER.name||"?").slice(0,2).toUpperCase())}</span>`}
-    <span>${esc(USER.given||USER.name||USER.email)}</span></span>`:"";
+  const who=USER?(USER.given||USER.name||USER.email):(ME||"");
+  bar.innerHTML=who?`<span class="uchip"><span class="avatar">${esc(who.slice(0,2).toUpperCase())}</span><span>${esc(who)}</span></span>`:"";
 }
 function signOut(){
   USER=null; ME="";
   localStorage.removeItem("blp-shop-reports.user");
   localStorage.removeItem("blp-shop-reports.me");
+  localStorage.removeItem("blpshop.idtok");
+  localStorage.removeItem("blp.appkey");
   sessionStorage.removeItem("blpshop.idtok");
-  sessionStorage.removeItem("blp.oauth.silent");
   showGate();
 }
 
@@ -2159,11 +2200,14 @@ function renderCalReport(){
   $("#calReport").textContent=mine?mine.text:(ME?(composeText()?"Draft: "+composeText():"No report yet for this week."):"Select your name in the sidebar.");
 }
 
-/* entry: Google session on this device → straight in (token renews
-   quietly); otherwise the sign-in gate */
+/* entry: Google session or temporary password → in; unauthorized Google
+   account → clear message + switch-account path */
 applyI18n();
 if(location.hash==="#signin"){ history.replaceState(null,"",location.pathname); showGate(); }
-else if(USER||devBypass()){ hideGate(); boot(); renewSession(); }
+else if(USER&&!OWN_OK(USER.email)){
+  showGate(`<b>${esc(USER.email)}</b> — ${t("gate_wrongacct")}`);
+}
+else if(USER||pwOk()||devBypass()){ hideGate(); boot(); renewSession(); }
 else showGate();
 </script>
 </body>

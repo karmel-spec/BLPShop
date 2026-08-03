@@ -66,7 +66,8 @@ exports.handler = async (event) => {
   let req;
   try { req = JSON.parse(event.body || '{}'); } catch (e) { return json(400, { error: 'bad json' }); }
 
-  const admin = await verifyAdmin(req.idToken);
+  const teamPw = String(req.key || '').trim().toLowerCase() === 'pianoman';  // TEMPORARY bypass while Google sign-in is stabilized
+  const admin = (await verifyAdmin(req.idToken)) || (teamPw ? 'shop' : null);
   if (!admin) return json(401, { error: 'admin sign-in required' });
 
   const key = process.env.ANTHROPIC_API_KEY;
