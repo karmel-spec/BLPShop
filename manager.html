@@ -1288,6 +1288,7 @@ async function loadProposal(box){
           by:localStorage.getItem("blpmgr.name")||"Shop Manager"},
         s=>{ bna.textContent="Working… "+s+"s (usually 30–90s)"; });
       if(j.error) throw new Error(j.error);
+      clearDrafts(".bnanswer");
       out.className="adjustout ok";
       out.innerHTML="✓ Answers processed"
         +(j.executed&&j.executed.length?"<ul>"+j.executed.map(c=>`<li>${esc(c)}</li>`).join("")+"</ul>":"")
@@ -1298,6 +1299,16 @@ async function loadProposal(box){
     }catch(e){ out.className="adjustout err"; out.textContent="✗ "+e.message; }
     bna.disabled=false; bna.textContent="🪄 Send answers to Claude";
   };
+  // Draft persistence — typed notes/answers survive refreshes and reloads.
+  // Saved per box on every keystroke, restored on render, cleared on send.
+  const draftKey=el=>"draft_"+((el.id||el.dataset.tech||el.dataset.title||"")+"").slice(0,90);
+  box.querySelectorAll(".ptnotes textarea, #adjGlobal, .bnanswer").forEach(t=>{
+    const k=draftKey(t);
+    const v=localStorage.getItem(k);
+    if(v && !t.value) t.value=v;
+    t.addEventListener("input",()=>{ t.value.trim()?localStorage.setItem(k,t.value):localStorage.removeItem(k); });
+  });
+  const clearDrafts=sel=>box.querySelectorAll(sel).forEach(t=>{ localStorage.removeItem(draftKey(t)); t.value=""; });
   // Heavy AI jobs run as Netlify BACKGROUND functions (a schedule revision
   // takes 30-90s, past the sync limit). POST returns 202 instantly; the
   // result lands in a blob keyed by our nonce, which we poll here.
@@ -1330,6 +1341,7 @@ async function loadProposal(box){
           by:localStorage.getItem("blpmgr.name")||"Shop Manager"},
         s=>{ adj.textContent="Thinking… "+s+"s (usually 30–90s)"; });
       if(j.error) throw new Error(j.error);
+      clearDrafts(".ptnotes textarea, #adjGlobal");
       out.className="adjustout ok";
       out.innerHTML="✓ Adjustments applied"+(j.saved?" and saved":" (⚠ save to bridge failed: "+esc(j.saveErr||"pending bridge update")+")")
         +(j.changes.length?"<ul>"+j.changes.map(c=>`<li>${esc(c)}</li>`).join("")+"</ul>":"")
