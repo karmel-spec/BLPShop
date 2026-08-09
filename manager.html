@@ -128,6 +128,31 @@
   .tpillw{border:1px solid var(--line);border-radius:99px;background:#fff;padding:3px 10px;font-size:11px;font-weight:700;color:#57524b;cursor:pointer;white-space:nowrap}
   .tpillw.on{background:var(--good-bg);border-color:var(--good);color:var(--good)}
   .wbvendors{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+  /* proposed-week schedule (embedded from the weekly Claude proposal) */
+  .propwrap{border:1px solid var(--line);border-radius:12px;margin-bottom:22px;overflow:hidden}
+  .prophead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:#17171b;color:#e8e4dd;padding:12px 16px}
+  .prophead h3{font-size:15px;margin:0}
+  .prophead .meta{font-size:11.5px;color:#a49d90}
+  .prophead .applybtn{margin-left:auto;background:var(--red);border:0;color:#fff;border-radius:8px;padding:9px 18px;font-weight:700;font-size:13px;cursor:pointer}
+  .prophead .applybtn[disabled]{background:#3a3a42;cursor:default}
+  .propbody{padding:14px 16px;background:#fff}
+  .proptech{border:1px solid var(--line-soft);border-radius:9px;margin-bottom:10px;overflow:hidden}
+  .proptech h5{background:#f7f5f0;padding:7px 11px;font-size:13px;display:flex;gap:10px;align-items:baseline}
+  .proptech h5 small{color:var(--mut);font-weight:400}
+  .propgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line-soft)}
+  .propday{background:#fff;padding:6px 7px;min-height:60px}
+  .propday .dh{font-size:9.5px;letter-spacing:1px;color:var(--mut2);text-transform:uppercase;margin-bottom:4px}
+  .propblock{border-left:3px solid #9aa3ac;background:#fafbfc;border-radius:0 5px 5px 0;padding:4px 6px;margin-bottom:4px}
+  .propblock .bt{font-size:10px;color:var(--mut);font-weight:700}
+  .propblock .bl{font-size:11px;line-height:1.35;color:#222}
+  .propblock .bn{font-size:10px;color:#8a6a00;font-style:italic}
+  .propboxes{padding:10px 16px 16px}
+  .propbn{background:#fdf3ec;border:1px solid #eecfae;border-radius:8px;padding:8px 11px;font-size:12px;color:#6b5030;margin-top:8px}
+  .propbn b{display:block;margin-bottom:2px}
+  .applyout{font-size:12.5px;padding:10px 16px;background:#f2f9f4;border-top:1px solid #bfd8c6;color:#2e5d40}
+  .applyout.err{background:#fbeaea;border-color:#e5c9c9;color:#9e2020}
+  @media(max-width:900px){.propgrid{grid-template-columns:1fr}}
+
   /* ---------- dashboard + planner (moved from the tech app) ---------- */
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
   .stat{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:#fff}
@@ -284,6 +309,7 @@ const CONFIG = {
   PIANOLOG_SHEET: "1ZunbPKygpQlcXfTyPowDHdUE9spJ3uV1XA4iX1eoKRc",
   DRAFT_FN: "/.netlify/functions/draft-client-update",
   APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycby9WPjupHsyTV0TvujoE8ZL9Qq7x2_E8Qu2HSQQe0hQFkN3_jwttZICwqnRxg-foRksfA/exec",
+  STOREMAP_BRIDGE: "https://script.google.com/macros/s/AKfycbxY4BKnr_Tr0iCTc9itCWhNYLvgszmkI1IoYSkbBWpyAqRtWI-yaUkJQjcVdgG58KXt/exec",
   PIANOLOG_URL: "https://pianologapp.netlify.app/",
   HANDBOOK_URL: "https://docs.google.com/document/d/1at8y6h6pphLmAL5gaE2TzfHeDv5Xn9xdbWVdozvxhxA/edit",
   HANDBOOK_APP: "index.html#handbook",   // in-app handbook (Shop Reports → Shop Handbook view)
@@ -1166,6 +1192,72 @@ function renderDash(){
       </div>
     </div>`;
 }
+const PROP_DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday"];
+async function loadProposal(box){
+  if(!box) return;
+  box.innerHTML=`<div class="curmsg">Loading proposed week…</div>`;
+  let got=null;
+  try{
+    const r=await fetch(CFG.STOREMAP_BRIDGE+"?fn=proposal",{redirect:"follow"});
+    const j=await r.json();
+    if(j.ok) got=j;
+  }catch(e){/* bridge not deployed yet — fall through */}
+  if(!got){
+    try{
+      const r2=await fetch("data/schedule-proposal.json?ts="+Date.now());
+      if(r2.ok){ const plan=await r2.json(); got={ok:true,plan,meta:{week:plan.week,savedAt:plan.generatedAt||"",applied:false,fallback:true}}; }
+    }catch(e){}
+  }
+  if(!got){ box.innerHTML=""; return; }
+  const {plan,meta}=got;
+  const colors=plan.colors||{};
+  box.innerHTML=`<div class="propwrap">
+    <div class="prophead">
+      <h3>📅 Proposed Technician Week — ${esc(plan.week||"")}</h3>
+      <span class="meta">${meta.fallback?"from repo snapshot":"from the weekly proposal"} · saved ${esc((meta.savedAt||"").slice(0,16).replace("T"," "))}
+        ${meta.applied?" · <b style='color:#7fc48f'>APPLIED "+esc((meta.appliedAt||"").slice(0,10))+"</b>":""}</span>
+      <button class="applybtn" id="applySched" ${meta.applied||meta.fallback?"disabled":""}>
+        ${meta.applied?"✓ Applied to calendars":meta.fallback?"Apply (needs bridge update)":"✅ Approve — apply to live tech calendars"}</button>
+    </div>
+    <div class="propbody">
+      ${(plan.techs||[]).map(tc=>`<div class="proptech">
+        <h5>${esc(tc.name)} <small>${esc(tc.hours||"")}</small><small style="margin-left:auto">${esc(tc.who||"")}</small></h5>
+        <div class="propgrid">${PROP_DAYS.map((dn,di)=>{
+          const blocks=(tc.days&&tc.days[di])||[];
+          return `<div class="propday"><div class="dh">${dn}</div>${blocks.map(b=>
+            `<div class="propblock" style="border-left-color:${colors[b[2]]||"#9aa3ac"}">
+               <div class="bt">${esc(b[0])}–${esc(b[1])}</div>
+               <div class="bl">${esc(b[3]||"")}</div>
+               ${b[4]?`<div class="bn">${esc(b[4])}</div>`:""}</div>`).join("")}</div>`;
+        }).join("")}</div>
+      </div>`).join("")}
+      <div class="propboxes">${(plan.bottlenecks||[]).map(bn=>
+        `<div class="propbn"><b>⚠ ${esc(bn[0])}</b>${esc(bn[1])}</div>`).join("")}</div>
+    </div>
+    <div id="applyOut"></div>
+  </div>`;
+  const ab=box.querySelector("#applySched");
+  if(ab&&!ab.disabled) ab.onclick=async()=>{
+    if(!confirm("Write this proposal onto every mapped technician's REAL Google Calendar?\n\nTechs without a calendar in the Tech Calendars tab are skipped.")) return;
+    const pin=prompt("Team PIN to authorize:");
+    if(!pin) return;
+    ab.disabled=true; ab.textContent="Applying…";
+    const out=box.querySelector("#applyOut");
+    try{
+      const r=await fetch(CFG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
+        headers:{"content-type":"text/plain;charset=utf-8"},
+        body:JSON.stringify({action:"applyschedule",pin,user:{name:(localStorage.getItem("blpmgr.name")||"Shop Manager")+" (Shop Manager)"}})});
+      const j=await r.json();
+      if(j.error) throw new Error(j.error);
+      out.className="applyout";
+      out.innerHTML="✓ Applied — "+j.results.map(x=>`<b>${esc(x.tech)}</b>: ${x.events!=null?x.events+" events":esc(x.skipped||x.error||"?")}`).join(" · ");
+      ab.textContent="✓ Applied to calendars";
+    }catch(e){
+      out.className="applyout err"; out.textContent="✗ "+e.message;
+      ab.disabled=false; ab.textContent="✅ Approve — apply to live tech calendars";
+    }
+  };
+}
 function renderPlanner(){
   const v=$("#view-planner"); if(!v) return;
   if(!REPORTS.entries.length){ v.innerHTML=`<div class="curmsg">${t("cur_loading")}</div>`; return; }
@@ -1173,6 +1265,7 @@ function renderPlanner(){
   const prevISO=iso(new Date(FRI.getTime()-7*864e5));
   const inCount=new Set(wk.map(e=>e.tech)).size;
   v.innerHTML=`
+    <div id="proposalBox"></div>
     <div class="row1"><div><h2 class="page">${t("planner_title")}</h2><div class="sub">${t("planner_sub")}</div></div>
       <button class="btn2" id="copyPlanBtn">${t("copy_plan")}</button></div>
     <div class="notice ${inCount>=Math.ceil(ROSTER.length*0.6)?"ok":""}">
@@ -1188,6 +1281,7 @@ function renderPlanner(){
         ${carries.length?`<ul>${carries.map(c=>`<li>${esc(c.slice(0,220))}</li>`).join("")}</ul>`:`<div class="none">${t("no_carry_found")}${pianos.length?t("in_flight",esc(pianos.join(", "))):""}.</div>`}
       </div>`;
     }).join("")}`;
+  loadProposal(v.querySelector("#proposalBox"));
   const btn=v.querySelector("#copyPlanBtn");
   btn.onclick=async()=>{
     const txt=ROSTER.map(tc=>{
