@@ -1295,7 +1295,10 @@ async function loadProposal(box){
         +(j.rules_saved&&j.rules_saved.length?`<div style="margin-top:6px"><b>📌 Remembered for future weeks:</b><ul>${j.rules_saved.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"")
         +(j.followups&&j.followups.length?`<div style="margin-top:6px"><b>👤 Still needs a human:</b><ul>${j.followups.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"")
         +(j.questions&&j.questions.length?`<div style="margin-top:6px;color:#8a6a00"><b>Questions back:</b><ul>${j.questions.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"");
-      if(j.planSaved) setTimeout(()=>loadProposal(box),2500);
+      if(j.planSaved){ const keep=out.innerHTML;
+        setTimeout(async()=>{ await loadProposal(box);
+          const o2=box.querySelector("#bnOut")||box.querySelector("#adjOut");
+          if(o2){ o2.className="adjustout ok"; o2.innerHTML=keep; } },2500); }
     }catch(e){ out.className="adjustout err"; out.textContent="✗ "+e.message; }
     bna.disabled=false; bna.textContent="🪄 Send answers to Claude";
   };
@@ -1354,7 +1357,10 @@ async function loadProposal(box){
         +(j.changes.length?"<ul>"+j.changes.map(c=>`<li>${esc(c)}</li>`).join("")+"</ul>":"")
         +(j.rules_saved.length?`<div style="margin-top:6px"><b>📌 Remembered for future weeks:</b><ul>${j.rules_saved.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"")
         +(j.questions&&j.questions.length?`<div style="margin-top:6px;color:#8a6a00"><b>Questions:</b><ul>${j.questions.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"");
-      setTimeout(()=>loadProposal(box), j.saved?1500:6000);
+      { const keep=out.innerHTML;
+        setTimeout(async()=>{ await loadProposal(box);
+          const o2=box.querySelector("#adjOut");
+          if(o2){ o2.className="adjustout ok"; o2.innerHTML=keep; } }, j.saved?1500:6000); }
     }catch(e){
       out.className="adjustout err"; out.textContent="✗ "+e.message;
     }
