@@ -149,6 +149,13 @@
   .propboxes{padding:10px 16px 16px}
   .propbn{background:#fdf3ec;border:1px solid #eecfae;border-radius:8px;padding:8px 11px;font-size:12px;color:#6b5030;margin-top:8px}
   .propbn b{display:block;margin-bottom:2px}
+  .bnhead{margin-top:20px;padding-top:14px;border-top:2px solid var(--line-soft)}
+  .bnhead h4{margin:0;font-size:15px;color:#7a3c10}
+  .bnhead .bnsub{font-size:12px;color:var(--mut2);margin-top:3px}
+  .bnanswer{display:block;width:100%;box-sizing:border-box;margin-top:7px;border:1px dashed #d8b98e;border-radius:6px;background:#fffdf9;padding:7px 9px;font:12px/1.45 inherit;color:#333;min-height:34px;resize:vertical;outline:none}
+  .bnanswer:focus{border-style:solid;border-color:#b98a4e}
+  .bnanswer::placeholder{color:#c2ad8e;font-style:italic}
+  .bnbar{margin-top:10px;display:flex;justify-content:flex-end}
   .applyout{font-size:12.5px;padding:10px 16px;background:#f2f9f4;border-top:1px solid #bfd8c6;color:#2e5d40}
   .applyout.err{background:#fbeaea;border-color:#e5c9c9;color:#9e2020}
   @media(max-width:900px){.propgrid{grid-template-columns:1fr}}
@@ -1225,7 +1232,7 @@ async function loadProposal(box){
       if(r2.ok){ const plan=await r2.json(); got={ok:true,plan,meta:{week:plan.week,savedAt:plan.generatedAt||"",applied:false,fallback:true}}; }
     }catch(e){}
   }
-  if(!got){ box.innerHTML=""; return; }
+  if(!got){ box.innerHTML=`<div class="curmsg">No weekly proposal yet — the Saturday draft publishes here, or ask Claude to generate one.</div>`; return; }
   const {plan,meta}=got;
   const colors=plan.colors||{};
   box.innerHTML=`<div class="propwrap">
@@ -1257,11 +1264,41 @@ async function loadProposal(box){
         <textarea data-tech="${esc(tc.name)}" placeholder="Adjustments for ${esc(tc.name)}'s week… ('swap Tue/Wed', 'he's out Thursday', 'rule: never schedule him on QC')"></textarea>
         </aside></div>
       </div>`).join("")}
-      <div class="propboxes">${(plan.bottlenecks||[]).map(bn=>
-        `<div class="propbn"><b>⚠ ${esc(bn[0])}</b>${esc(bn[1])}</div>`).join("")}</div>
+      ${(plan.bottlenecks||[]).length?`<div class="bnhead"><h4>🛎 Manager Clarification Needed</h4>
+        <div class="bnsub">Answer any of these in its box — Claude will make the Store Map / schedule updates, clear the resolved items, and remember any standing rules.</div></div>`:""}
+      <div class="propboxes">${(plan.bottlenecks||[]).map((bn,i)=>
+        `<div class="propbn" data-bi="${i}"><b>⚠ ${esc(bn[0])}</b>${esc(bn[1])}
+           <textarea class="bnanswer" data-title="${esc(bn[0])}" data-body="${esc(bn[1])}"
+             placeholder="Your answer / clarification for Claude… ('put it in spot 84', 'yes it spans both', 'the serial is actually …')"></textarea></div>`).join("")}</div>
+      ${(plan.bottlenecks||[]).length?`<div class="bnbar"><button class="abtn" id="bnApply">🪄 Send answers to Claude</button></div>
+      <div class="adjustout" id="bnOut"></div>`:""}
     </div>
     <div id="applyOut"></div>
   </div>`;
+  const bna=box.querySelector("#bnApply");
+  if(bna) bna.onclick=async()=>{
+    const items=[];
+    box.querySelectorAll(".bnanswer").forEach(t=>{ if(t.value.trim()) items.push({title:t.dataset.title,body:t.dataset.body,answer:t.value.trim()}); });
+    const out=box.querySelector("#bnOut");
+    if(!items.length){ out.className="adjustout err"; out.textContent="Write an answer in at least one box first."; return; }
+    bna.disabled=true; bna.textContent="Working… (15–30s)";
+    try{
+      const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/bottleneck-resolve",{
+        method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({key:localStorage.getItem("blp.appkey")||"pianoman",items,
+          by:localStorage.getItem("blpmgr.name")||"Shop Manager"})});
+      const j=await r.json();
+      if(j.error) throw new Error(j.error);
+      out.className="adjustout ok";
+      out.innerHTML="✓ Answers processed"
+        +(j.executed&&j.executed.length?"<ul>"+j.executed.map(c=>`<li>${esc(c)}</li>`).join("")+"</ul>":"")
+        +(j.rules_saved&&j.rules_saved.length?`<div style="margin-top:6px"><b>📌 Remembered for future weeks:</b><ul>${j.rules_saved.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"")
+        +(j.followups&&j.followups.length?`<div style="margin-top:6px"><b>👤 Still needs a human:</b><ul>${j.followups.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"")
+        +(j.questions&&j.questions.length?`<div style="margin-top:6px;color:#8a6a00"><b>Questions back:</b><ul>${j.questions.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"");
+      if(j.planSaved) setTimeout(()=>loadProposal(box),2500);
+    }catch(e){ out.className="adjustout err"; out.textContent="✗ "+e.message; }
+    bna.disabled=false; bna.textContent="🪄 Send answers to Claude";
+  };
   const adj=box.querySelector("#adjApply");
   if(adj) adj.onclick=async()=>{
     const notes={};
@@ -1312,39 +1349,8 @@ async function loadProposal(box){
 }
 function renderPlanner(){
   const v=$("#view-planner"); if(!v) return;
-  if(!REPORTS.entries.length){ v.innerHTML=`<div class="curmsg">${t("cur_loading")}</div>`; return; }
-  const wk=weekEntries(FRI_ISO);
-  const prevISO=iso(new Date(FRI.getTime()-7*864e5));
-  const inCount=new Set(wk.map(e=>e.tech)).size;
-  v.innerHTML=`
-    <div id="proposalBox"></div>
-    <div class="row1"><div><h2 class="page">${t("planner_title")}</h2><div class="sub">${t("planner_sub")}</div></div>
-      <button class="btn2" id="copyPlanBtn">${t("copy_plan")}</button></div>
-    <div class="notice ${inCount>=Math.ceil(ROSTER.length*0.6)?"ok":""}">
-      ${t("planner_status",inCount,ROSTER.length,fmtShort(FRI_ISO))}${inCount>=Math.ceil(ROSTER.length*0.6)?t("planner_good"):t("planner_wait")}</div>
-    ${ROSTER.map(tech=>{
-      const cur=wk.find(e=>e.tech===tech) || REPORTS.entries.find(e=>e.tech===tech&&e.date===prevISO);
-      if(!cur) return `<div class="tcard"><h4>${esc(tech)} <span class="pill out st">${t("no_recent")}</span></h4><div class="none">${t("nothing_carry")}</div></div>`;
-      const carries=carryLines(cur.text);
-      const pianos=[...new Set(extractPianos(cur.text).filter(p=>p.serial).map(p=>p.label))];
-      return `<div class="tcard">
-        <h4>${esc(tech)} <span class="lite" style="font-weight:400;color:var(--mut2)">${t("from_date",fmtShort(cur.date))}</span>
-          <span style="margin-left:auto" class="pill ${carries.length?"mid":"in"} st">${carries.length?(carries.length===1?t("carry_one"):t("carry_many",carries.length)):t("nothing_flagged")}</span></h4>
-        ${carries.length?`<ul>${carries.map(c=>`<li>${esc(c.slice(0,220))}</li>`).join("")}</ul>`:`<div class="none">${t("no_carry_found")}${pianos.length?t("in_flight",esc(pianos.join(", "))):""}.</div>`}
-      </div>`;
-    }).join("")}`;
+  v.innerHTML=`<div id="proposalBox"></div>`;
   loadProposal(v.querySelector("#proposalBox"));
-  const btn=v.querySelector("#copyPlanBtn");
-  btn.onclick=async()=>{
-    const txt=ROSTER.map(tc=>{
-      const cur=wk.find(e=>e.tech===tc)||REPORTS.entries.find(e=>e.tech===tc&&e.date===prevISO);
-      const carries=cur?carryLines(cur.text):[];
-      return `${tc}:\n${carries.length?carries.map(c=>"  • "+c).join("\n"):"  • (no carry-overs — assign fresh work)"}`;
-    }).join("\n\n");
-    await navigator.clipboard.writeText(`BLP next-week assignment draft — from reports of ${fmtShort(FRI_ISO)}\n\n${txt}`);
-    btn.textContent=t("copied");
-    setTimeout(()=>{ btn.textContent=t("copy_plan"); },1600);
-  };
 }
 
 /* ================= SHEET GRIDS (Curtis Harper · Schedules) =================
