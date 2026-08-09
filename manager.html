@@ -1281,13 +1281,12 @@ async function loadProposal(box){
     box.querySelectorAll(".bnanswer").forEach(t=>{ if(t.value.trim()) items.push({title:t.dataset.title,body:t.dataset.body,answer:t.value.trim()}); });
     const out=box.querySelector("#bnOut");
     if(!items.length){ out.className="adjustout err"; out.textContent="Write an answer in at least one box first."; return; }
-    bna.disabled=true; bna.textContent="Working… (15–30s)";
+    bna.disabled=true; bna.textContent="Working… (usually 30–90s)";
     try{
-      const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/bottleneck-resolve",{
-        method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({key:localStorage.getItem("blp.appkey")||"pianoman",items,
-          by:localStorage.getItem("blpmgr.name")||"Shop Manager"})});
-      const j=await r.json();
+      const j=await aiJob("bottleneck-resolve-background",
+        {key:localStorage.getItem("blp.appkey")||"pianoman",items,
+          by:localStorage.getItem("blpmgr.name")||"Shop Manager"},
+        s=>{ bna.textContent="Working… "+s+"s (usually 30–90s)"; });
       if(j.error) throw new Error(j.error);
       out.className="adjustout ok";
       out.innerHTML="✓ Answers processed"
@@ -1299,6 +1298,24 @@ async function loadProposal(box){
     }catch(e){ out.className="adjustout err"; out.textContent="✗ "+e.message; }
     bna.disabled=false; bna.textContent="🪄 Send answers to Claude";
   };
+  // Heavy AI jobs run as Netlify BACKGROUND functions (a schedule revision
+  // takes 30-90s, past the sync limit). POST returns 202 instantly; the
+  // result lands in a blob keyed by our nonce, which we poll here.
+  const aiJob=async(fn,payload,onTick)=>{
+    const nonce="adj_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);
+    const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/"+fn,{
+      method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({...payload,nonce})});
+    if(r.status>=400) throw new Error("request failed ("+r.status+")");
+    const t0=Date.now();
+    while(Date.now()-t0<210000){
+      await new Promise(res=>setTimeout(res,4000));
+      if(onTick) onTick(Math.round((Date.now()-t0)/1000));
+      const pr=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/adjust-result?nonce="+nonce);
+      if(pr.status===200) return pr.json();
+    }
+    throw new Error("timed out after 3½ min — the job may still finish; reload in a minute");
+  };
   const adj=box.querySelector("#adjApply");
   if(adj) adj.onclick=async()=>{
     const notes={};
@@ -1306,13 +1323,12 @@ async function loadProposal(box){
     const globalTxt=(box.querySelector("#adjGlobal").value||"").trim();
     const out=box.querySelector("#adjOut");
     if(!Object.keys(notes).length && !globalTxt){ out.className="adjustout err"; out.textContent="Write a note first — per-tech or in the overall box."; return; }
-    adj.disabled=true; adj.textContent="Thinking… (10–20s)";
+    adj.disabled=true; adj.textContent="Thinking… (usually 30–90s)";
     try{
-      const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/schedule-adjust",{
-        method:"POST",headers:{"content-type":"application/json"},
-        body:JSON.stringify({key:localStorage.getItem("blp.appkey")||"pianoman",notes,global:globalTxt,
-          by:localStorage.getItem("blpmgr.name")||"Shop Manager"})});
-      const j=await r.json();
+      const j=await aiJob("schedule-adjust-background",
+        {key:localStorage.getItem("blp.appkey")||"pianoman",notes,global:globalTxt,
+          by:localStorage.getItem("blpmgr.name")||"Shop Manager"},
+        s=>{ adj.textContent="Thinking… "+s+"s (usually 30–90s)"; });
       if(j.error) throw new Error(j.error);
       out.className="adjustout ok";
       out.innerHTML="✓ Adjustments applied"+(j.saved?" and saved":" (⚠ save to bridge failed: "+esc(j.saveErr||"pending bridge update")+")")
