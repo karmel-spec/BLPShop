@@ -1222,7 +1222,7 @@ async function loadProposal(box){
   box.innerHTML=`<div class="curmsg">Loading proposed week…</div>`;
   let got=null;
   try{
-    const r=await fetch(CFG.STOREMAP_BRIDGE+"?fn=proposal",{redirect:"follow"});
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=proposal",{redirect:"follow"});
     const j=await r.json();
     if(j.ok) got=j;
   }catch(e){/* bridge not deployed yet — fall through */}
@@ -1361,7 +1361,7 @@ async function loadProposal(box){
     ab.disabled=true; ab.textContent="Applying…";
     const out=box.querySelector("#applyOut");
     try{
-      const r=await fetch(CFG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
+      const r=await fetch(CONFIG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
         headers:{"content-type":"text/plain;charset=utf-8"},
         body:JSON.stringify({action:"applyschedule",pin,user:{name:(localStorage.getItem("blpmgr.name")||"Shop Manager")+" (Shop Manager)"}})});
       const j=await r.json();
