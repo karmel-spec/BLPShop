@@ -153,6 +153,23 @@
   .applyout.err{background:#fbeaea;border-color:#e5c9c9;color:#9e2020}
   @media(max-width:900px){.propgrid{grid-template-columns:1fr}}
 
+  /* planner notes-to-Claude column + adjust bar */
+  .ptflex{display:flex;gap:0;align-items:stretch}
+  .ptmain{flex:1;min-width:0}
+  .ptnotes{width:240px;flex:none;border-left:1px solid var(--line-soft);background:#fbfaf7;display:flex;flex-direction:column}
+  .ptnotes textarea{flex:1;border:0;background:transparent;padding:9px 11px;font:12px/1.5 inherit;color:#333;resize:none;outline:none;min-height:100px}
+  .ptnotes textarea::placeholder{color:#b6afa2;font-style:italic}
+  .ptnotes .ntag{font-size:9px;letter-spacing:1.4px;color:#a49d90;text-transform:uppercase;padding:7px 11px 0}
+  .adjustbar{display:flex;gap:12px;align-items:flex-start;background:#f7f5f0;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:4px 0 14px}
+  .adjustbar textarea{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:12.5px/1.5 inherit;min-height:52px;resize:vertical}
+  .adjustbar .abtn{background:var(--red);color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
+  .adjustbar .abtn[disabled]{background:#b9b2a4;cursor:default}
+  .adjustout{border-radius:8px;padding:10px 13px;font-size:12.5px;margin:0 0 14px;display:none}
+  .adjustout.ok{display:block;background:#f2f9f4;border:1px solid #bfd8c6;color:#2e5d40}
+  .adjustout.err{display:block;background:#fbeaea;border:1px solid #e5c9c9;color:#9e2020}
+  .adjustout ul{margin:4px 0 0 18px}
+  @media(max-width:1000px){.ptflex{flex-direction:column}.ptnotes{width:auto;border-left:0;border-top:1px solid var(--line-soft)}}
+
   /* ---------- dashboard + planner (moved from the tech app) ---------- */
   .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;margin-top:18px}
   .stat{border:1px solid var(--line);border-radius:6px;padding:14px 16px;background:#fff}
@@ -1220,8 +1237,14 @@ async function loadProposal(box){
         ${meta.applied?"✓ Applied to calendars":meta.fallback?"Apply (needs bridge update)":"✅ Approve — apply to live tech calendars"}</button>
     </div>
     <div class="propbody">
+      <div class="adjustbar">
+        <textarea id="adjGlobal" placeholder="Overall notes to Claude for this week — adjustments across techs, and standing rules ('from now on…', 'always…', 'never…') that should be remembered for every future week."></textarea>
+        <button class="abtn" id="adjApply">🪄 Apply adjustments</button>
+      </div>
+      <div class="adjustout" id="adjOut"></div>
       ${(plan.techs||[]).map(tc=>`<div class="proptech">
         <h5>${esc(tc.name)} <small>${esc(tc.hours||"")}</small><small style="margin-left:auto">${esc(tc.who||"")}</small></h5>
+        <div class="ptflex"><div class="ptmain">
         <div class="propgrid">${PROP_DAYS.map((dn,di)=>{
           const blocks=(tc.days&&tc.days[di])||[];
           return `<div class="propday"><div class="dh">${dn}</div>${blocks.map(b=>
@@ -1230,12 +1253,41 @@ async function loadProposal(box){
                <div class="bl">${esc(b[3]||"")}</div>
                ${b[4]?`<div class="bn">${esc(b[4])}</div>`:""}</div>`).join("")}</div>`;
         }).join("")}</div>
+        </div><aside class="ptnotes"><div class="ntag">Notes to Claude — ${esc(tc.name)}</div>
+        <textarea data-tech="${esc(tc.name)}" placeholder="Adjustments for ${esc(tc.name)}'s week… ('swap Tue/Wed', 'he's out Thursday', 'rule: never schedule him on QC')"></textarea>
+        </aside></div>
       </div>`).join("")}
       <div class="propboxes">${(plan.bottlenecks||[]).map(bn=>
         `<div class="propbn"><b>⚠ ${esc(bn[0])}</b>${esc(bn[1])}</div>`).join("")}</div>
     </div>
     <div id="applyOut"></div>
   </div>`;
+  const adj=box.querySelector("#adjApply");
+  if(adj) adj.onclick=async()=>{
+    const notes={};
+    box.querySelectorAll(".ptnotes textarea").forEach(t=>{ if(t.value.trim()) notes[t.dataset.tech]=t.value.trim(); });
+    const globalTxt=(box.querySelector("#adjGlobal").value||"").trim();
+    const out=box.querySelector("#adjOut");
+    if(!Object.keys(notes).length && !globalTxt){ out.className="adjustout err"; out.textContent="Write a note first — per-tech or in the overall box."; return; }
+    adj.disabled=true; adj.textContent="Thinking… (10–20s)";
+    try{
+      const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/schedule-adjust",{
+        method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({key:localStorage.getItem("blp.appkey")||"pianoman",notes,global:globalTxt,
+          by:localStorage.getItem("blpmgr.name")||"Shop Manager"})});
+      const j=await r.json();
+      if(j.error) throw new Error(j.error);
+      out.className="adjustout ok";
+      out.innerHTML="✓ Adjustments applied"+(j.saved?" and saved":" (⚠ save to bridge failed: "+esc(j.saveErr||"pending bridge update")+")")
+        +(j.changes.length?"<ul>"+j.changes.map(c=>`<li>${esc(c)}</li>`).join("")+"</ul>":"")
+        +(j.rules_saved.length?`<div style="margin-top:6px"><b>📌 Remembered for future weeks:</b><ul>${j.rules_saved.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"")
+        +(j.questions&&j.questions.length?`<div style="margin-top:6px;color:#8a6a00"><b>Questions:</b><ul>${j.questions.map(c=>`<li>${esc(c)}</li>`).join("")}</ul></div>`:"");
+      setTimeout(()=>loadProposal(box), j.saved?1500:6000);
+    }catch(e){
+      out.className="adjustout err"; out.textContent="✗ "+e.message;
+    }
+    adj.disabled=false; adj.textContent="🪄 Apply adjustments";
+  };
   const ab=box.querySelector("#applySched");
   if(ab&&!ab.disabled) ab.onclick=async()=>{
     if(!confirm("Write this proposal onto every mapped technician's REAL Google Calendar?\n\nTechs without a calendar in the Tech Calendars tab are skipped.")) return;
