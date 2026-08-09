@@ -1319,9 +1319,11 @@ async function loadProposal(box){
   // result lands in a blob keyed by our nonce, which we poll here.
   const aiJob=async(fn,payload,onTick)=>{
     const nonce="adj_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,10);
-    const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/"+fn,{
+    // adjust-submit is a sync relay: browsers can't POST straight to Netlify
+    // background functions cross-origin (preflight gets an empty 202)
+    const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/adjust-submit",{
       method:"POST",headers:{"content-type":"application/json"},
-      body:JSON.stringify({...payload,nonce})});
+      body:JSON.stringify({fn:fn.startsWith("bottleneck")?"bottleneck":"schedule",payload:{...payload,nonce}})});
     if(r.status>=400) throw new Error("request failed ("+r.status+")");
     const t0=Date.now();
     while(Date.now()-t0<210000){
