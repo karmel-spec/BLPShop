@@ -1,6 +1,6 @@
 {
  "week": "week of Aug 10\u201314, 2026",
- "sources": "Friday reports 8/7 \u00b7 tech calendars \u00b7 MOVING CALENDAR (pickups/deliveries) \u00b7 Custom Shopwork queue \u00b7 specialties chart \u00b7 phase-time standards",
+ "sources": "Friday reports 8/7 \u00b7 tech calendars \u00b7 MOVING CALENDAR (pickups/deliveries) \u00b7 Custom Shopwork queue \u00b7 specialties chart \u00b7 phase-time standards \u00b7 Brigham's Plaud walkthrough (Sat 8/8)",
  "colors": {
   "dhrt": "#7c3aed",
   "cap": "#2e7d4f",
@@ -158,7 +158,7 @@
   {
    "name": "Curtis",
    "hours": "8:00\u20134:00 \u00b7 Tue morning off \u00b7 Fri field tuning 4\u20136",
-   "who": "Steinway 55038 hammers/DHRT, Steinway 16927, M&H 7912 bass-pin fix, intern PRSB supervision",
+   "who": "55038 \u2192 regulation, 1803HPCHICK damper system, 66823 soundboard+knobs, 7912 bass-pin fix",
    "days": [
     [
      [
@@ -188,15 +188,15 @@
       "10:00",
       "12:00",
       "hold",
-      "(morning off \u2014 on your calendar)",
+      "(morning off \u2014 calendar)",
       ""
      ],
      [
       "12:00",
       "4:00",
       "dhrt",
-      "Steinway 16927 \u2014 the 'one more day' finish day",
-      "protect from sidetracks"
+      "Chickering 1803HPCHICK \u2014 install updated damper system (higher-end job \u2014 yours or McKinly's; McKinly is on the Petrof)",
+      "piano ready for DHRT"
      ]
     ],
     [
@@ -218,9 +218,23 @@
     [
      [
       "8:00",
+      "12:00",
+      "dhrt",
+      "Steinway 55038 \u2014 regulation (hammers nearly done)",
+      ""
+     ],
+     [
+      "12:00",
+      "2:00",
+      "qc",
+      "Lester 66823 (map 262) \u2014 check soundboard issue (may be QRS cords) + install 4 brass knobs (2 fallboard, 2 front panel)",
+      ""
+     ],
+     [
+      "2:00",
       "4:00",
       "dhrt",
-      "Steinway 55038 \u2014 DHRT/voicing",
+      "1803HPCHICK dampers continue",
       ""
      ]
     ],
@@ -259,24 +273,31 @@
   {
    "name": "Doris",
    "hours": "8:00\u20134:00",
-   "who": "Bechstein 21174 (lid), Weber 33045 (50%), Kawai 185852 (50%), Emerson 107154",
+   "who": "Howard lid (HIGH, Thu delivery), T300098 panel, 160095 Duo-Art + 28524 soundboards",
    "days": [
     [
      [
       "8:00",
       "4:00",
       "refinish",
-      "Bechstein 21174 \u2014 lid: final sand + lacquer",
-      "last piece; 7' grand queue #12"
+      "Howard 72712 \u2014 LID: HIGH priority, delivers Thu (Vegas run) \u2014 must be done Mon/Tue for Wed QC",
+      "Brigham: top of the list"
      ]
     ],
     [
      [
       "8:00",
-      "4:00",
+      "12:00",
       "refinish",
-      "Weber 33045 \u2014 sanding/lacquer push toward 100% (at 50%)",
+      "Yamaha T300098 \u2014 refinish FRONT PANEL (white splotchiness; customer request, high priority)",
       ""
+     ],
+     [
+      "12:00",
+      "4:00",
+      "refinish",
+      "Steinway Duo-Art 160095 \u2014 soundboard refinish (PRSB complete)",
+      "early-week per Brigham"
      ]
     ],
     [
@@ -284,8 +305,8 @@
       "8:00",
       "4:00",
       "refinish",
-      "Weber 33045 \u2014 continue",
-      "PRSB piano in sanding shop"
+      "160095 soundboard finish",
+      "when done: note Curtis Harper work orders \u2014 ready for plate"
      ]
     ],
     [
@@ -293,7 +314,7 @@
       "8:00",
       "4:00",
       "refinish",
-      "Kawai 185852 \u2014 from 50% toward finish",
+      "M&H 28524 \u2014 soundboard refinish (Myrrhanda's bass bridge done ~Tue)",
       ""
      ]
     ],
@@ -302,15 +323,15 @@
       "8:00",
       "12:00",
       "refinish",
-      "Emerson 107154 \u2014 sanding",
+      "28524 soundboard continue",
       ""
      ],
      [
       "12:00",
       "2:30",
       "refinish",
-      "touch-up sweep: 288901 pieces",
-      "per last report"
+      "Bechstein 21174 lid (resumes next week if needed)",
+      ""
      ],
      [
       "2:30",
@@ -325,7 +346,7 @@
   {
    "name": "Garrett",
    "hours": "8:00\u20134:00",
-   "who": "Steinway 288901 DHRT (hammers hung, aligning)",
+   "who": "288901 (shank trim \u2192 regulation), then 76197 DHRT next",
    "days": [
     [
      [
@@ -366,10 +387,17 @@
     [
      [
       "8:00",
+      "12:00",
+      "dhrt",
+      "288901 \u2014 regulation wrap for the week",
+      ""
+     ],
+     [
+      "12:00",
       "2:30",
       "dhrt",
-      "Steinway 288901 \u2014 week wrap: dampers re-check",
-      ""
+      "Steinway 76197 \u2014 DHRT start (Brigham: next after 288901)",
+      "ready for DHRT"
      ],
      [
       "2:30",
@@ -384,15 +412,29 @@
   {
    "name": "Jacob",
    "hours": "8:00\u20134:00",
-   "who": "Schafer HIJG0085 finish, Yamaha T300098 reassembly, next refurb",
+   "who": "T300098 reassembly, 311107 aftertouch hour, Kimball 85614 refurb (new project)",
    "days": [
     [
      [
       "8:00",
+      "9:00",
+      "qc",
+      "Hailun 311107 \u2014 1 hr: decrease blow distance + take up lost motion (more aftertouch)",
+      ""
+     ],
+     [
+      "9:00",
+      "12:00",
+      "qc",
+      "T300098 \u2014 cabinetry reassembly + pedal regulation (hardware buffed 9:30)",
+      "TOOLS: clean up after \u2014 no tools left out, esp. showroom"
+     ],
+     [
+      "12:00",
       "4:00",
       "qc",
-      "Schafer HIJG0085 \u2014 finish bass-string twists + damper fixes ('one more day')",
-      "McKinly QCs 12\u20132"
+      "Kimball 85614 \u2014 refurb START (refurb first; full key service after \u2014 Melissa confirming keytops)",
+      "track set to Refurbish"
      ]
     ],
     [
@@ -400,16 +442,7 @@
       "8:00",
       "4:00",
       "qc",
-      "Yamaha T300098 \u2014 reassemble cabinetry + regulate pedals",
-      "hardware buffed by Korban Mon"
-     ]
-    ],
-    [
-     [
-      "8:00",
-      "4:00",
-      "qc",
-      "Yamaha T300098 \u2014 final regulation + wrap",
+      "Kimball 85614 \u2014 refurb",
       ""
      ]
     ],
@@ -417,17 +450,26 @@
      [
       "8:00",
       "4:00",
-      "cap",
-      "P.S. Wick 29908 \u2014 CAP start (queue #33, refurb-strong next up)",
-      "alt: Ellington 52031 if pedals arrive"
+      "qc",
+      "Kimball 85614 \u2014 refurb",
+      ""
+     ]
+    ],
+    [
+     [
+      "8:00",
+      "4:00",
+      "qc",
+      "Kimball 85614 \u2014 refurb",
+      ""
      ]
     ],
     [
      [
       "8:00",
       "2:30",
-      "cap",
-      "P.S. Wick 29908 \u2014 CAP continue",
+      "qc",
+      "Kimball 85614 \u2014 refurb",
       ""
      ],
      [
@@ -443,7 +485,7 @@
   {
    "name": "Jake",
    "hours": "8:00\u20134:00",
-   "who": "Steinway D 38930 DHRT finish, then Chickering 1803HPCHICK",
+   "who": "Steinway D 38930 DHRT \u2014 ON HOLD pending Melissa payment confirmation; fallback M&H 55383 DHRT (38a)",
    "days": [
     [
      [
@@ -458,16 +500,23 @@
       "4:00",
       "dhrt",
       "Steinway D 38930 \u2014 DHRT push",
-      ""
+      "HOLD until Melissa confirms payments \u2014 if paused, switch to M&H 55383 DHRT (ready, spot 38a)"
      ]
     ],
     [
      [
       "8:00",
+      "10:00",
+      "dhrt",
+      "Cable 17823 \u2014 even out damper lift w/ sustain pedal (2 hr)",
+      "Brigham wants it dialed in early week (tentative \u2014 DHRT was yours?)"
+     ],
+     [
+      "8:00",
       "4:00",
       "dhrt",
       "Steinway D 38930 \u2014 DHRT ('done by Wed/Thu' per your report)",
-      ""
+      "HOLD until Melissa confirms payments \u2014 if paused, switch to M&H 55383 DHRT (ready, spot 38a)"
      ]
     ],
     [
@@ -476,7 +525,7 @@
       "4:00",
       "dhrt",
       "Steinway D 38930 \u2014 target finish",
-      "shoot to wrap by Thu \u2014 queue #2"
+      "shoot to wrap by Thu \u2014 queue #2 \u00b7 HOLD until Melissa confirms payments \u2014 if paused, switch to M&H 55383 DHRT (ready, spot 38a)"
      ]
     ],
     [
@@ -485,7 +534,7 @@
       "4:00",
       "dhrt",
       "38930 buffer / handoff notes; start Chickering 1803HPCHICK DHRT review",
-      "keys w/ Victoria in progress"
+      "keys w/ Victoria in progress \u00b7 HOLD until Melissa confirms payments \u2014 if paused, switch to M&H 55383 DHRT (ready, spot 38a)"
      ]
     ],
     [
@@ -509,7 +558,7 @@
   {
    "name": "Korban",
    "hours": "8:00\u20134:00 \u00b7 Sat OFF",
-   "who": "In-store tunings, chip tunings, buffing queue (T300098 gate)",
+   "who": "Delivery tunes (191714?, 299517, 16124), T300098, 38180 bass octave, buffing, 12-piano low-priority tune queue",
    "days": [
     [
      [
@@ -546,6 +595,13 @@
       "clean",
       "Vacuum/sweep/mop",
       ""
+     ],
+     [
+      "3:00",
+      "3:30",
+      "tuning",
+      "Merrill 38180 \u2014 tune HIGHEST OCTAVE OF BASS SECTION ONLY (30 min, nothing else)",
+      "Brigham's explicit scope"
      ]
     ],
     [
@@ -553,18 +609,18 @@
       "8:00",
       "9:30",
       "tuning",
-      "Hailun 313754 showroom tune (moved from Mon 8:00 \u2014 Baldwin emergency took the slot)",
+      "Hailun 313754 showroom tune (moved from Mon)",
       ""
      ],
      [
-      "8:00",
-      "10:00",
+      "9:30",
+      "11:00",
       "tuning",
-      "Chip tuning: B\u00f6sendorfer 9374/18324 (queue #13, phase Chip Tuning)",
-      ""
+      "Yamaha T300098 \u2014 tune (Jake's regulation done; trap work buffed Mon)",
+      "customer piano"
      ],
      [
-      "10:00",
+      "11:00",
       "3:00",
       "buff",
       "Buffing queue + shipments",
@@ -679,10 +735,17 @@
     [
      [
       "7:00",
+      "9:00",
+      "restring",
+      "M&H 7912 \u2014 fix blue-taped stringing notes FIRST (before other projects)",
+      "Brigham: several notes on blue tape"
+     ],
+     [
+      "9:00",
       "5:00",
       "restring",
-      "Steinway 181349 \u2014 restring (plate set & felts glued last wk)",
-      "std ~40h/piano"
+      "Steinway 181349 (now map 71) \u2014 restring (plate screws on; felts + pressure bars)",
+      ""
      ]
     ],
     [
@@ -723,14 +786,23 @@
   {
    "name": "Marcelo",
    "hours": "8:00\u20134:00",
-   "who": "Key service feeding upcoming DHRT: Chickering 1803HPCHICK, Meister 128210",
+   "who": "Steinway Square 3536 FULL key service (except ivories \u2014 Victoria completed)",
    "days": [
     [
      [
       "8:00",
       "4:00",
       "keys",
-      "Chickering 1803HPCHICK \u2014 keywork w/ Victoria's ivory plan (DHRT is next for it)",
+      "Steinway Square 3536 \u2014 full key service start (skip ivories, already done)",
+      "Brigham: next in your queue"
+     ]
+    ],
+    [
+     [
+      "8:00",
+      "4:00",
+      "keys",
+      "3536 key service",
       ""
      ]
     ],
@@ -739,7 +811,7 @@
       "8:00",
       "4:00",
       "keys",
-      "Chickering 1803HPCHICK \u2014 bushings continue",
+      "3536 key service finish",
       ""
      ]
     ],
@@ -748,16 +820,7 @@
       "8:00",
       "4:00",
       "keys",
-      "Chickering 1803HPCHICK \u2014 finish + sharps",
-      ""
-     ]
-    ],
-    [
-     [
-      "8:00",
-      "4:00",
-      "keys",
-      "Meister 128210 \u2014 keys (restrung; keys gate its DHRT)",
+      "Resume prior queue (67219 waiting on pedals \u2014 Melissa checking)",
       ""
      ]
     ],
@@ -766,7 +829,7 @@
       "8:00",
       "2:30",
       "keys",
-      "Meister 128210 \u2014 continue",
+      "Key queue continue",
       ""
      ],
      [
@@ -790,7 +853,7 @@
       "4:00",
       "dhrt",
       "Howard 72712 \u2014 hinge screw holes, pedal rods, dummy-pedal spring, final regulation",
-      "deadline: Wed 9:30 tune + QC"
+      "deadline: Wed 9:30 tune + QC \u00b7 Brigham: can you finish Mon\u2013Tue, or do you need more hands? Tell him."
      ]
     ],
     [
@@ -855,21 +918,21 @@
   {
    "name": "Matthew",
    "hours": "8:00\u20134:00 \u00b7 tunings on hold (your calendar note)",
-   "who": "Hallet Davis 22947 bridge fix (unblocks Sadie), Decker 20349 PRSB",
+   "who": "22947 bridge (gates Sadie), Decker 20349 PRSB, Wick 29908, Universal electrical",
    "days": [
     [
      [
       "8:00",
       "12:00",
       "prsb",
-      "Hallet Davis 22947 \u2014 fix cracked bridge (Sadie's tenor strings wait on this)",
-      "9 strings loosened for access"
+      "Hallet Davis 22947 \u2014 repair bridge at end of first section \u2014 FIRST THING (gates Sadie's restring)",
+      ""
      ],
      [
       "12:00",
       "4:00",
       "prsb",
-      "Decker 20349 \u2014 rib separation finish",
+      "Decker 20349 \u2014 PRSB continue (Brigham: likely done by end of week)",
       ""
      ]
     ],
@@ -878,7 +941,7 @@
       "8:00",
       "4:00",
       "prsb",
-      "Decker 20349 \u2014 bridge caps",
+      "Decker 20349 \u2014 PRSB",
       ""
      ]
     ],
@@ -887,8 +950,8 @@
       "8:00",
       "4:00",
       "prsb",
-      "Decker 20349 \u2014 PRSB continue",
-      "std: ~37-40h"
+      "Decker 20349 \u2014 PRSB finish",
+      "then note Curtis work orders: soundboard ready \u2192 higher in plate queue"
      ]
     ],
     [
@@ -896,7 +959,7 @@
       "8:00",
       "4:00",
       "prsb",
-      "Decker 20349 \u2014 PRSB continue",
+      "Wick 29908 \u2014 PRSB start (confirmed on your list)",
       ""
      ]
     ],
@@ -905,14 +968,14 @@
       "8:00",
       "12:00",
       "prsb",
-      "Steinway 289994 \u2014 plate pull w/ Courtney (teardown wrap)",
+      "29908 continue",
       ""
      ],
      [
       "12:00",
       "2:30",
-      "prsb",
-      "Universal 745310 player \u2014 PRSB scope (queue #31)",
+      "qc",
+      "Universal player \u2014 install electrical components (arrived) \u2014 2nd priority",
       ""
      ],
      [
@@ -928,7 +991,7 @@
   {
    "name": "McKinly",
    "hours": "8:00\u20136:00 \u00b7 field tunings on your calendar",
-   "who": "Field tunings (mornings), Schafer QC, Schimmel 316295 QC, Petrof 2046",
+   "who": "PETROF 2046 FOCUS (Brigham: minor QCs only), field mornings, 8409 QC Wed",
    "days": [
     [
      [
@@ -958,15 +1021,15 @@
       "8:00",
       "12:00",
       "field",
-      "Field: Mapleton + Santaquin (calendar)",
+      "Field (calendar)",
       ""
      ],
      [
       "12:00",
       "6:00",
       "qc",
-      "Schimmel 316295 \u2014 QC & Assembly (queue #32, in QC phase)",
-      ""
+      "Petrof 2046 \u2014 focused work",
+      "Brigham: give it the week"
      ]
     ],
     [
@@ -994,25 +1057,18 @@
     ],
     [
      [
-      "8:30",
-      "9:30",
-      "hold",
-      "(no-book block on your calendar)",
-      ""
-     ],
-     [
-      "10:00",
-      "2:00",
+      "8:00",
+      "12:00",
       "field",
-      "Field: Draper + Lehi (calendar)",
+      "Field (calendar)",
       ""
      ],
      [
-      "2:00",
+      "12:00",
       "6:00",
       "qc",
-      "Ellington 52031 \u2014 pedals if arrived; else Petrof continue",
-      ""
+      "Petrof 2046 \u2014 focused work",
+      "missing shank still open (CNC/3D-print question)"
      ]
     ],
     [
@@ -1020,14 +1076,14 @@
       "8:00",
       "12:00",
       "field",
-      "Field: Orem \u00d72 (calendar)",
+      "Field (calendar)",
       ""
      ],
      [
       "12:00",
       "2:30",
       "qc",
-      "QC sweep: delivery prep list",
+      "Petrof 2046",
       ""
      ],
      [
@@ -1041,7 +1097,7 @@
       "3:30",
       "6:00",
       "qc",
-      "catch-up / paperwork",
+      "Petrof 2046",
       ""
      ]
     ]
@@ -1116,48 +1172,48 @@
   {
    "name": "Sadie",
    "hours": "intern \u00b7 8:00\u20134:00",
-   "who": "Hallet Davis 22947 restring (bass Mon; tenor after bridge fix), assist Courtney",
+   "who": "22947: finish restring + epoxy strings, then DHRT (promoted \u2014 no repetition needed)",
    "days": [
     [
      [
       "8:00",
       "12:00",
-      "restring",
-      "HD 22947 \u2014 finish bass section (10 strings); check epoxied agraffe",
-      "Matthew fixes bridge 8-12"
-     ]
-    ],
-    [
-     [
-      "8:00",
-      "4:00",
-      "restring",
-      "HD 22947 \u2014 tenor section (bridge fixed Mon)",
-      "re-tension the 9 loosened strings"
-     ]
-    ],
-    [
-     [
-      "8:00",
-      "4:00",
-      "restring",
-      "HD 22947 \u2014 tenor finish + first chip pass",
-      ""
-     ]
-    ],
-    [
-     [
-      "8:00",
-      "12:00",
       "cap",
-      "Assist Courtney \u2014 289994 CAP (2nd rep pattern)",
+      "Assist Courtney / prep while Matthew fixes 22947 bridge (morning)",
       ""
      ],
      [
       "12:00",
       "4:00",
-      "cap",
-      "289994 CAP w/ Courtney",
+      "restring",
+      "22947 \u2014 finish restringing + install strings for the epoxy repair",
+      "bridge fixed this morning"
+     ]
+    ],
+    [
+     [
+      "8:00",
+      "4:00",
+      "restring",
+      "22947 \u2014 restringing wrap + pull-ups",
+      ""
+     ]
+    ],
+    [
+     [
+      "8:00",
+      "4:00",
+      "dhrt",
+      "22947 \u2014 DHRT begin",
+      "Brigham: 'her work was excellent' \u2014 promoted, no double-rep"
+     ]
+    ],
+    [
+     [
+      "8:00",
+      "4:00",
+      "dhrt",
+      "22947 \u2014 DHRT",
       ""
      ]
     ],
@@ -1165,8 +1221,8 @@
      [
       "8:00",
       "2:30",
-      "cap",
-      "289994 CAP w/ Courtney",
+      "dhrt",
+      "22947 \u2014 DHRT continue",
       ""
      ],
      [
@@ -1180,90 +1236,127 @@
    ]
   },
   {
-   "name": "Victoria",
-   "hours": "subcontractor \u00b7 on-site days vary",
-   "who": "Chickering 1803HPCHICK ivory (gates DHRT), Steinway Square 3536 (if unblocked)",
+   "name": "Hunter",
+   "hours": "NEW HIRE \u00b7 starts Monday \u00b7 8:00\u20134:00",
+   "who": "Orientation Mon; CAP training on Conway 15097 (queue #28, upright, map 327)",
    "days": [
     [
      [
+      "8:00",
       "9:00",
-      "3:00",
-      "keys",
-      "Chickering 1803HPCHICK \u2014 ivory keytops (with Marcelo's bushing work)",
-      "its DHRT is queued behind this"
+      "clean",
+      "Orientation \u2014 Matthew & Mark greet + team intros (medium shirt from Melissa)",
+      ""
+     ],
+     [
+      "9:00",
+      "12:00",
+      "clean",
+      "Shop tour, safety, systems (Store Map, Friday reports, cleaning cards)",
+      ""
+     ],
+     [
+      "12:00",
+      "4:00",
+      "cap",
+      "Conway 15097 \u2014 CAP training intro w/ Courtney (watch + first steps)",
+      "intern rule: CAP first"
      ]
     ],
     [
      [
-      "9:00",
-      "3:00",
-      "keys",
-      "Chickering 1803HPCHICK \u2014 ivory continue",
+      "8:00",
+      "4:00",
+      "cap",
+      "Conway 15097 \u2014 CAP training day 2 (supervised)",
       ""
      ]
     ],
-    null,
     [
      [
-      "9:00",
-      "3:00",
-      "keys",
-      "Steinway Square 3536 \u2014 ivory IF Brigham unblocks (Waiting on Brigham, 10 phases done)",
-      "see bottleneck #6"
+      "8:00",
+      "4:00",
+      "cap",
+      "Conway 15097 \u2014 CAP training continue",
+      ""
      ]
     ],
-    null
+    [
+     [
+      "8:00",
+      "4:00",
+      "cap",
+      "Conway 15097 \u2014 CAP training continue",
+      ""
+     ]
+    ],
+    [
+     [
+      "8:00",
+      "2:30",
+      "cap",
+      "Conway 15097 \u2014 CAP week wrap",
+      ""
+     ],
+     [
+      "2:30",
+      "3:30",
+      "clean",
+      "Friday Shop Organization (all hands) + first Friday report",
+      ""
+     ]
+    ]
    ]
   }
  ],
  "bottlenecks": [
   [
+   "288901 got bumped to the ATTIC \u2014 needs a real spot",
+   "Brigham's spot list put Howard 72712 into 72, which bumped Garrett's active Steinway 288901 (regulation this week) to the attic. Assign it a spot \u2014 Brigham didn't give one."
+  ],
+  [
+   "38930 DHRT on HOLD \u2014 payment check",
+   "Brigham: confirm with Melissa the customer is making payments before DHRT proceeds. Jake's fallback is M&H 55383 (DHRT-ready, spot 38a)."
+  ],
+  [
+   "76197 spot conflict",
+   "Walkthrough says both '69 is correct' and '83a is Steinway 76197'. Left at 69 \u2014 clarify."
+  ],
+  [
+   "B\u00f6sendorfer 42/45 double-claim",
+   "'45 is Petrof 2046' AND 'B\u00f6sendorfer taking up both 45 and 42' can't both hold. Applied Petrof\u219245, B\u00f6sendorfer stays 42 \u2014 clarify if it truly spans two spots."
+  ],
+  [
+   "Showroom rows 203\u2013213 + wall 214\u2013248 need layout rework",
+   "More pianos than mapped spots in the 203\u2013213 lineup ('they'll be narrower'); wall order read but not spot-mapped. These need slot-geometry edits in the Store Map sheet, not just moves \u2014 queued for Brigham/Karmel."
+  ],
+  [
+   "Hallet Davis 188 'serial 278360' not in the Piano Log",
+   "Wanted at spot 126 + low-priority tuning. No matching serial \u2014 add its row or correct the serial."
+  ],
+  [
+   "Baldwin 9' concert grand (spots 281+287) \u2014 refurb+refinish project",
+   "Serial unknown (was on Marcelo's calendar for keys). Add serial, then schedule the full refurb+refinish."
+  ],
+  [
+   "Samick 1JC1114 bumped to attic",
+   "Displaced from 139 by the Hallet Davis walnut. It's in the SOLD-pending group \u2014 give it a parking spot or deliver it."
+  ],
+  [
+   "Victoria out until ~spring",
+   "Accepting IVORY WORK BY MAIL \u2014 ship ivory jobs to her and she returns them. Removed from the weekly roster."
+  ],
+  [
+   "Existing tech calendar events not merged",
+   "Weekly caveat: field appointments/time off on personal calendars may conflict \u2014 verify before applying."
+  ],
+  [
    "Baldwin 191714 \u2014 stale phase + Monday 2:00 delivery",
    "McKinly reported it 'completed' 8/7 but the map still says Refinishing (map #52). It delivers to the Fox Group (Draper) Mon 2:00 with NO tune scheduled \u2014 draft adds an emergency 8:00 tune (Korban) and a 12:00 QC sign-off (Curtis), both flagged 'delivers today'. Advance the phase and mark it sold/completed-pending on the map."
   ],
   [
-   "M&H 55383 \u2014 map phase is stale",
-   "Lupita finished its restringing 7/31 ('I finished restring') and Korban chip-tuned it 8/7, but the map still says phase Restringing (queue #29). Advance the phase \u2014 the first draft of this schedule nearly re-assigned work that was done two weeks ago."
-  ],
-  [
    "Cable Nelson 139681 \u2014 UNBLOCKED Monday (was: plate not ready)",
    "The moving calendar has 'Deliver plate to Curtis Harper, pick up a plate' Mon 9:00 \u2014 the returning plate frees Lupita's Friday restring. Remaining sub-item: plate SCREWS were also not ready per her report; source them before Friday or she falls back to Steinway D2689."
-  ],
-  [
-   "Lester 39753 \u2014 refinishing 0%",
-   "Waiting on customer to approve a color (map: Waiting on OTHER). Doris is otherwise clear to start after Weber 33045. Suggest: check-back call Monday."
-  ],
-  [
-   "Ellington 52031 \u2014 QC paused",
-   "New pedals not arrived (McKinly). If they land this week, Thu pm is reserved; otherwise stays paused. Who owns the pedal order?"
-  ],
-  [
-   "Petrof 2046 \u2014 missing hammer shank",
-   "One unique shank missing + several ends broken. McKinly asks: CNC or 3D-print replacements? Needs Brigham's call \u2014 blocks hammer install."
-  ],
-  [
-   "M&H 7912 \u2014 bass pins out of threading",
-   "Several strings can't reach pitch. Curtis proved a fix (remove pin, straighten, clip, reattach) \u2014 scheduled Mon 2:00 with Korban learning it. Blocks final pitch/QC."
-  ],
-  [
-   "Steinway Square 3536 \u2014 Waiting on Brigham",
-   "10 of 13 phases done. Victoria is available Thursday for ivory if released."
-  ],
-  [
-   "Cable 17823 \u2014 status mismatch",
-   "McKinly reported QC/Assembly done 8/7, but the map still says Waiting on OTHER (queue #21). Update the phase or say what's actually outstanding."
-  ],
-  [
-   "Matthew tunings",
-   "Calendar hold ('tentatively hold off scheduling any tunings for Matthew') kept \u2014 zero tunings proposed for him."
-  ],
-  [
-   "Weber 22722 \u2014 queue #1, In Queue",
-   "Top of queue, technology track, no spot in shop flow this week. If the QRS install should jump the line, it needs an explicit slot \u2014 flagging rather than guessing."
-  ],
-  [
-   "Deliveries next week drive 4 expedites",
-   "Mon: Hailun 299517 same-day tune+QC+deliver (Draper 2:00). Tue: Paula Roper upright \u2014 tune+QC crammed into Mon. Fri: Cunningham 16124 (Piet) \u2014 QC Mon, tune Thu. Sat: Mathushek 8409 (Almgren) \u2014 tune Wed 'if ready', QC Wed 4:30. Rule now standing: delivery pianos get tuned THEN QC'd before load-out, same-day only when unavoidable."
   ],
   [
    "Map gaps found in the moving-calendar audit",
@@ -1271,5 +1364,5 @@
   ]
  ],
  "weekStart": "2026-08-10",
- "generatedAt": "2026-08-08T22:33"
+ "generatedAt": "2026-08-08T23:46"
 }
