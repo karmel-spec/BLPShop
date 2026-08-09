@@ -1309,6 +1309,11 @@ async function loadProposal(box){
     t.addEventListener("input",()=>{ t.value.trim()?localStorage.setItem(k,t.value):localStorage.removeItem(k); });
   });
   const clearDrafts=sel=>box.querySelectorAll(sel).forEach(t=>{ localStorage.removeItem(draftKey(t)); t.value=""; });
+  // Cmd/Ctrl+Enter in any box = fire the matching send button (plain Enter stays a newline)
+  box.querySelectorAll(".ptnotes textarea, #adjGlobal").forEach(t=>
+    t.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); box.querySelector("#adjApply")?.click(); } }));
+  box.querySelectorAll(".bnanswer").forEach(t=>
+    t.addEventListener("keydown",e=>{ if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){ e.preventDefault(); box.querySelector("#bnApply")?.click(); } }));
   // Heavy AI jobs run as Netlify BACKGROUND functions (a schedule revision
   // takes 30-90s, past the sync limit). POST returns 202 instantly; the
   // result lands in a blob keyed by our nonce, which we poll here.
