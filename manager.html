@@ -175,6 +175,15 @@
   .adjustout.ok{display:block;background:#f2f9f4;border:1px solid #bfd8c6;color:#2e5d40}
   .adjustout.err{display:block;background:#fbeaea;border:1px solid #e5c9c9;color:#9e2020}
   .adjustout ul{margin:4px 0 0 18px}
+  .adjhist{margin:0 0 14px}
+  .ahentry{border:1px solid var(--line);border-radius:8px;margin:0 0 7px;background:#fff}
+  .ahentry summary{cursor:pointer;padding:9px 13px;font-size:12.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;list-style-position:inside}
+  .ahbadge{margin-left:auto;font-size:11px;border-radius:20px;padding:2px 9px;white-space:nowrap}
+  .ahbadge.ok{background:#e7f2ea;color:#2e5d40}
+  .ahbadge.bad{background:#fbeaea;color:#9e2020}
+  .ahsec{padding:0 13px 9px;font-size:12.5px}
+  .ahsec pre{white-space:pre-wrap;font:inherit;margin:3px 0 0;color:var(--mut2);background:#faf9f7;border-radius:6px;padding:7px 10px;overflow-x:auto}
+  .ahsec.qq pre{color:#8a6a00}
   @media(max-width:1000px){.ptflex{flex-direction:column}.ptnotes{width:auto;border-left:0;border-top:1px solid var(--line-soft)}}
 
   /* ---------- dashboard + planner (moved from the tech app) ---------- */
@@ -1217,6 +1226,45 @@ function renderDash(){
     </div>`;
 }
 const PROP_DAYS=["Monday","Tuesday","Wednesday","Thursday","Friday"];
+// bridge timestamps are UTC ISO — show them in shop (Denver) time
+function fmtDenver(iso){
+  if(!iso) return "";
+  const d=new Date(iso);
+  if(isNaN(d)) return String(iso).slice(0,16).replace("T"," ");
+  return d.toLocaleString("en-US",{timeZone:"America/Denver",
+    month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+}
+// 🕘 Adjustment history — the Adjustment Log tab (written by the adjust /
+// bottleneck background functions) rendered newest-first so Brigham can see
+// every past submission: what he wrote, what changed, rules banked, saved?
+async function loadAdjustHistory(panel){
+  panel.innerHTML=`<div class="curmsg">Loading history…</div>`;
+  try{
+    const key=encodeURIComponent(localStorage.getItem("blp.appkey")||"pianoman");
+    const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/adjust-log?key="+key);
+    const j=await r.json();
+    if(j.error) throw new Error(j.error);
+    if(!(j.rows||[]).length){
+      panel.innerHTML=`<div class="curmsg">No adjustment history yet — every "Apply adjustments"
+        and bottleneck-answer run from Aug 10, 2026 onward is recorded here.</div>`;
+      return;
+    }
+    panel.innerHTML=j.rows.map(row=>{
+      const [when,by,kind,input,outcome,rules,questions,saved]=row.map(x=>String(x||""));
+      const ok=saved.toLowerCase().startsWith("yes");
+      return `<details class="ahentry">
+        <summary><b>${esc(when)}</b> · ${esc(by)} · <i>${esc(kind)}</i>
+          <span class="ahbadge ${ok?"ok":"bad"}">${ok?"✓ saved":"⚠ "+esc(saved)}</span></summary>
+        ${input?`<div class="ahsec"><b>What you wrote</b><pre>${esc(input)}</pre></div>`:""}
+        ${outcome?`<div class="ahsec"><b>What Claude did</b><pre>${esc(outcome)}</pre></div>`:""}
+        ${rules?`<div class="ahsec"><b>📌 Rules remembered for future weeks</b><pre>${esc(rules)}</pre></div>`:""}
+        ${questions?`<div class="ahsec qq"><b>Questions for you</b><pre>${esc(questions)}</pre></div>`:""}
+      </details>`;
+    }).join("");
+  }catch(e){
+    panel.innerHTML=`<div class="curmsg" style="color:var(--red)">Couldn't load history: ${esc(e.message)}</div>`;
+  }
+}
 async function loadProposal(box){
   if(!box) return;
   box.innerHTML=`<div class="curmsg">Loading proposed week…</div>`;
@@ -1238,7 +1286,7 @@ async function loadProposal(box){
   box.innerHTML=`<div class="propwrap">
     <div class="prophead">
       <h3>📅 Proposed Technician Week — ${esc(plan.week||"")}</h3>
-      <span class="meta">${meta.fallback?"from repo snapshot":"from the weekly proposal"} · saved ${esc((meta.savedAt||"").slice(0,16).replace("T"," "))}
+      <span class="meta">${meta.fallback?"from repo snapshot":"from the weekly proposal"} · saved ${esc(fmtDenver(meta.savedAt))}
         ${meta.applied?" · <b style='color:#7fc48f'>APPLIED "+esc((meta.appliedAt||"").slice(0,10))+"</b>":""}</span>
       <button class="applybtn" id="applySched" ${meta.applied||meta.fallback?"disabled":""}>
         ${meta.applied?"✓ Applied to calendars":meta.fallback?"Apply (needs bridge update)":(meta.appliedTechs&&meta.appliedTechs.length?"✅ Approve more — "+meta.appliedTechs.length+" of "+((plan&&plan.techs)||[]).length+" applied":"✅ Approve — apply to live tech calendars")}</button>
@@ -1247,8 +1295,10 @@ async function loadProposal(box){
       <div class="adjustbar">
         <textarea id="adjGlobal" placeholder="Overall notes to Claude for this week — adjustments across techs, and standing rules ('from now on…', 'always…', 'never…') that should be remembered for every future week."></textarea>
         <button class="abtn" id="adjApply">🪄 Apply adjustments</button>
+        <button class="abtn" id="adjHistBtn" style="background:none;border:1px solid var(--line);color:inherit">🕘 History</button>
       </div>
       <div class="adjustout" id="adjOut"></div>
+      <div class="adjhist" id="adjHist" hidden></div>
       ${(plan.techs||[]).map(tc=>`<div class="proptech">
         <h5>${esc(tc.name)} <small>${esc(tc.hours||"")}</small><small style="margin-left:auto">${esc(tc.who||"")}</small></h5>
         <div class="ptflex"><div class="ptmain">
@@ -1336,6 +1386,11 @@ async function loadProposal(box){
       if(pr.status===200) return pr.json();
     }
     throw new Error("timed out after 3½ min — the job may still finish; reload in a minute");
+  };
+  const ahb=box.querySelector("#adjHistBtn"), ahp=box.querySelector("#adjHist");
+  if(ahb) ahb.onclick=()=>{
+    if(ahp.hidden){ ahp.hidden=false; loadAdjustHistory(ahp); ahb.textContent="🕘 Hide history"; }
+    else { ahp.hidden=true; ahb.textContent="🕘 History"; }
   };
   const adj=box.querySelector("#adjApply");
   if(adj) adj.onclick=async()=>{
