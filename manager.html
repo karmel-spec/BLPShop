@@ -1367,10 +1367,9 @@ async function loadProposal(box){
     adj.disabled=false; adj.textContent="🪄 Apply adjustments";
   };
   const ab=box.querySelector("#applySched");
-  if(ab&&!ab.disabled) ab.onclick=async()=>{
-    if(!confirm("Write this proposal onto every mapped technician's REAL Google Calendar?\n\nTechs without a calendar in the Tech Calendars tab are skipped.")) return;
-    const pin=prompt("Team PIN to authorize:");
-    if(!pin) return;
+  // prompt()/confirm() are blocked in embedded browsers (why the button
+  // seemed dead) — inline confirm + PIN instead
+  const doApply=async(pin)=>{
     ab.disabled=true; ab.textContent="Applying…";
     const out=box.querySelector("#applyOut");
     try{
@@ -1386,6 +1385,24 @@ async function loadProposal(box){
       out.className="applyout err"; out.textContent="✗ "+e.message;
       ab.disabled=false; ab.textContent="✅ Approve — apply to live tech calendars";
     }
+  };
+  if(ab&&!ab.disabled) ab.onclick=()=>{
+    const out=box.querySelector("#applyOut");
+    if(box.querySelector("#applyPin")){ box.querySelector("#applyPin").focus(); return; }
+    out.className="applyout";
+    out.innerHTML=`Writes this proposal onto every mapped technician's REAL Google Calendar
+      (techs without a calendar on the Tech Calendars tab are skipped) — nothing existing is deleted.<br>
+      <span style="display:inline-flex;gap:7px;margin-top:7px;align-items:center">
+        <input id="applyPin" type="password" placeholder="Team PIN" autocomplete="off"
+          style="border:1px solid #cfc9bf;border-radius:6px;padding:8px 11px;font:inherit;font-size:13.5px">
+        <button class="abtn" id="applyGo2">Confirm &amp; apply</button>
+        <button class="abtn" id="applyCancel" style="background:none;border:1px solid var(--line)">Cancel</button>
+      </span>`;
+    const pin=box.querySelector("#applyPin");
+    box.querySelector("#applyGo2").onclick=()=>{ if(pin.value.trim()) doApply(pin.value.trim()); else pin.focus(); };
+    box.querySelector("#applyCancel").onclick=()=>{ out.innerHTML=""; };
+    pin.onkeydown=e=>{ if(e.key==="Enter"&&pin.value.trim()) doApply(pin.value.trim()); };
+    pin.focus();
   };
 }
 function renderPlanner(){
