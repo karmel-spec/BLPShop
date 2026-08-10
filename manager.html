@@ -1241,7 +1241,7 @@ async function loadProposal(box){
       <span class="meta">${meta.fallback?"from repo snapshot":"from the weekly proposal"} · saved ${esc((meta.savedAt||"").slice(0,16).replace("T"," "))}
         ${meta.applied?" · <b style='color:#7fc48f'>APPLIED "+esc((meta.appliedAt||"").slice(0,10))+"</b>":""}</span>
       <button class="applybtn" id="applySched" ${meta.applied||meta.fallback?"disabled":""}>
-        ${meta.applied?"✓ Applied to calendars":meta.fallback?"Apply (needs bridge update)":"✅ Approve — apply to live tech calendars"}</button>
+        ${meta.applied?"✓ Applied to calendars":meta.fallback?"Apply (needs bridge update)":(meta.appliedTechs&&meta.appliedTechs.length?"✅ Approve more — "+meta.appliedTechs.length+" of "+((plan&&plan.techs)||[]).length+" applied":"✅ Approve — apply to live tech calendars")}</button>
     </div>
     <div class="propbody">
       <div class="adjustbar">
@@ -1369,18 +1369,20 @@ async function loadProposal(box){
   const ab=box.querySelector("#applySched");
   // prompt()/confirm() are blocked in embedded browsers (why the button
   // seemed dead) — inline confirm + PIN instead
-  const doApply=async(pin)=>{
+  const doApply=async(pin,techs)=>{
     ab.disabled=true; ab.textContent="Applying…";
     const out=box.querySelector("#applyOut");
     try{
       const r=await fetch(CONFIG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
         headers:{"content-type":"text/plain;charset=utf-8"},
-        body:JSON.stringify({action:"applyschedule",pin,user:{name:(localStorage.getItem("blpmgr.name")||"Shop Manager")+" (Shop Manager)"}})});
+        body:JSON.stringify({action:"applyschedule",pin,techs,user:{name:(localStorage.getItem("blpmgr.name")||"Shop Manager")+" (Shop Manager)"}})});
       const j=await r.json();
       if(j.error) throw new Error(j.error);
       out.className="applyout";
       out.innerHTML="✓ Applied — "+j.results.map(x=>`<b>${esc(x.tech)}</b>: ${x.events!=null?x.events+" events":esc(x.skipped||x.error||"?")}`).join(" · ");
-      ab.textContent="✓ Applied to calendars";
+      if(j.applied){ ab.textContent="✓ Applied to calendars"; }
+      else { ab.disabled=false; ab.textContent="✅ Approve — apply to live tech calendars"; }
+      setTimeout(()=>loadProposal(box),2500);
     }catch(e){
       out.className="applyout err"; out.textContent="✗ "+e.message;
       ab.disabled=false; ab.textContent="✅ Approve — apply to live tech calendars";
@@ -1389,20 +1391,38 @@ async function loadProposal(box){
   if(ab&&!ab.disabled) ab.onclick=()=>{
     const out=box.querySelector("#applyOut");
     if(box.querySelector("#applyPin")){ box.querySelector("#applyPin").focus(); return; }
+    const appliedSet=new Set((meta.appliedTechs||[]).map(n=>n.toLowerCase()));
     out.className="applyout";
-    out.innerHTML=`Writes this proposal onto every mapped technician's REAL Google Calendar
-      (techs without a calendar on the Tech Calendars tab are skipped) — nothing existing is deleted.<br>
-      <span style="display:inline-flex;gap:7px;margin-top:7px;align-items:center">
+    out.innerHTML=`Pick who goes live — only checked technicians' proposed weeks are written to their REAL
+      Google Calendars (add-only; nothing existing is deleted; techs without a calendar on the Tech Calendars tab are skipped).<br>
+      <div id="applyTechs" style="display:flex;gap:6px 14px;flex-wrap:wrap;margin:9px 0 4px">
+        ${(plan.techs||[]).map(tc=>{
+          const done=appliedSet.has(tc.name.toLowerCase());
+          return `<label style="display:inline-flex;gap:5px;align-items:center;font-size:13px;${done?"color:var(--mut2)":""}">
+            <input type="checkbox" value="${esc(tc.name)}" ${done?"":"checked"}> ${esc(tc.name)}${done?" ✓applied":""}</label>`;
+        }).join("")}
+      </div>
+      <span style="display:inline-flex;gap:7px;margin-top:4px;align-items:center;flex-wrap:wrap">
+        <button class="abtn" id="applyNone" style="background:none;border:1px solid var(--line)">none</button>
+        <button class="abtn" id="applyAll" style="background:none;border:1px solid var(--line)">all</button>
         <input id="applyPin" type="password" placeholder="Team PIN" autocomplete="off"
           style="border:1px solid #cfc9bf;border-radius:6px;padding:8px 11px;font:inherit;font-size:13.5px">
-        <button class="abtn" id="applyGo2">Confirm &amp; apply</button>
+        <button class="abtn" id="applyGo2">Apply selected</button>
         <button class="abtn" id="applyCancel" style="background:none;border:1px solid var(--line)">Cancel</button>
       </span>`;
     const pin=box.querySelector("#applyPin");
-    box.querySelector("#applyGo2").onclick=()=>{ if(pin.value.trim()) doApply(pin.value.trim()); else pin.focus(); };
+    const picked=()=>[...box.querySelectorAll("#applyTechs input:checked")].map(c=>c.value);
+    box.querySelector("#applyAll").onclick=()=>box.querySelectorAll("#applyTechs input").forEach(c=>c.checked=true);
+    box.querySelector("#applyNone").onclick=()=>box.querySelectorAll("#applyTechs input").forEach(c=>c.checked=false);
+    const go=()=>{
+      const sel=picked();
+      if(!sel.length){ out.insertAdjacentHTML("beforeend","<br><b style='color:var(--red)'>Check at least one technician.</b>"); return; }
+      if(!pin.value.trim()){ pin.focus(); return; }
+      doApply(pin.value.trim(),sel);
+    };
+    box.querySelector("#applyGo2").onclick=go;
     box.querySelector("#applyCancel").onclick=()=>{ out.innerHTML=""; };
-    pin.onkeydown=e=>{ if(e.key==="Enter"&&pin.value.trim()) doApply(pin.value.trim()); };
-    pin.focus();
+    pin.onkeydown=e=>{ if(e.key==="Enter") go(); };
   };
 }
 function renderPlanner(){
