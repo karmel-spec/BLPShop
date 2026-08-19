@@ -274,6 +274,21 @@
   .qc-item input{grid-column:1/-1;border:1px solid var(--line);border-radius:5px;padding:7px 10px;font:inherit;font-size:13px}
   .qc-final{border:2px solid var(--good);border-radius:7px;background:var(--good-bg);padding:16px;text-align:center;margin-top:6px}
   .qc-final .btn{background:var(--good)}
+
+  /* shop board */
+  .sbtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+  .sbtile{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+  .sbtile.on{border-color:#7fbb8c;background:#f4faf5}
+  .sbtile b{font-size:14px}
+  .sbwhat{font-size:12px;color:#333}
+  .sbwhat.off{color:var(--mut2);font-style:italic}
+  .sbtime{font-size:13px;font-weight:800;color:#2f7d4f;font-variant-numeric:tabular-nums}
+  .sbtoday{font-size:10.5px;color:var(--mut2);letter-spacing:.4px}
+  .sbtbl{width:100%;border-collapse:collapse;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden;font-size:13px;margin-top:8px}
+  .sbtbl th{background:#17171b;color:#e8e4dd;text-align:left;padding:8px 11px;font-size:10.5px;letter-spacing:1px;text-transform:uppercase}
+  .sbtbl td{padding:8px 11px;border-top:1px solid var(--line-soft);vertical-align:top}
+  .sbtbl .num{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+  .sbh3{margin:18px 0 2px;font-size:15px}
   @media print{.side,#topbar,.qc-head,.qc-btns,nav{display:none!important}main{padding:0}}
 </style>
 </head>
@@ -314,6 +329,7 @@
     <section class="view" id="view-dash"></section>
     <section class="view" id="view-review"></section>
     <section class="view" id="view-planner"></section>
+    <section class="view" id="view-shopboard"></section>
     <section class="view" id="view-walk"></section>
     <section class="view" id="view-week"></section>
     <section class="view" id="view-sequence"></section>
@@ -481,6 +497,7 @@ const I18N = {
   /* shop dashboard + assignment planner (moved from the tech app) */
   nav_dashboard:["Shop Dashboard","Panel del Taller"],
   nav_planner:["Assignment Planner","Planificador"],
+  nav_shopboard:["Shop Board","Tablero del Taller"],
   week_ending:["Week ending %1","Semana que termina %1"],
   dash_sub:["Shop overview · %1 active technicians · %2 reports on file since 2017","Resumen del taller · %1 técnicos activos · %2 reportes archivados desde 2017"],
   st_reports_in:["Reports in","Reportes entregados"],
@@ -846,7 +863,7 @@ const BLP_APPS=[
   {href:"https://pianotechnologylibrary.com", label:"PTL"},
 ];
 let APPS_OPEN=false;
-const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
+const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -881,7 +898,7 @@ $("#navScrim").onclick=()=>navDrawer(false);
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderDash(); renderReview(); renderPlanner(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderWhiteboard(); renderCurtis(); renderBrigham();
+  renderDash(); renderReview(); renderPlanner(); renderShopBoard(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderWhiteboard(); renderCurtis(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -1484,6 +1501,109 @@ function renderPlanner(){
   const v=$("#view-planner"); if(!v) return;
   v.innerHTML=`<div id="proposalBox"></div>`;
   loadProposal(v.querySelector("#proposalBox"));
+}
+
+/* ================= SHOP BOARD (live work clock + job costing) =================
+   Live tiles: who is clocked into which piano right now (bridge fn=timeclock,
+   one open session per tech enforced server-side). Below: Job Costing pulled
+   from fn=timelog — hours per piano, per tech, cost at a settable shop rate. */
+let SB={state:null,rows:null,loading:false,timer:null};
+function sbElapsed(startIso){
+  const s=Math.max(0,Math.floor((Date.now()-new Date(startIso))/1000));
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60);
+  return h+":"+String(m).padStart(2,"0");
+}
+function sbHours(min){ return (min/60).toFixed(1); }
+async function sbFetchState(){
+  try{
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=timeclock",{redirect:"follow"});
+    const j=await r.json();
+    if(j.open){ SB.state=j; if(ACTIVE==="shopboard") renderShopBoard(); }
+  }catch(e){}
+}
+async function sbFetchLog(days){
+  SB.loading=true; renderShopBoard();
+  try{
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=timelog&days="+days,{redirect:"follow"});
+    const j=await r.json();
+    SB.rows=j.rows||[];
+  }catch(e){ SB.rows=[]; }
+  SB.loading=false; renderShopBoard();
+}
+function renderShopBoard(){
+  const v=$("#view-shopboard"); if(!v) return;
+  if(ACTIVE==="shopboard"&&!SB.state&&!SB._kick){ SB._kick=true; sbFetchState(); }
+  if(ACTIVE==="shopboard"&&!SB.timer) SB.timer=setInterval(()=>{ if(ACTIVE==="shopboard") sbFetchState(); },60000);
+  const st=SB.state||{open:[],todayMinutes:{}};
+  const openBy={}; st.open.forEach(o=>openBy[o.tech.toLowerCase()]=o);
+  const names=[...new Set([...ROSTER,...st.open.map(o=>o.tech)])].sort();
+  const rate=+(localStorage.getItem("blp.rate")||48);
+  const days=+(localStorage.getItem("blp.jcdays")||90);
+  const tiles=names.map(n=>{
+    const o=openBy[n.toLowerCase()];
+    const today=st.todayMinutes[n]||st.todayMinutes[Object.keys(st.todayMinutes).find(k=>k.toLowerCase()===n.toLowerCase())]||0;
+    return `<div class="sbtile ${o?"on":""}">
+      <b>${esc(n)}</b>
+      ${o?`<span class="sbwhat">#${esc(o.serial)} · ${esc(o.phase||"working")}</span>
+           <span class="sbtime">⏱ ${sbElapsed(o.start)}</span>`
+         :`<span class="sbwhat off">not clocked in</span>`}
+      <span class="sbtoday">today ${sbHours(today)} h</span></div>`;
+  }).join("");
+  // job costing aggregation
+  let jc="";
+  if(SB.loading) jc=`<div class="curmsg">Loading time log…</div>`;
+  else if(SB.rows){
+    const now=Date.now();
+    const perPiano={},perTech={};
+    for(const r of SB.rows){
+      const mins=r.minutes||Math.max(0,Math.round((now-new Date(r.start))/60000));
+      const pk=r.serial+"|"+(r.piano||"");
+      (perPiano[pk]=perPiano[pk]||{serial:r.serial,piano:r.piano,min:0,techs:{},phases:{}});
+      perPiano[pk].min+=mins;
+      perPiano[pk].techs[r.tech]=(perPiano[pk].techs[r.tech]||0)+mins;
+      perPiano[pk].phases[r.phase||"—"]=(perPiano[pk].phases[r.phase||"—"]||0)+mins;
+      perTech[r.tech]=(perTech[r.tech]||0)+mins;
+    }
+    const pianos=Object.values(perPiano).sort((a,b)=>b.min-a.min);
+    const techs=Object.entries(perTech).sort((a,b)=>b[1]-a[1]);
+    jc=`<table class="sbtbl"><thead><tr><th>Piano</th><th>Hours</th><th>Cost @ $${rate}/h</th><th>By phase</th><th>By tech</th></tr></thead><tbody>
+      ${pianos.map(p=>`<tr><td><b>${esc(p.piano||p.serial)}</b><br><span class="lite">#${esc(p.serial)}</span></td>
+        <td class="num">${sbHours(p.min)}</td>
+        <td class="num">$${Math.round(p.min/60*rate).toLocaleString()}</td>
+        <td>${Object.entries(p.phases).sort((a,b)=>b[1]-a[1]).map(([k,m])=>esc(k)+" "+sbHours(m)+"h").join(" · ")}</td>
+        <td>${Object.entries(p.techs).sort((a,b)=>b[1]-a[1]).map(([k,m])=>esc(k)+" "+sbHours(m)+"h").join(" · ")}</td></tr>`).join("")||
+        `<tr><td colspan=5 style="color:var(--mut2)">No punches in this window yet — hours appear as soon as techs start clocking in.</td></tr>`}
+      </tbody></table>
+      ${techs.length?`<h3 class="sbh3">Hours by technician (${days}d)</h3>
+      <table class="sbtbl"><tbody>${techs.map(([n,m])=>`<tr><td>${esc(n)}</td><td class="num">${sbHours(m)} h</td><td class="num">$${Math.round(m/60*rate).toLocaleString()}</td></tr>`).join("")}</tbody></table>`:""}`;
+  } else jc=`<div class="curmsg">Pick a window and load the log.</div>`;
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">Shop Board</h2>
+      <div class="sub">Who's on what right now — and what every piano is costing in tech hours. One piano per tech, enforced.</div></div></div>
+    <div class="sbtiles">${tiles||'<div class="curmsg">Loading…</div>'}</div>
+    <div class="row1" style="margin-top:26px"><h2 class="page" style="font-size:19px">Job Costing</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select id="sbDays">${[30,90,180,365].map(d=>`<option value="${d}" ${d===days?"selected":""}>${d} days</option>`).join("")}</select>
+        <label style="font-size:12.5px">$<input id="sbRate" type="number" value="${rate}" style="width:56px"> /h loaded</label>
+        <button class="btn2" id="sbLoad">Load</button>
+        <button class="btn2" id="sbCsv" ${SB.rows&&SB.rows.length?"":"disabled"}>⬇ CSV</button>
+      </div></div>
+    ${jc}`;
+  const load=$("#sbLoad");
+  if(load) load.onclick=()=>{
+    localStorage.setItem("blp.jcdays",$("#sbDays").value);
+    localStorage.setItem("blp.rate",$("#sbRate").value||"48");
+    sbFetchLog(+$("#sbDays").value);
+  };
+  const csv=$("#sbCsv");
+  if(csv&&SB.rows) csv.onclick=()=>{
+    const head="Tech,Serial,Piano,Phase,Clock In,Clock Out,Minutes,Source";
+    const q=x=>'"'+String(x??"").replace(/"/g,'""')+'"';
+    const body=SB.rows.map(r=>[r.tech,r.serial,r.piano,r.phase,r.start,r.end,r.minutes,r.source].map(q).join(","));
+    const blob=new Blob([head+"\n"+body.join("\n")],{type:"text/csv"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob); a.download="blp-time-log.csv"; a.click();
+  };
 }
 
 /* ================= SHEET GRIDS (Curtis Harper · Schedules) =================
