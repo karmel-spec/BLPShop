@@ -275,6 +275,21 @@
   .qc-final{border:2px solid var(--good);border-radius:7px;background:var(--good-bg);padding:16px;text-align:center;margin-top:6px}
   .qc-final .btn{background:var(--good)}
 
+
+  /* app requests */
+  .rqcard{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
+  .rqtop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+  .rqid{font-family:monospace;font-size:11px;color:var(--mut2)}
+  .rqshot{font-size:12px}
+  .rqcopy{margin-left:auto;border:1px solid var(--line);background:#fafbfc;border-radius:7px;padding:5px 10px;font:600 12px inherit;cursor:pointer}
+  .rqtext{margin:7px 0;font-size:14px;line-height:1.45}
+  .rqflow{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .rqarrow{color:#c9c3b8;font-size:12px}
+  .rqst{border:1.5px solid var(--line);background:#fff;border-radius:999px;padding:5px 12px;font:700 11.5px inherit;color:#8a847a;cursor:pointer}
+  .rqst.on.sRequested{background:#eee;border-color:#bbb;color:#555}
+  .rqst.on.sInprogress{background:#fdf3ec;border-color:#e0b57e;color:#9a5b13}
+  .rqst.on.sLive{background:#eaf2fd;border-color:#8db4e0;color:#2c5d96}
+  .rqst.on.sTested{background:#eaf5ec;border-color:#7fbb8c;color:#2f7d4f}
   /* shop board */
   .sbtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
   .sbtile{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:3px}
@@ -330,6 +345,7 @@
     <section class="view" id="view-review"></section>
     <section class="view" id="view-planner"></section>
     <section class="view" id="view-shopboard"></section>
+    <section class="view" id="view-requests"></section>
     <section class="view" id="view-walk"></section>
     <section class="view" id="view-week"></section>
     <section class="view" id="view-sequence"></section>
@@ -498,6 +514,7 @@ const I18N = {
   nav_dashboard:["Shop Dashboard","Panel del Taller"],
   nav_planner:["Assignment Planner","Planificador"],
   nav_shopboard:["Shop Board","Tablero del Taller"],
+  nav_requests:["App Requests","Solicitudes de Apps"],
   week_ending:["Week ending %1","Semana que termina %1"],
   dash_sub:["Shop overview · %1 active technicians · %2 reports on file since 2017","Resumen del taller · %1 técnicos activos · %2 reportes archivados desde 2017"],
   st_reports_in:["Reports in","Reportes entregados"],
@@ -863,7 +880,7 @@ const BLP_APPS=[
   {href:"https://pianotechnologylibrary.com", label:"PTL"},
 ];
 let APPS_OPEN=false;
-const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
+const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["requests","nav_requests"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -898,7 +915,7 @@ $("#navScrim").onclick=()=>navDrawer(false);
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderDash(); renderReview(); renderPlanner(); renderShopBoard(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderWhiteboard(); renderCurtis(); renderBrigham();
+  renderDash(); renderReview(); renderPlanner(); renderShopBoard(); renderRequests(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderWhiteboard(); renderCurtis(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -1501,6 +1518,78 @@ function renderPlanner(){
   const v=$("#view-planner"); if(!v) return;
   v.innerHTML=`<div id="proposalBox"></div>`;
   loadProposal(v.querySelector("#proposalBox"));
+}
+
+/* ================= APP REQUESTS (suggestion box triage) =================
+   Team-filed bugs/edits/ideas from the Store Map's 💡 button. Status flow:
+   Requested -> In progress -> Live -> Tested. Flipping to Live texts the
+   requester (request-notify on blpsalesapp); "Copy for Claude" packages the
+   request for pasting into a Claude Code session. */
+let RQ={rows:null,loading:false,showDone:false};
+async function rqFetch(){
+  RQ.loading=true; renderRequests();
+  try{
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=requests",{redirect:"follow"});
+    RQ.rows=(await r.json()).requests||[];
+  }catch(e){ RQ.rows=[]; }
+  RQ.loading=false; renderRequests();
+}
+async function rqSetStatus(id,status,btn){
+  const row=(RQ.rows||[]).find(x=>x.id===id); if(!row) return;
+  if(btn){ btn.disabled=true; btn.textContent="…"; }
+  try{
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
+      headers:{"content-type":"text/plain;charset=utf-8"},
+      body:JSON.stringify({action:"requeststatus",id,status,pin:localStorage.getItem("blp.appkey")||"pianoman",
+        user:{name:localStorage.getItem("blpmgr.name")||"Shop Manager"}})});
+    const j=await r.json();
+    if(j.error) throw new Error(j.error);
+    row.status=status;
+    if(status==="Live"){
+      fetch("https://blpsalesapp.netlify.app/.netlify/functions/request-notify",{
+        method:"POST",headers:{"content-type":"application/json"},
+        body:JSON.stringify({key:localStorage.getItem("blp.appkey")||"pianoman",name:row.who,
+          message:"BLP Apps: your request \""+row.text.slice(0,80)+"\" is LIVE — go try it! "+
+            "Open the Store Map 💡 button and tap \"It works\" to confirm. Thanks for making the apps better!"})
+      }).catch(()=>{});
+    }
+  }catch(e){ alert("✗ "+e.message); }
+  renderRequests();
+}
+function renderRequests(){
+  const v=$("#view-requests"); if(!v) return;
+  if(ACTIVE==="requests"&&RQ.rows===null&&!RQ.loading) rqFetch();
+  const STAT=["Requested","In progress","Live","Tested"];
+  const ICONS={bug:"🐛",edit:"✏️",idea:"💡"};
+  const rows=(RQ.rows||[]).filter(x=>RQ.showDone||x.status!=="Tested");
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">App Requests</h2>
+      <div class="sub">Bugs, edits and ideas from the team (💡 in the Store Map). Flip to Live to auto-text the requester; they confirm Tested themselves.</div></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn2" id="rqToggle">${RQ.showDone?"Hide":"Show"} tested</button>
+        <button class="btn2" id="rqReload">↻ Refresh</button></div></div>
+    ${RQ.loading?'<div class="curmsg">Loading…</div>':rows.length?rows.map(x=>`
+      <div class="rqcard">
+        <div class="rqtop">
+          <span class="rqid">${esc(x.id)}</span>
+          <b>${ICONS[x.type]||"💡"} ${esc(x.who)}</b>
+          <span class="lite">${esc((x.date||"").slice(0,10))}${x.context?" · "+esc(x.context):""}</span>
+          ${x.screenshot?`<a class="rqshot" target="_blank" rel="noopener" href="${esc(x.screenshot)}">📷 screenshot</a>`:""}
+          <button class="rqcopy" data-id="${esc(x.id)}">📋 Copy for Claude</button>
+        </div>
+        <div class="rqtext">${esc(x.text)}</div>
+        <div class="rqflow">${STAT.map(st=>`<button class="rqst ${x.status===st?"on":""} s${st.replace(/\s/g,"")}"
+          data-id="${esc(x.id)}" data-st="${esc(st)}">${st}${x.status===st?" ✓":""}</button>`).join("<span class='rqarrow'>→</span>")}</div>
+      </div>`).join(""):'<div class="curmsg">No open requests — the box is empty. 🎉</div>'}`;
+  $("#rqReload")&&($("#rqReload").onclick=rqFetch);
+  $("#rqToggle")&&($("#rqToggle").onclick=()=>{RQ.showDone=!RQ.showDone;renderRequests();});
+  v.querySelectorAll(".rqst").forEach(b=>b.onclick=()=>{ if(!b.classList.contains("on")) rqSetStatus(b.dataset.id,b.dataset.st,b); });
+  v.querySelectorAll(".rqcopy").forEach(b=>b.onclick=async()=>{
+    const x=(RQ.rows||[]).find(r=>r.id===b.dataset.id); if(!x) return;
+    const brief=`App request ${x.id} (${x.type}) from ${x.who}, ${x.date.slice(0,10)}:\n"${x.text}"\nContext: ${x.context||"—"}${x.screenshot?"\nScreenshot: "+x.screenshot:""}`;
+    await navigator.clipboard.writeText(brief);
+    b.textContent="✓ copied"; setTimeout(()=>{b.textContent="📋 Copy for Claude";},1500);
+  });
 }
 
 /* ================= SHOP BOARD (live work clock + job costing) =================
