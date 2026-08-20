@@ -276,6 +276,18 @@
   .qc-final .btn{background:var(--good)}
 
 
+
+  /* team transitions */
+  .trxpanel{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:12px}
+  .trxbtns{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .trxbtns select{padding:7px 9px;border:1px solid var(--line);border-radius:8px;font:inherit}
+  .trxcard{border:1px solid var(--line-soft);border-radius:10px;padding:10px 12px;margin-top:10px;background:#fbfaf7}
+  .trxhead{display:flex;align-items:center;gap:10px}
+  .trxprog{font-size:11px;font-weight:800;background:#eee;border-radius:999px;padding:2px 9px}
+  .trxdone{margin-left:auto;border:1px solid var(--line);background:#fff;border-radius:7px;padding:4px 10px;font:700 11.5px inherit;cursor:pointer}
+  .trxsteps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 18px;margin-top:8px}
+  .trxstep{font-size:13px;display:flex;gap:8px;align-items:baseline;cursor:pointer}
+  .trxmove{grid-column:1/-1;margin-top:6px;background:#9e2020;color:#fff;border:0;border-radius:8px;padding:9px 14px;font:800 12.5px inherit;cursor:pointer;width:fit-content}
   /* app requests */
   .rqcard{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
   .rqtop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
@@ -1520,6 +1532,122 @@ function renderPlanner(){
   loadProposal(v.querySelector("#proposalBox"));
 }
 
+/* ================= TEAM TRANSITIONS (exit + onboarding checklists) =========
+   Lives on the Team Roster page. Exit: walk the steps, last one moves the
+   whole row (payroll columns included, server-side) to the Former Team tab.
+   Onboard: welcome -> setup -> training-module steps for a new hire.
+   State persists per person on a "Transitions" tab of the BLP TEAM sheet. */
+const EXIT_STEPS=[
+  "Tell the team + set the last working day",
+  "Final Work Clock session closed (check the Shop Board)",
+  "Collect shirt / uniform + any shop keys",
+  "Reminders OFF on the Tech Phones tab",
+  "Un-share tech calendars + remove from Tech Calendars tab",
+  "Remove from weekly schedule roster (tell Claude — the Saturday draft learns it)",
+  "Suspend the .blp@gmail account / change shared passwords",
+  "Final paycheck + payroll paperwork done",
+  "Exit interview — what should BLP do better?",
+  "Thank-you sent (door stays open)"];
+const ONBOARD_STEPS=[
+  "Welcome call/text — confirm start date + first day plan",
+  "Shirt ordered (get the size!)",
+  "Create firstlast.blp@gmail.com + share tech calendars",
+  "Added to Tech Phones tab (reminders YES)",
+  "Added to Team Schedule tab (shift hours)",
+  "Store Map sign-in works on their phone (Google or name+PIN)",
+  "Orientation tour: Store Map, Friday reports, cleaning cards",
+  "Greeter/mentor assigned for week one",
+  "⏱ Work Clock demo — clock into a piano together",
+  "First training piano assigned (interns: CAP first, tasks twice back-to-back)",
+  "Added to the weekly schedule roster (tell Claude)"];
+let TRX={list:null,loading:false};
+async function trxFetch(){
+  TRX.loading=true;
+  try{
+    const r=await fetch(CONFIG.ROSTER_API,{method:"POST",headers:curHeaders(true),
+      body:curBody({listTransitions:true})});
+    const j=await r.json();
+    if(j.ok) TRX.list=j.transitions;
+  }catch(e){}
+  TRX.loading=false; renderGrid("roster");
+}
+function trxPanelHTML(G){
+  const cur=(G.tabs&&G.tabs["Current Team"])||[];
+  const people=cur.slice(1).map(r=>(r[0]+" "+(r[1]||"")).trim()).filter(x=>x);
+  const open=(TRX.list||[]).filter(x=>!x.done);
+  const opts=people.map(p=>`<option>${esc(p)}</option>`).join("");
+  return `<div class="trxpanel">
+    <div class="trxbtns">
+      <select id="trxWho"><option value="">— pick a team member —</option>${opts}</select>
+      <button class="btn2" id="trxExit">🚪 Start exit checklist</button>
+      <button class="btn2" id="trxOnb">🎉 Start onboarding checklist</button>
+      <span class="lite" style="font-size:12px">New hire? Add their row first (${t("ros_addrow")}), then start onboarding.</span>
+    </div>
+    ${TRX.list===null?`<div class="lite" style="font-size:12px;margin-top:6px">${TRX.loading?"Loading checklists…":"<a href='#' id='trxLoad'>Load open checklists</a>"}</div>`:
+      open.length?open.map(x=>{
+        let steps={}; try{ steps=JSON.parse(x.steps)||{}; }catch(e){}
+        const defs=x.type==="exit"?EXIT_STEPS:ONBOARD_STEPS;
+        const doneN=defs.filter((_,i)=>steps[i]).length;
+        return `<div class="trxcard" data-row="${x.row}" data-type="${esc(x.type)}" data-name="${esc(x.name)}">
+          <div class="trxhead"><b>${x.type==="exit"?"🚪":"🎉"} ${esc(x.name)}</b>
+            <span class="trxprog">${doneN}/${defs.length}</span>
+            <button class="trxdone" title="close this checklist">✓ finish</button></div>
+          <div class="trxsteps">${defs.map((st,i)=>`<label class="trxstep"><input type="checkbox" data-i="${i}" ${steps[i]?"checked":""}> ${esc(st)}</label>`).join("")}
+          ${x.type==="exit"?`<button class="trxmove">📤 Move ${esc(x.name.split(" ")[0])}'s row to Former BLP now</button>`:""}</div>
+        </div>`;}).join("")
+      :`<div class="lite" style="font-size:12px;margin-top:6px">No open checklists.</div>`}
+  </div>`;
+}
+async function trxSave(card){
+  const boxes=[...card.querySelectorAll("input[type=checkbox]")];
+  const steps={}; boxes.forEach(b=>{ if(b.checked) steps[b.dataset.i]=1; });
+  await fetch(CONFIG.ROSTER_API,{method:"POST",headers:curHeaders(true),
+    body:curBody({transition:{row:+card.dataset.row,name:card.dataset.name,type:card.dataset.type,
+      steps:JSON.stringify(steps)}})});
+  const defs=card.dataset.type==="exit"?EXIT_STEPS:ONBOARD_STEPS;
+  card.querySelector(".trxprog").textContent=Object.keys(steps).length+"/"+defs.length;
+}
+function trxWire(v,G){
+  const load=v.querySelector("#trxLoad");
+  if(load) load.onclick=e=>{ e.preventDefault(); trxFetch(); };
+  const start=async type=>{
+    const who=v.querySelector("#trxWho").value;
+    if(!who){ alert("Pick the team member first."); return; }
+    await fetch(CONFIG.ROSTER_API,{method:"POST",headers:curHeaders(true),
+      body:curBody({transition:{name:who,type,steps:"{}"}})});
+    await trxFetch();
+  };
+  const ex=v.querySelector("#trxExit"); if(ex) ex.onclick=()=>start("exit");
+  const ob=v.querySelector("#trxOnb"); if(ob) ob.onclick=()=>start("onboard");
+  v.querySelectorAll(".trxcard").forEach(card=>{
+    card.querySelectorAll("input[type=checkbox]").forEach(b=>b.onchange=()=>trxSave(card));
+    const done=card.querySelector(".trxdone");
+    if(done) done.onclick=async()=>{
+      if(!confirm("Close this checklist for "+card.dataset.name+"?")) return;
+      const steps={};
+      card.querySelectorAll("input[type=checkbox]").forEach(b=>{ if(b.checked) steps[b.dataset.i]=1; });
+      await fetch(CONFIG.ROSTER_API,{method:"POST",headers:curHeaders(true),
+        body:curBody({transition:{row:+card.dataset.row,name:card.dataset.name,type:card.dataset.type,
+          steps:JSON.stringify(steps),done:true}})});
+      trxFetch();
+    };
+    const mv=card.querySelector(".trxmove");
+    if(mv) mv.onclick=async()=>{
+      const name=card.dataset.name;
+      const cur=(G.tabs&&G.tabs["Current Team"])||[];
+      const ri=cur.slice(1).findIndex(r=>((r[0]+" "+(r[1]||"")).trim().toLowerCase()===name.toLowerCase()));
+      if(ri<0){ alert("Couldn't find "+name+" on Current Team — maybe already moved?"); return; }
+      if(!confirm("Move "+name+" to the Former BLP tab? Their display info moves there, the complete raw row is archived server-side, and the Current Team row is removed.")) return;
+      mv.disabled=true; mv.textContent="Moving…";
+      const r=await fetch(CONFIG.ROSTER_API,{method:"POST",headers:curHeaders(true),
+        body:curBody({tab:"Current Team",move:{row:ri+2}})});
+      const j=await r.json();
+      if(j.ok){ mv.textContent="✓ Moved to Former BLP"; gridState("roster").tabs=null; gridFetch("roster"); }
+      else{ mv.disabled=false; mv.textContent="✗ "+(j.error||"failed — try again"); }
+    };
+  });
+}
+
 /* ================= APP REQUESTS (suggestion box triage) =================
    Team-filed bugs/edits/ideas from the Store Map's 💡 button. Status flow:
    Requested -> In progress -> Live -> Tested. Flipping to Live texts the
@@ -1706,8 +1834,9 @@ const GRID_CFGS={
     tabs:["Team Schedule"],
     title:"sched_title", sub:"sched_sub", addLabel:"sched_addrow", dateHeader:null },
   roster:{ api:()=>CONFIG.ROSTER_API, sheet:()=>CONFIG.ROSTER_SHEET_URL,
-    tabs:["Current Team","Subcontractors/INS"],
-    title:"ros_title", sub:"ros_sub", addLabel:"ros_addrow", dateHeader:null },
+    tabs:["Current Team","Subcontractors/INS","Former BLP"],
+    title:"ros_title", sub:"ros_sub", addLabel:"ros_addrow", dateHeader:null,
+    topPanel:G=>trxPanelHTML(G), postRender:(v,G)=>trxWire(v,G) },
 };
 const GRIDS={};
 function gridState(id){
@@ -1858,6 +1987,10 @@ function renderGrid(id){
       setTimeout(((tr)=>()=>tr.querySelectorAll("td").forEach(x=>x.classList.remove("saved")))(cell.parentElement),2500);
     }
     gridMsg(id,t("cur_added",G.flashRow));
+    G.flashRow=null;
+  }
+  if(cfg.postRender) try{ cfg.postRender(v,G); }catch(e){}
+  if(false){
     G.flashRow=null;
   }
   if(cfg.wireTop&&G.tabs) cfg.wireTop(v,G);
