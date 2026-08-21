@@ -288,6 +288,10 @@
   .trxsteps{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:4px 18px;margin-top:8px}
   .trxstep{font-size:13px;display:flex;gap:8px;align-items:baseline;cursor:pointer}
   .trxmove{grid-column:1/-1;margin-top:6px;background:#9e2020;color:#fff;border:0;border-radius:8px;padding:9px 14px;font:800 12.5px inherit;cursor:pointer;width:fit-content}
+
+  .rqfilters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+  .rqfilters select,.rqfilters input{border:1px solid var(--line);border-radius:8px;padding:7px 9px;font:12.5px inherit;background:#fff}
+  .rqfilters input{width:170px}
   /* app requests */
   .rqcard{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
   .rqtop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
@@ -1653,7 +1657,47 @@ function trxWire(v,G){
    Requested -> In progress -> Live -> Tested. Flipping to Live texts the
    requester (request-notify on blpsalesapp); "Copy for Claude" packages the
    request for pasting into a Claude Code session. */
-let RQ={rows:null,loading:false,showDone:false};
+let RQ={rows:null,loading:false,showDone:false,f:{type:"",status:"",who:"",q:""}};
+function rqFiltered(){
+  const f=RQ.f;
+  return (RQ.rows||[]).filter(x=>
+    (!f.type||x.type===f.type)&&
+    (!f.status||x.status===f.status)&&
+    (!f.who||x.who===f.who)&&
+    (!f.q||(x.text+" "+x.context+" "+x.id).toLowerCase().includes(f.q.toLowerCase())));
+}
+function rqPrint(){
+  const rows=rqFiltered();
+  const day=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"});
+  const w=window.open("","_blank");
+  if(!w){ alert("Pop-up blocked — allow pop-ups to print."); return; }
+  const f=RQ.f;
+  const scope=[f.type&&("type: "+f.type),f.status&&("status: "+f.status),f.who&&("by: "+f.who),f.q&&('search: "'+f.q+'"')].filter(Boolean).join(" · ")||"all requests";
+  w.document.write(`<!doctype html><html><head><title>App Requests</title><style>
+    body{font:12px/1.5 Helvetica,Arial,sans-serif;color:#121212;margin:28px}
+    .hd{border-bottom:3px solid #0d0d0d;padding-bottom:10px;margin-bottom:14px}
+    .brand{font-family:Georgia,serif;letter-spacing:4px;font-size:17px}
+    .sub{font-size:10px;letter-spacing:2px;color:#777;margin-top:3px}
+    table{width:100%;border-collapse:collapse}
+    th{text-align:left;font-size:9px;letter-spacing:1px;color:#777;border-bottom:2px solid #ccc;padding:4px 8px 4px 0}
+    td{border-bottom:1px solid #eee;padding:5px 8px 5px 0;vertical-align:top}
+    .st{font-weight:700}
+  </style></head><body>
+  <div class="hd"><div class="brand">BRIGHAM LARSON PIANOS</div>
+  <div class="sub">APP REQUESTS · ${scope.toUpperCase()} · ${rows.length} ENTRIES · ${day.toUpperCase()}</div></div>
+  <table><tr><th>ID</th><th>DATE</th><th>WHO</th><th>TYPE</th><th>REQUEST</th><th>STATUS</th></tr>
+  ${rows.map(x=>`<tr><td>${esc(x.id)}</td><td style="white-space:nowrap">${esc((x.date||"").slice(0,10))}</td>
+    <td>${esc(x.who)}</td><td>${esc(x.type)}</td><td>${esc(x.text)}</td><td class="st">${esc(x.status)}</td></tr>`).join("")}
+  </table><script>onload=()=>setTimeout(()=>print(),250)<\/script></body></html>`);
+  w.document.close();
+}
+function rqCsv(){
+  const q=x=>'"'+String(x??"").replace(/"/g,'""')+'"';
+  const body=rqFiltered().map(x=>[x.id,x.date,x.who,x.type,x.text,x.context,x.screenshot,x.status,x.statusBy,x.statusAt].map(q).join(","));
+  const blob=new Blob(["ID,Date,Who,Type,Request,Context,Screenshot,Status,Status By,Status At\n"+body.join("\n")],{type:"text/csv"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download="blp-app-requests.csv"; a.click();
+}
 async function rqFetch(){
   RQ.loading=true; renderRequests();
   try{
@@ -1689,13 +1733,31 @@ function renderRequests(){
   if(ACTIVE==="requests"&&RQ.rows===null&&!RQ.loading) rqFetch();
   const STAT=["Requested","In progress","Live","Tested"];
   const ICONS={bug:"🐛",edit:"✏️",idea:"💡"};
-  const rows=(RQ.rows||[]).filter(x=>RQ.showDone||x.status!=="Tested");
+  const all=RQ.rows||[];
+  const whos=[...new Set(all.map(x=>x.who).filter(Boolean))].sort();
+  const types=[...new Set(all.map(x=>x.type).filter(Boolean))].sort();
+  const STATS=["Requested","In progress","Live","Tested"];
+  const f=RQ.f;
+  const rows=rqFiltered().filter(x=>RQ.showDone||f.status==="Tested"||x.status!=="Tested");
   v.innerHTML=`
     <div class="row1"><div><h2 class="page">App Requests</h2>
       <div class="sub">Bugs, edits and ideas from the team (💡 in the Store Map). Flip to Live to auto-text the requester; they confirm Tested themselves.</div></div>
       <div style="display:flex;gap:8px">
         <button class="btn2" id="rqToggle">${RQ.showDone?"Hide":"Show"} tested</button>
+        <button class="btn2" id="rqPrint">🖨 Print report</button>
+        <button class="btn2" id="rqCsv">⬇ CSV</button>
         <button class="btn2" id="rqReload">↻ Refresh</button></div></div>
+    <div class="rqfilters">
+      <select class="rqf" data-f="type"><option value="">all types</option>
+        ${types.map(t0=>`<option ${f.type===t0?"selected":""}>${esc(t0)}</option>`).join("")}</select>
+      <select class="rqf" data-f="status"><option value="">all statuses</option>
+        ${STATS.map(t0=>`<option ${f.status===t0?"selected":""}>${esc(t0)}</option>`).join("")}</select>
+      <select class="rqf" data-f="who"><option value="">everyone</option>
+        ${whos.map(t0=>`<option ${f.who===t0?"selected":""}>${esc(t0)}</option>`).join("")}</select>
+      <input class="rqf" data-f="q" placeholder="search text / id…" value="${esc(f.q)}">
+      <span class="lite" style="font-size:12px">${rows.length}${rows.length!==all.length?" of "+all.length:""} shown</span>
+      ${(f.type||f.status||f.who||f.q)?'<button id="rqClear" class="btn2" style="padding:4px 10px">✕ clear</button>':""}
+    </div>
     ${RQ.loading?'<div class="curmsg">Loading…</div>':rows.length?rows.map(x=>`
       <div class="rqcard">
         <div class="rqtop">
@@ -1710,6 +1772,16 @@ function renderRequests(){
           data-id="${esc(x.id)}" data-st="${esc(st)}">${st}${x.status===st?" ✓":""}</button>`).join("<span class='rqarrow'>→</span>")}</div>
       </div>`).join(""):'<div class="curmsg">No open requests — the box is empty. 🎉</div>'}`;
   $("#rqReload")&&($("#rqReload").onclick=rqFetch);
+  $("#rqPrint")&&($("#rqPrint").onclick=rqPrint);
+  $("#rqCsv")&&($("#rqCsv").onclick=rqCsv);
+  $("#rqClear")&&($("#rqClear").onclick=()=>{RQ.f={type:"",status:"",who:"",q:""};renderRequests();});
+  v.querySelectorAll(".rqf").forEach(el=>{
+    const apply=()=>{RQ.f[el.dataset.f]=el.value;renderRequests();
+      const again=v.querySelector(`.rqf[data-f="${el.dataset.f}"]`);
+      if(again&&again.tagName==="INPUT"){again.focus();again.setSelectionRange(again.value.length,again.value.length);}};
+    if(el.tagName==="SELECT") el.onchange=apply;
+    else el.oninput=()=>{clearTimeout(el._t);el._t=setTimeout(apply,350);};
+  });
   $("#rqToggle")&&($("#rqToggle").onclick=()=>{RQ.showDone=!RQ.showDone;renderRequests();});
   v.querySelectorAll(".rqst").forEach(b=>b.onclick=()=>{ if(!b.classList.contains("on")) rqSetStatus(b.dataset.id,b.dataset.st,b); });
   v.querySelectorAll(".rqcopy").forEach(b=>b.onclick=async()=>{
