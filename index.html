@@ -1517,6 +1517,7 @@ async function boot(){
   renderAll();
   handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
   if(/^#(cleaning|plating|whiteboard)$/.test(location.hash)) showView(location.hash.slice(1));  // e.g. the 3:30 cleaning text
+  if(/^#(myweek|report|calendars)$/.test(location.hash)) showView(location.hash.slice(1));  // Store Map tech-dashboard deep links
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
   loadLivePhases();   // CURRENT PHASE from the Piano Log via the Store Map API
 }
