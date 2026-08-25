@@ -1754,6 +1754,7 @@ async function rqSetStatus(id,status,btn){
     const r=await fetch(CONFIG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
       headers:{"content-type":"text/plain;charset=utf-8"},
       body:JSON.stringify({action:"requeststatus",id,status,pin:localStorage.getItem("blp.appkey")||"pianoman",
+        idToken:localStorage.getItem("blpshop.idtok")||sessionStorage.getItem("blpshop.idtok")||"",
         user:{name:localStorage.getItem("blpmgr.name")||"Shop Manager"}})});
     const j=await r.json();
     if(j.error) throw new Error(j.error);
