@@ -316,6 +316,13 @@
   .rqst.on.sInprogress{background:#fdf3ec;border-color:#e0b57e;color:#9a5b13}
   .rqst.on.sLive{background:#eaf2fd;border-color:#8db4e0;color:#2c5d96}
   .rqst.on.sTested{background:#eaf5ec;border-color:#7fbb8c;color:#2f7d4f}
+  .rqsmsbox{margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:9px;background:#fbfaf8}
+  .rqpresets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
+  .rqpre{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font:600 11.5px inherit;color:#6f6a63;cursor:pointer}
+  .rqpre:hover{border-color:#b6afa4;color:#1c1c1c}
+  .rqsmstxt{width:100%;border:1px solid #cfc9bf;border-radius:7px;padding:8px 10px;font:inherit;font-size:13px;resize:vertical}
+  .rqsmsrow{display:flex;gap:8px;align-items:center;margin-top:7px}
+  .rqsmsout{font:600 12px inherit;color:#2f7d4f}
   /* shop board */
   .sbtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
   .sbtile{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:3px}
@@ -1810,10 +1817,25 @@ function renderRequests(){
           <span class="lite">${esc((x.date||"").slice(0,10))}${x.context?" · "+esc(x.context):""}</span>
           ${x.screenshot?`<a class="rqshot" target="_blank" rel="noopener" href="${esc(x.screenshot)}">📷 screenshot</a>`:""}
           <button class="rqcopy" data-id="${esc(x.id)}">📋 Copy for Claude</button>
+          <button class="rqcopy rqsmsbtn" data-id="${esc(x.id)}">💬 Text ${esc((x.who||"").split(" ")[0])}</button>
         </div>
         <div class="rqtext">${esc(x.text)}</div>
         <div class="rqflow">${STAT.map(st=>`<button class="rqst ${x.status===st?"on":""} s${st.replace(/\s/g,"")}"
           data-id="${esc(x.id)}" data-st="${esc(st)}">${st}${x.status===st?" ✓":""}</button>`).join("<span class='rqarrow'>→</span>")}</div>
+        <div class="rqsmsbox" data-id="${esc(x.id)}" hidden>
+          <div class="rqpresets">
+            <button class="rqpre" data-t="Could you send that screenshot again through the 💡 button? It didn't come through.">📷 resend screenshot</button>
+            <button class="rqpre" data-t="Could you give me a bit more detail on what you'd like changed?">➕ more detail</button>
+            <button class="rqpre" data-t="Where in the app does this happen? Which page/button?">📍 where exactly?</button>
+            <button class="rqpre" data-t="Quick question about this — grab me next time you see me in the shop.">🗣 let's talk</button>
+          </div>
+          <textarea class="rqsmstxt" rows="2" placeholder="Text ${esc((x.who||"").split(" ")[0])} about this request… (they'll see which request it's about)"></textarea>
+          <div class="rqsmsrow">
+            <button class="abtn rqsmssend" data-id="${esc(x.id)}">Send text</button>
+            <button class="btn2 rqsmscancel">Cancel</button>
+            <span class="rqsmsout"></span>
+          </div>
+        </div>
       </div>`).join(""):'<div class="curmsg">No open requests — the box is empty. 🎉</div>'}`;
   $("#rqReload")&&($("#rqReload").onclick=rqFetch);
   $("#rqPrint")&&($("#rqPrint").onclick=rqPrint);
@@ -1828,11 +1850,42 @@ function renderRequests(){
   });
   $("#rqToggle")&&($("#rqToggle").onclick=()=>{RQ.showDone=!RQ.showDone;renderRequests();});
   v.querySelectorAll(".rqst").forEach(b=>b.onclick=()=>{ if(!b.classList.contains("on")) rqSetStatus(b.dataset.id,b.dataset.st,b); });
-  v.querySelectorAll(".rqcopy").forEach(b=>b.onclick=async()=>{
+  v.querySelectorAll(".rqcopy:not(.rqsmsbtn)").forEach(b=>b.onclick=async()=>{
     const x=(RQ.rows||[]).find(r=>r.id===b.dataset.id); if(!x) return;
     const brief=`App request ${x.id} (${x.type}) from ${x.who}, ${x.date.slice(0,10)}:\n"${x.text}"\nContext: ${x.context||"—"}${x.screenshot?"\nScreenshot: "+x.screenshot:""}`;
     await navigator.clipboard.writeText(brief);
     b.textContent="✓ copied"; setTimeout(()=>{b.textContent="📋 Copy for Claude";},1500);
+  });
+  // 💬 text the submitter — clarify, ask for a re-sent screenshot, anything.
+  // Inline compose (prompt() is blocked in embedded browsers); sends through
+  // request-notify, which looks up the phone on Tech Phones server-side.
+  v.querySelectorAll(".rqsmsbtn").forEach(b=>b.onclick=()=>{
+    const box=v.querySelector(`.rqsmsbox[data-id="${b.dataset.id}"]`); if(!box) return;
+    box.hidden=!box.hidden;
+    if(!box.hidden) box.querySelector(".rqsmstxt").focus();
+  });
+  v.querySelectorAll(".rqsmsbox").forEach(box=>{
+    const x=(RQ.rows||[]).find(r=>r.id===box.dataset.id); if(!x) return;
+    const ta=box.querySelector(".rqsmstxt"), out=box.querySelector(".rqsmsout");
+    box.querySelectorAll(".rqpre").forEach(p=>p.onclick=()=>{ ta.value=p.dataset.t; ta.focus(); });
+    box.querySelector(".rqsmscancel").onclick=()=>{ box.hidden=true; out.textContent=""; };
+    box.querySelector(".rqsmssend").onclick=async(ev)=>{
+      const msg=ta.value.trim();
+      if(!msg){ ta.focus(); return; }
+      const btn=ev.currentTarget; btn.disabled=true; btn.textContent="Sending…"; out.textContent="";
+      try{
+        const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/request-notify",{
+          method:"POST",headers:{"content-type":"application/json"},
+          body:JSON.stringify({key:localStorage.getItem("blp.appkey")||"pianoman",name:x.who,
+            message:`BLP Apps — about your ${x.type||"request"} "${x.text.slice(0,60)}": ${msg} — ${localStorage.getItem("blpmgr.name")||"Shop Manager"}`})});
+        const j=await r.json();
+        if(j.error) throw new Error(j.error);
+        if(j.sent===false) throw new Error(j.reason||"not sent");
+        out.textContent=`✓ texted ${x.who.split(" ")[0]}`; ta.value="";
+        setTimeout(()=>{ box.hidden=true; out.textContent=""; },2200);
+      }catch(e){ out.textContent="✗ "+e.message; }
+      btn.disabled=false; btn.textContent="Send text";
+    };
   });
 }
 
