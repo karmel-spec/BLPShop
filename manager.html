@@ -1787,9 +1787,11 @@ function renderRequests(){
   const all=RQ.rows||[];
   const whos=[...new Set(all.map(x=>x.who).filter(Boolean))].sort();
   const types=[...new Set(all.map(x=>x.type).filter(Boolean))].sort();
-  const STATS=["Requested","In progress","Live","Tested"];
+  const STATS=["Requested","In progress","Live","Tested","Archived"];
   const f=RQ.f;
-  const rows=rqFiltered().filter(x=>RQ.showDone||f.status==="Tested"||x.status!=="Tested");
+  // archived cards leave the list entirely unless filtered for explicitly
+  const rows=rqFiltered().filter(x=>f.status==="Archived"?x.status==="Archived"
+    :x.status!=="Archived"&&(RQ.showDone||f.status==="Tested"||x.status!=="Tested"));
   v.innerHTML=`
     <div class="row1"><div><h2 class="page">App Requests</h2>
       <div class="sub">Bugs, edits and ideas from the team (💡 in the Store Map). Flip to Live to auto-text the requester; they confirm Tested themselves.</div></div>
@@ -1821,7 +1823,9 @@ function renderRequests(){
         </div>
         <div class="rqtext">${esc(x.text)}</div>
         <div class="rqflow">${STAT.map(st=>`<button class="rqst ${x.status===st?"on":""} s${st.replace(/\s/g,"")}"
-          data-id="${esc(x.id)}" data-st="${esc(st)}">${st}${x.status===st?" ✓":""}</button>`).join("<span class='rqarrow'>→</span>")}</div>
+          data-id="${esc(x.id)}" data-st="${esc(st)}">${st}${x.status===st?" ✓":""}</button>`).join("<span class='rqarrow'>→</span>")}
+          ${x.status==="Tested"?`<button class="rqst rqarch" data-id="${esc(x.id)}" data-st="Archived" title="Fully done — remove from this list (find it later under the Archived filter)">🗄 Archive</button>`:""}
+          ${x.status==="Archived"?`<button class="rqst" data-id="${esc(x.id)}" data-st="Tested" title="Bring it back to the list">↩ Unarchive</button>`:""}</div>
         <div class="rqsmsbox" data-id="${esc(x.id)}" hidden>
           <div class="rqpresets">
             <button class="rqpre" data-t="Could you send that screenshot again through the 💡 button? It didn't come through.">📷 resend screenshot</button>
@@ -1922,15 +1926,17 @@ async function sbFetchRoles(){
     const j=await r.json();
     const rows=(j.tabs&&j.tabs["Current Team"])||[];
     const roles={};
+    const fulls={};
     rows.slice(1).forEach(row=>{
       const first=String(row[0]||"").trim().toLowerCase();
-      const full=(String(row[0]||"").trim()+" "+String(row[1]||"").trim()).trim().toLowerCase();
+      const full=(String(row[0]||"").trim()+" "+String(row[1]||"").trim()).trim();
       const pos=String(row[2]||"");
       const cat=/intern/i.test(pos)?"intern":/refinish/i.test(pos)?"refinisher":"tech";
       if(first&&!roles[first]) roles[first]=cat;
-      if(full) roles[full]=cat;
+      if(full) roles[full.toLowerCase()]=cat;
+      if(first&&!fulls[first]) fulls[first]=full;   // "sadie" -> "Sadie Erickson"
     });
-    SB.roles=roles;
+    SB.roles=roles; SB.fullnames=fulls;
   }catch(e){ SB.roles={}; }
   if(ACTIVE==="shopboard") renderShopBoard();
 }
@@ -1939,16 +1945,31 @@ function renderShopBoard(){
   if(ACTIVE==="shopboard"&&!SB.state&&!SB._kick){ SB._kick=true; sbFetchState(); }
   if(ACTIVE==="shopboard"&&!SB.timer) SB.timer=setInterval(()=>{ if(ACTIVE==="shopboard") sbFetchState(); },60000);
   const st=SB.state||{open:[],todayMinutes:{}};
-  const openBy={}; st.open.forEach(o=>openBy[o.tech.toLowerCase()]=o);
-  const names=[...new Set([...ROSTER,...st.open.map(o=>o.tech)])].sort();
+  // ONE tile per person (Brigham 8/25): the report roster uses first names while
+  // clock sessions carry full Google names ("Sadie" vs "Sadie Erickson"), which
+  // used to render two tiles. Canonicalize by first name; display the Current
+  // Team full name when we have it, else the longest name seen.
+  const firstOf=n=>String(n).trim().split(/\s+/)[0].toLowerCase();
+  const canon={};
+  [...ROSTER,...st.open.map(o=>o.tech),...Object.keys(st.todayMinutes)].forEach(n=>{
+    const k=firstOf(n); if(!k) return;
+    const disp=String(n).trim();
+    if(!canon[k]||disp.length>canon[k].length) canon[k]=disp;
+  });
+  for(const k in canon){ if(SB.fullnames&&SB.fullnames[k]) canon[k]=SB.fullnames[k]; }
+  const names=Object.values(canon).sort();
+  const openBy={}; st.open.forEach(o=>openBy[firstOf(o.tech)]=o);
+  const todayFor=n=>{ const k=firstOf(n); let m=0;
+    for(const t in st.todayMinutes) if(firstOf(t)===k) m+=st.todayMinutes[t]||0;
+    return m; };
   const rate=+(localStorage.getItem("blp.rate")||48);
   const days=+(localStorage.getItem("blp.jcdays")||90);
   // role sections (Brigham 8/25): Interns / Technicians / Refinishers,
   // classified from the Current Team sheet's Position column
   if(ACTIVE==="shopboard"&&!SB.roles&&!SB._rolesKick){ SB._rolesKick=true; sbFetchRoles(); }
   const tileFor=n=>{
-    const o=openBy[n.toLowerCase()];
-    const today=st.todayMinutes[n]||st.todayMinutes[Object.keys(st.todayMinutes).find(k=>k.toLowerCase()===n.toLowerCase())]||0;
+    const o=openBy[firstOf(n)];
+    const today=todayFor(n);
     return `<div class="sbtile ${o?"on":""}">
       <b>${esc(n)}</b>
       ${o?`<span class="sbwhat">#${esc(o.serial)} · ${esc(o.phase||"working")}</span>
@@ -1957,7 +1978,7 @@ function renderShopBoard(){
       <span class="sbtoday">today ${sbHours(today)} h</span></div>`;
   };
   const roleOf=n=>{ const r=SB.roles||{};
-    return r[n.trim().toLowerCase()]||r[n.split(/\s+/)[0].toLowerCase()]||"tech"; };
+    return r[n.trim().toLowerCase()]||r[firstOf(n)]||"tech"; };
   const SECTIONS=[["🔧 Technicians","tech"],["🎨 Refinishers","refinisher"],["🎓 Interns","intern"]];
   const tiles=SECTIONS.map(([label,cat])=>{
     const members=names.filter(n=>roleOf(n)===cat);
