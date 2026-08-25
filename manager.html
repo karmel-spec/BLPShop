@@ -1926,17 +1926,22 @@ async function sbFetchRoles(){
     const j=await r.json();
     const rows=(j.tabs&&j.tabs["Current Team"])||[];
     const roles={};
-    const fulls={};
+    const fulls={},seed=[];
     rows.slice(1).forEach(row=>{
       const first=String(row[0]||"").trim().toLowerCase();
-      const full=(String(row[0]||"").trim()+" "+String(row[1]||"").trim()).trim();
+      const full=(String(row[0]||"").trim()+" "+String(row[1]||"").trim()).trim().replace(/\s+/g," ");
       const pos=String(row[2]||"");
-      const cat=/intern/i.test(pos)?"intern":/refinish/i.test(pos)?"refinisher":"tech";
+      const cat=/intern/i.test(pos)?"intern":/refinish/i.test(pos)?"refinisher"
+        :/admin/i.test(pos)?"admin":/mover/i.test(pos)?"mover":"tech";
       if(first&&!roles[first]) roles[first]=cat;
       if(full) roles[full.toLowerCase()]=cat;
       if(first&&!fulls[first]) fulls[first]=full;   // "sadie" -> "Sadie Erickson"
+      // refinishers, admins and movers show on the board even before their
+      // first punch (Brigham 8/25) — techs/interns still come from the report
+      // roster, so family members without shop roles stay off the board
+      if(cat==="refinisher"||cat==="admin"||cat==="mover") seed.push(full);
     });
-    SB.roles=roles; SB.fullnames=fulls;
+    SB.roles=roles; SB.fullnames=fulls; SB.seed=seed;
   }catch(e){ SB.roles={}; }
   if(ACTIVE==="shopboard") renderShopBoard();
 }
@@ -1951,12 +1956,15 @@ function renderShopBoard(){
   // Team full name when we have it, else the longest name seen.
   const firstOf=n=>String(n).trim().split(/\s+/)[0].toLowerCase();
   const canon={};
-  [...ROSTER,...st.open.map(o=>o.tech),...Object.keys(st.todayMinutes)].forEach(n=>{
+  [...ROSTER,...st.open.map(o=>o.tech),...Object.keys(st.todayMinutes),...(SB.seed||[])].forEach(n=>{
     const k=firstOf(n); if(!k) return;
     const disp=String(n).trim();
     if(!canon[k]||disp.length>canon[k].length) canon[k]=disp;
   });
-  for(const k in canon){ if(SB.fullnames&&SB.fullnames[k]) canon[k]=SB.fullnames[k]; }
+  // upgrade bare first names to the Current Team full name; leave names that
+  // are already full alone (so "Brigham Jr Larson" never becomes "Brigham Larson")
+  for(const k in canon){ const f=SB.fullnames&&SB.fullnames[k];
+    if(f&&canon[k].split(/\s+/).length===1) canon[k]=f; }
   const names=Object.values(canon).sort();
   const openBy={}; st.open.forEach(o=>openBy[firstOf(o.tech)]=o);
   const todayFor=n=>{ const k=firstOf(n); let m=0;
@@ -1979,7 +1987,8 @@ function renderShopBoard(){
   };
   const roleOf=n=>{ const r=SB.roles||{};
     return r[n.trim().toLowerCase()]||r[firstOf(n)]||"tech"; };
-  const SECTIONS=[["🔧 Technicians","tech"],["🎨 Refinishers","refinisher"],["🎓 Interns","intern"]];
+  const SECTIONS=[["🔧 Technicians","tech"],["🎨 Refinishers","refinisher"],
+    ["🎓 Interns","intern"],["🗂 Admins","admin"],["🚚 Piano Movers","mover"]];
   const tiles=SECTIONS.map(([label,cat])=>{
     const members=names.filter(n=>roleOf(n)===cat);
     if(!members.length) return "";
