@@ -773,7 +773,9 @@ function seqRows(){ return SEQ.filter(r=>validTechName((r[1]||"").trim()) && r.s
 let ROSTER_OVR=null;   // {name -> 'active'|'inactive'} from the Roster tab via the bridge
 async function fetchRosterOverrides(){
   try{
-    const r=await fetch(CONFIG.APPS_SCRIPT_URL+"?action=roster");
+    // served by the Store Map bridge (the Shop Reports Bridge deployment is
+    // owner-locked); same "Roster" tab either way
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=shoproster",{redirect:"follow"});
     const out=await r.json();
     if(out.ok && Array.isArray(out.roster)){
       ROSTER_OVR={};
@@ -1861,6 +1863,24 @@ async function sbFetchLog(days){
   }catch(e){ SB.rows=[]; }
   SB.loading=false; renderShopBoard();
 }
+async function sbFetchRoles(){
+  try{
+    const r=await fetch(CONFIG.ROSTER_API+curQS(),{headers:curHeaders(false)});
+    const j=await r.json();
+    const rows=(j.tabs&&j.tabs["Current Team"])||[];
+    const roles={};
+    rows.slice(1).forEach(row=>{
+      const first=String(row[0]||"").trim().toLowerCase();
+      const full=(String(row[0]||"").trim()+" "+String(row[1]||"").trim()).trim().toLowerCase();
+      const pos=String(row[2]||"");
+      const cat=/intern/i.test(pos)?"intern":/refinish/i.test(pos)?"refinisher":"tech";
+      if(first&&!roles[first]) roles[first]=cat;
+      if(full) roles[full]=cat;
+    });
+    SB.roles=roles;
+  }catch(e){ SB.roles={}; }
+  if(ACTIVE==="shopboard") renderShopBoard();
+}
 function renderShopBoard(){
   const v=$("#view-shopboard"); if(!v) return;
   if(ACTIVE==="shopboard"&&!SB.state&&!SB._kick){ SB._kick=true; sbFetchState(); }
@@ -1870,7 +1890,10 @@ function renderShopBoard(){
   const names=[...new Set([...ROSTER,...st.open.map(o=>o.tech)])].sort();
   const rate=+(localStorage.getItem("blp.rate")||48);
   const days=+(localStorage.getItem("blp.jcdays")||90);
-  const tiles=names.map(n=>{
+  // role sections (Brigham 8/25): Interns / Technicians / Refinishers,
+  // classified from the Current Team sheet's Position column
+  if(ACTIVE==="shopboard"&&!SB.roles&&!SB._rolesKick){ SB._rolesKick=true; sbFetchRoles(); }
+  const tileFor=n=>{
     const o=openBy[n.toLowerCase()];
     const today=st.todayMinutes[n]||st.todayMinutes[Object.keys(st.todayMinutes).find(k=>k.toLowerCase()===n.toLowerCase())]||0;
     return `<div class="sbtile ${o?"on":""}">
@@ -1879,6 +1902,15 @@ function renderShopBoard(){
            <span class="sbtime">⏱ ${sbElapsed(o.start)}</span>`
          :`<span class="sbwhat off">not clocked in</span>`}
       <span class="sbtoday">today ${sbHours(today)} h</span></div>`;
+  };
+  const roleOf=n=>{ const r=SB.roles||{};
+    return r[n.trim().toLowerCase()]||r[n.split(/\s+/)[0].toLowerCase()]||"tech"; };
+  const SECTIONS=[["🔧 Technicians","tech"],["🎨 Refinishers","refinisher"],["🎓 Interns","intern"]];
+  const tiles=SECTIONS.map(([label,cat])=>{
+    const members=names.filter(n=>roleOf(n)===cat);
+    if(!members.length) return "";
+    return `<h3 class="sbh3 sbsec">${label} <span class="lite">${members.length}</span></h3>
+      <div class="sbtiles">${members.map(tileFor).join("")}</div>`;
   }).join("");
   // job costing aggregation
   let jc="";
@@ -1911,7 +1943,7 @@ function renderShopBoard(){
   v.innerHTML=`
     <div class="row1"><div><h2 class="page">Shop Board</h2>
       <div class="sub">Who's on what right now — and what every piano is costing in tech hours. One piano per tech, enforced.</div></div></div>
-    <div class="sbtiles">${tiles||'<div class="curmsg">Loading…</div>'}</div>
+    ${tiles||'<div class="curmsg">Loading…</div>'}
     <div class="row1" style="margin-top:26px"><h2 class="page" style="font-size:19px">Job Costing</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <select id="sbDays">${[30,90,180,365].map(d=>`<option value="${d}" ${d===days?"selected":""}>${d} days</option>`).join("")}</select>
@@ -2750,9 +2782,12 @@ let TEAM_BUSY=false, TEAM_ERR="";
 async function rosterSet(tech, status){
   TEAM_BUSY=true; TEAM_ERR=""; renderTeam();
   try{
-    const r=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
       headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action:"rosterSet", tech, status})});
+      body:JSON.stringify({action:"shoprosterset", tech, status,
+        pin:localStorage.getItem("blp.appkey")||"pianoman",
+        idToken:localStorage.getItem("blpshop.idtok")||sessionStorage.getItem("blpshop.idtok")||"",
+        user:{name:localStorage.getItem("blpmgr.name")||"Shop Manager"}})});
     const out=await r.json();
     if(!out.ok) throw new Error(out.error||"error");
     await fetchRosterOverrides();
