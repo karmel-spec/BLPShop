@@ -131,7 +131,7 @@
   .wbitem.done .wtxt{color:var(--mut2);text-decoration:line-through}
   .wbitem .wnote{display:block;font-size:11.5px;color:var(--red-deep);font-weight:600}
   .wbitem .wmeta{display:block;font-size:10.5px;color:var(--mut2)}
-  .wbadd{display:flex;gap:7px;padding:10px 12px;background:#faf8f4}
+  .wbadd{display:flex;gap:7px;padding:10px 12px;background:#faf8f4;border-bottom:1px solid #e5dfd2}
   .wbadd input{flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:8px 10px;font:inherit;font-size:13px;min-width:0}
   .wbnone{padding:16px 14px;color:var(--mut2);font-size:12.5px;font-style:italic}
   .wbsect{padding:7px 14px;background:#f2efe8;border-top:2px solid var(--line);border-bottom:1px solid var(--line);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:#57524b;font-weight:700}
@@ -1206,11 +1206,11 @@ function renderWhiteboard(){
         const ordered=inCol.filter(r=>r.ordered&&!r.arrived);
         const arrived=inCol.filter(r=>r.arrived);
         return `<div class="wbcol"><h3>${esc(col)}${noteKey?`<small>${t(noteKey)}</small>`:""}</h3>
+          <div class="wbadd"><input maxlength="200" placeholder="${t("wb_item_ph")}" data-col="${esc(col)}">
+            <button class="btn2" data-col="${esc(col)}">${t("wb_add")}</button></div>
           ${open.map(wbItemHTML).join("")||`<div class="wbnone">${t("wb_none")}</div>`}
           ${ordered.length?`<div class="wbsect">📦 ${t("wb_waiting")}</div>`+ordered.map(wbItemHTML).join(""):""}
           ${WB.showArrived&&arrived.length?`<div class="wbsect">✓ ${t("wb_arrived_sect")}</div>`+arrived.map(wbItemHTML).join(""):""}
-          <div class="wbadd"><input maxlength="200" placeholder="${t("wb_item_ph")}" data-col="${esc(col)}">
-            <button class="btn2" data-col="${esc(col)}">${t("wb_add")}</button></div>
         </div>`;
       }).join("")}
     </div>`:""}`;
