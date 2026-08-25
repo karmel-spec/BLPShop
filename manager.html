@@ -1920,6 +1920,17 @@ async function sbFetchLog(days){
   }catch(e){ SB.rows=[]; }
   SB.loading=false; renderShopBoard();
 }
+async function sbFetchRates(){
+  // per-person LOADED rates from the report sheet's "Pay Rates" tab (first-name
+  // keyed, server-side); anyone blank costs at the blended rate input
+  try{
+    const key=encodeURIComponent(localStorage.getItem("blp.appkey")||"pianoman");
+    const r=await fetch("https://blpsalesapp.netlify.app/.netlify/functions/pay-rates?key="+key);
+    const j=await r.json();
+    SB.rates=j.rates||{};
+  }catch(e){ SB.rates={}; }
+  if(ACTIVE==="shopboard") renderShopBoard();
+}
 async function sbFetchRoles(){
   try{
     const r=await fetch(CONFIG.ROSTER_API+curQS(),{headers:curHeaders(false)});
@@ -2006,7 +2017,11 @@ function renderShopBoard(){
     return `<h3 class="sbh3 sbsec">${label} <span class="lite">${members.length}</span></h3>
       <div class="sbtiles">${members.map(tileFor).join("")}</div>`;
   }).join("");
-  // job costing aggregation
+  // job costing aggregation — per-tech LOADED rates from the Pay Rates tab
+  // when present; the blended $/h input covers anyone unlisted
+  if(ACTIVE==="shopboard"&&SB.rates==null&&!SB._ratesKick){ SB._ratesKick=true; sbFetchRates(); }
+  const rateFor=t=>((SB.rates||{})[firstOf(t)])||rate;
+  const usingRates=Object.keys(SB.rates||{}).length;
   let jc="";
   if(SB.loading) jc=`<div class="curmsg">Loading time log…</div>`;
   else if(SB.rows){
@@ -2021,18 +2036,25 @@ function renderShopBoard(){
       perPiano[pk].phases[r.phase||"—"]=(perPiano[pk].phases[r.phase||"—"]||0)+mins;
       perTech[r.tech]=(perTech[r.tech]||0)+mins;
     }
-    const pianos=Object.values(perPiano).sort((a,b)=>b.min-a.min);
+    const cost=techMin=>Object.entries(techMin).reduce((s,[t,m])=>s+m/60*rateFor(t),0);
+    const q=(SB.find||"").trim().toLowerCase();
+    const pianos=Object.values(perPiano)
+      .filter(p=>!q||(String(p.serial)+" "+String(p.piano||"")).toLowerCase().includes(q))
+      .sort((a,b)=>b.min-a.min);
     const techs=Object.entries(perTech).sort((a,b)=>b[1]-a[1]);
-    jc=`<table class="sbtbl"><thead><tr><th>Piano</th><th>Hours</th><th>Cost @ $${rate}/h</th><th>By phase</th><th>By tech</th></tr></thead><tbody>
+    jc=`<div class="lite" style="font-size:12px;margin:2px 0 8px">${usingRates
+        ?`Costs use each person's loaded rate from the <b>Pay Rates</b> tab (${usingRates} entered); the blended $${rate}/h covers anyone unlisted.`
+        :`Costs use the blended $${rate}/h for everyone — enter real loaded rates on the report sheet's <b>Pay Rates</b> tab for true payroll cost.`}</div>
+      <table class="sbtbl"><thead><tr><th>Piano</th><th>Hours</th><th>Payroll cost</th><th>By phase</th><th>By tech</th></tr></thead><tbody>
       ${pianos.map(p=>`<tr><td><b>${esc(p.piano||p.serial)}</b><br><span class="lite">#${esc(p.serial)}</span></td>
         <td class="num">${sbHours(p.min)}</td>
-        <td class="num">$${Math.round(p.min/60*rate).toLocaleString()}</td>
+        <td class="num">$${Math.round(cost(p.techs)).toLocaleString()}</td>
         <td>${Object.entries(p.phases).sort((a,b)=>b[1]-a[1]).map(([k,m])=>esc(k)+" "+sbHours(m)+"h").join(" · ")}</td>
-        <td>${Object.entries(p.techs).sort((a,b)=>b[1]-a[1]).map(([k,m])=>esc(k)+" "+sbHours(m)+"h").join(" · ")}</td></tr>`).join("")||
-        `<tr><td colspan=5 style="color:var(--mut2)">No punches in this window yet — hours appear as soon as techs start clocking in.</td></tr>`}
+        <td>${Object.entries(p.techs).sort((a,b)=>b[1]-a[1]).map(([k,m])=>esc(k)+" "+sbHours(m)+"h ($"+Math.round(m/60*rateFor(k)).toLocaleString()+")").join(" · ")}</td></tr>`).join("")||
+        `<tr><td colspan=5 style="color:var(--mut2)">${q?"No pianos match \""+esc(q)+"\".":"No punches in this window yet — hours appear as soon as techs start clocking in."}</td></tr>`}
       </tbody></table>
       ${techs.length?`<h3 class="sbh3">Hours by technician (${days}d)</h3>
-      <table class="sbtbl"><tbody>${techs.map(([n,m])=>`<tr><td>${esc(n)}</td><td class="num">${sbHours(m)} h</td><td class="num">$${Math.round(m/60*rate).toLocaleString()}</td></tr>`).join("")}</tbody></table>`:""}`;
+      <table class="sbtbl"><tbody>${techs.map(([n,m])=>`<tr><td>${esc(n)}</td><td class="num">${sbHours(m)} h</td><td class="num">$${Math.round(m/60*rateFor(n)).toLocaleString()}</td></tr>`).join("")}</tbody></table>`:""}`;
   } else jc=`<div class="curmsg">Pick a window and load the log.</div>`;
   v.innerHTML=`
     <div class="row1"><div><h2 class="page">Shop Board</h2>
@@ -2040,12 +2062,20 @@ function renderShopBoard(){
     ${tiles||'<div class="curmsg">Loading…</div>'}
     <div class="row1" style="margin-top:26px"><h2 class="page" style="font-size:19px">Job Costing</h2>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="sbFind" placeholder="🔍 filter by serial / piano…" value="${esc(SB.find||"")}"
+          style="border:1px solid #cfc9bf;border-radius:7px;padding:6px 10px;font:inherit;font-size:12.5px;width:190px">
         <select id="sbDays">${[30,90,180,365].map(d=>`<option value="${d}" ${d===days?"selected":""}>${d} days</option>`).join("")}</select>
-        <label style="font-size:12.5px">$<input id="sbRate" type="number" value="${rate}" style="width:56px"> /h loaded</label>
+        <label style="font-size:12.5px" title="blended fallback: wage + taxes + overhead, used for anyone without a Pay Rates entry">$<input id="sbRate" type="number" value="${rate}" style="width:56px"> /h blended</label>
         <button class="btn2" id="sbLoad">Load</button>
         <button class="btn2" id="sbCsv" ${SB.rows&&SB.rows.length?"":"disabled"}>⬇ CSV</button>
       </div></div>
     ${jc}`;
+  const find=$("#sbFind");
+  if(find) find.oninput=()=>{ clearTimeout(find._t); find._t=setTimeout(()=>{
+    SB.find=find.value; renderShopBoard();
+    const again=$("#sbFind");
+    if(again){ again.focus(); again.setSelectionRange(again.value.length,again.value.length); }
+  },300); };
   const load=$("#sbLoad");
   if(load) load.onclick=()=>{
     localStorage.setItem("blp.jcdays",$("#sbDays").value);
