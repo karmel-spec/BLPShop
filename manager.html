@@ -1955,9 +1955,12 @@ function renderShopBoard(){
   // used to render two tiles. Canonicalize by first name; display the Current
   // Team full name when we have it, else the longest name seen.
   const NAME_ALIAS={guadalupe:"lupita"};   // Current Team uses her legal name; she goes by Lupita
+  // Brigham's explicit board adjustments (8/25) — on top of the Current Team sheet
+  const BOARD_REMOVE=new Set(["louis","brielle","susie"]);
+  const BOARD_ADD={"Josh Larson":"mover","JoJo Larson":"mover","Lisa Litton":"admin"};
   const firstOf=n=>{const f=String(n).trim().split(/\s+/)[0].toLowerCase();return NAME_ALIAS[f]||f;};
   const canon={};
-  [...ROSTER,...st.open.map(o=>o.tech),...Object.keys(st.todayMinutes),...(SB.seed||[])].forEach(n=>{
+  [...ROSTER,...st.open.map(o=>o.tech),...Object.keys(st.todayMinutes),...(SB.seed||[]),...Object.keys(BOARD_ADD)].forEach(n=>{
     const k=firstOf(n); if(!k) return;
     const disp=String(n).trim();
     const curr=canon[k];
@@ -1971,6 +1974,7 @@ function renderShopBoard(){
   // are already full alone (so "Brigham Jr Larson" never becomes "Brigham Larson")
   for(const k in canon){ const f=SB.fullnames&&SB.fullnames[k];
     if(f&&canon[k].split(/\s+/).length===1) canon[k]=f; }
+  BOARD_REMOVE.forEach(k=>delete canon[k]);
   const names=Object.values(canon).sort();
   const openBy={}; st.open.forEach(o=>openBy[firstOf(o.tech)]=o);
   const todayFor=n=>{ const k=firstOf(n); let m=0;
@@ -1991,8 +1995,9 @@ function renderShopBoard(){
          :`<span class="sbwhat off">not clocked in</span>`}
       <span class="sbtoday">today ${sbHours(today)} h</span></div>`;
   };
+  const addRoles={}; Object.entries(BOARD_ADD).forEach(([n,cat])=>addRoles[firstOf(n)]=cat);
   const roleOf=n=>{ const r=SB.roles||{};
-    return r[n.trim().toLowerCase()]||r[firstOf(n)]||"tech"; };
+    return addRoles[firstOf(n)]||r[n.trim().toLowerCase()]||r[firstOf(n)]||"tech"; };
   const SECTIONS=[["🔧 Technicians","tech"],["🎨 Refinishers","refinisher"],
     ["🎓 Interns","intern"],["🗂 Admins","admin"],["🚚 Piano Movers","mover"]];
   const tiles=SECTIONS.map(([label,cat])=>{
