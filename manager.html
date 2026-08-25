@@ -1954,12 +1954,18 @@ function renderShopBoard(){
   // clock sessions carry full Google names ("Sadie" vs "Sadie Erickson"), which
   // used to render two tiles. Canonicalize by first name; display the Current
   // Team full name when we have it, else the longest name seen.
-  const firstOf=n=>String(n).trim().split(/\s+/)[0].toLowerCase();
+  const NAME_ALIAS={guadalupe:"lupita"};   // Current Team uses her legal name; she goes by Lupita
+  const firstOf=n=>{const f=String(n).trim().split(/\s+/)[0].toLowerCase();return NAME_ALIAS[f]||f;};
   const canon={};
   [...ROSTER,...st.open.map(o=>o.tech),...Object.keys(st.todayMinutes),...(SB.seed||[])].forEach(n=>{
     const k=firstOf(n); if(!k) return;
     const disp=String(n).trim();
-    if(!canon[k]||disp.length>canon[k].length) canon[k]=disp;
+    const curr=canon[k];
+    // prefer the name they actually go by (first word matches the canonical
+    // key), then the fuller of the two
+    const goesBy=s=>s.split(/\s+/)[0].toLowerCase()===k;
+    if(!curr||(goesBy(disp)&&!goesBy(curr))||(goesBy(disp)===goesBy(curr)&&disp.length>curr.length))
+      canon[k]=disp;
   });
   // upgrade bare first names to the Current Team full name; leave names that
   // are already full alone (so "Brigham Jr Larson" never becomes "Brigham Larson")
