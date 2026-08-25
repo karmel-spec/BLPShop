@@ -58,6 +58,16 @@
   .pill.ok{background:var(--good-bg);color:var(--good)} .pill.miss{background:var(--bad-bg);color:var(--red-deep)}
   .pill.wait{background:var(--warn-bg);color:#8a6d1a} .pill.lvl{background:#eee9e0;color:#57524b}
   .card{background:#fff;border:1px solid var(--line);border-radius:7px}
+  /* training list */
+  .trainlist{display:flex;flex-direction:column;gap:12px;max-width:860px}
+  .trainrow{display:flex;align-items:center;gap:16px;border:1px solid var(--line);border-radius:7px;background:#fff;padding:15px 18px;color:inherit}
+  .trainrow:hover{border-color:var(--red);box-shadow:0 1px 6px rgba(0,0,0,.06)}
+  .trainrow .tr-main{flex:1;min-width:0}
+  .trainrow h3{margin:0 0 3px;font-family:Georgia,serif;font-size:16.5px;font-weight:700}
+  .trainrow .tr-desc{color:var(--mut);font-size:13px;line-height:1.5}
+  .trainrow .tr-acts{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .trainrow .tr-acts a{white-space:nowrap;font-weight:700;font-size:13px;color:var(--red);text-decoration:none}
+  .trainrow .tr-acts a:hover{text-decoration:underline}
   .banner{background:var(--red);color:#fff;border-radius:7px;padding:10px 16px;font-size:14px;margin-bottom:16px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
   .banner b{font-weight:700}
   .view{display:none}.view.on{display:block}
@@ -371,6 +381,7 @@
     <section class="view" id="view-team"></section>
     <section class="view" id="view-schedule"></section>
     <section class="view" id="view-roster"></section>
+    <section class="view" id="view-training"></section>
     <section class="view" id="view-whiteboard"></section>
     <section class="view" id="view-curtis"></section>
     <section class="view" id="view-brigham"></section>
@@ -567,6 +578,13 @@ const I18N = {
   in_flight:[" (pianos in flight: %1)"," (pianos en proceso: %1)"],
   /* team roster (BLP TEAM sheet) */
   nav_roster:["Team Roster","Plantilla"],
+
+  /* training */
+  nav_training:["Training","Capacitación"],
+  train_title:["Training","Capacitación"],
+  train_sub:["Guides and training materials for the shop — more will be added over time.","Guías y materiales de capacitación para el taller — se agregarán más con el tiempo."],
+  train_open:["Open ↗","Abrir ↗"],
+  train_video:["▶ Watch video","▶ Ver video"],
   ros_title:["Team Roster","Plantilla del equipo"],
   ros_sub:["Two-way sync with the “BLP TEAM” spreadsheet — edit names, positions, phones, uniform sizes and notes right here (sensitive columns like passwords and tax forms stay sheet-only). Click any cell to edit.","Sincronización con la hoja “BLP TEAM” — edita nombres, puestos, teléfonos, tallas y notas aquí (las columnas sensibles como contraseñas quedan solo en la hoja). Toca cualquier celda para editar."],
   ros_addrow:["+ Add person","+ Agregar persona"],
@@ -896,7 +914,7 @@ const BLP_APPS=[
   {href:"https://pianotechnologylibrary.com", label:"PTL"},
 ];
 let APPS_OPEN=false;
-const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["requests","nav_requests"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
+const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["requests","nav_requests"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["training","nav_training"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
@@ -931,7 +949,7 @@ $("#navScrim").onclick=()=>navDrawer(false);
 function renderAll(){
   renderShell();
   renderTopbar();
-  renderDash(); renderReview(); renderPlanner(); renderShopBoard(); renderRequests(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderWhiteboard(); renderCurtis(); renderBrigham();
+  renderDash(); renderReview(); renderPlanner(); renderShopBoard(); renderRequests(); renderWalk(); renderWeek(); renderSequence(); renderPipeline(); renderQC(); renderClients(); renderTeam(); renderSchedule(); renderRoster(); renderTraining(); renderWhiteboard(); renderCurtis(); renderBrigham();
   document.querySelectorAll(".view").forEach(v=>v.classList.toggle("on", v.id==="view-"+ACTIVE));
 }
 
@@ -1143,6 +1161,29 @@ function wbItemHTML(r){
         title="${esc(r.arrivedAt)}">${t("wb_arrived")}${r.arrived?" ✓":""}</button>
     </span></div>`;
 }
+/* ================= TRAINING ================= */
+/* adding a training = one line here; title/desc are [en,es] pairs.
+   href "index.html#handbook" opens the tech app's in-app handbook view. */
+const TRAINING=[
+  {title:["Store Map User Guide","Guía de Usuario del Store Map"], desc:["How to use the BLP Store Map: signing in, finding pianos, clocking work time, paperwork & photos.","Cómo usar el BLP Store Map: iniciar sesión, encontrar pianos, registrar el tiempo de trabajo, papeleo y fotos."], href:"https://docs.google.com/document/d/1aq3oTa6pxr6AhquS7pbJakAY4q4iPc_nUJW4yLMXDOM/edit?usp=sharing", video:"https://youtu.be/1zDlnks5CC0"},
+  {title:["BLP Restoration Handbook","Manual de Restauración BLP"], desc:["The complete BLP restoration handbook.","El manual completo de restauración BLP."], href:"index.html#handbook"},
+  {title:["Professional Standards & Team Culture","Estándares Profesionales y Cultura de Equipo"], desc:["BLP professional standards: punctuality, dress code, safety, workplace conduct & cleanliness.","Estándares profesionales de BLP: puntualidad, código de vestimenta, seguridad, conducta en el trabajo y limpieza."], href:"index.html#policies"},
+];
+function renderTraining(){
+  const v=$("#view-training"); if(!v) return;
+  const i=LANG==="es"?1:0;
+  v.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("train_title")}</h2><div class="sub">${t("train_sub")}</div></div></div>
+    <div class="trainlist">${TRAINING.map(it=>`
+      <div class="trainrow">
+        <div class="tr-main"><h3>${esc(it.title[i]||it.title[0])}</h3><div class="tr-desc">${esc(it.desc[i]||it.desc[0])}</div></div>
+        <span class="tr-acts">
+          <a href="${it.href}" target="_blank" rel="noopener">${t("train_open")}</a>
+          ${it.video?`<a href="${it.video}" target="_blank" rel="noopener">${t("train_video")}</a>`:""}
+        </span></div>`).join("")}
+    </div>`;
+}
+
 function renderWhiteboard(){
   const v=$("#view-whiteboard"); if(!v) return;
   if(document.activeElement&&v.contains(document.activeElement)&&

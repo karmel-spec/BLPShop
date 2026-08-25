@@ -89,6 +89,16 @@
   .cols{display:grid;grid-template-columns:1.55fr 1fr;gap:18px;margin-top:18px}
   @media (max-width:980px){.cols{grid-template-columns:1fr}}
   .card{border:1px solid var(--line);border-radius:6px;overflow:hidden;background:#fff}
+  /* training list */
+  .trainlist{display:flex;flex-direction:column;gap:12px;max-width:860px}
+  .trainrow{display:flex;align-items:center;gap:16px;border:1px solid var(--line);border-radius:6px;background:#fff;padding:15px 18px;color:inherit}
+  .trainrow:hover{border-color:var(--red);box-shadow:0 1px 6px rgba(0,0,0,.06)}
+  .trainrow .tr-main{flex:1;min-width:0}
+  .trainrow h3{margin:0 0 3px;font-family:Georgia,serif;font-size:17px;font-weight:700}
+  .trainrow .tr-desc{color:var(--mut);font-size:13.5px;line-height:1.5}
+  .trainrow .tr-acts{display:flex;gap:18px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+  .trainrow .tr-acts a{white-space:nowrap;font-weight:700;font-size:13.5px;color:var(--red);text-decoration:none}
+  .trainrow .tr-acts a:hover{text-decoration:underline}
   .card>h4{margin:0;padding:12px 16px;border-bottom:1px solid var(--line);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#57524b;display:flex;justify-content:space-between;align-items:center;font-weight:700;gap:10px}
   .card>h4 .lite{font-weight:400;letter-spacing:0;text-transform:none;color:var(--mut2);font-size:12px}
   table.list{width:100%;border-collapse:collapse;font-size:13.5px}
@@ -331,6 +341,7 @@
       <button data-view="pianos"><span class="dot"></span><span data-i18n="nav_pianos">Pianos</span></button>
       <button data-view="calendars" class="on"><span class="dot"></span><span data-i18n="nav_calendars">Calendars</span></button>
       <button data-view="handbook"><span class="dot"></span><span data-i18n="nav_handbook">Shop Handbook</span></button>
+      <button data-view="training"><span class="dot"></span><span data-i18n="nav_training">Training</span></button>
       <button data-view="policies"><span class="dot"></span><span data-i18n="nav_policies">Shop Policies</span></button>
       <button data-view="bassstrings"><span class="dot"></span><span data-i18n="nav_bassstrings">Bass Strings</span></button>
       <button data-view="cleaning"><span class="dot"></span><span data-i18n="nav_cleaning">Friday Cleaning</span></button>
@@ -517,6 +528,17 @@
         <div id="bassStatus" style="padding:26px 0;color:var(--mut);font-size:14px" data-i18n="hb_loading">Loading…</div>
       </section>
 
+      <!-- ============ TRAINING (list rendered from the TRAINING array in JS) ============ -->
+      <section class="view" id="view-training">
+        <div class="row1">
+          <div>
+            <h2 class="page" data-i18n="train_title">Training</h2>
+            <div class="sub" data-i18n="train_sub">Guides and training materials for the shop — more will be added over time.</div>
+          </div>
+        </div>
+        <div class="trainlist" id="trainList"></div>
+      </section>
+
     </main>
     <footer>
       <span data-i18n="footer_tag">Brigham Larson Pianos · Shop Reports — a live view over the weekly report spreadsheet (and writes back to it).</span>
@@ -620,6 +642,13 @@ const I18N = {
   cl_signin:["Sign in again so check-offs are saved under your name.","Inicia sesión de nuevo para guardar bajo tu nombre."],
   nav_handbook:["Shop Handbook","Manual del Taller"],
   nav_policies:["Shop Policies","Políticas del Taller"],
+  /* training */
+  nav_training:["Training","Capacitación"],
+  train_title:["Training","Capacitación"],
+  train_sub:["Guides and training materials for the shop — more will be added over time.","Guías y materiales de capacitación para el taller — se agregarán más con el tiempo."],
+  train_open:["Open ↗","Abrir ↗"],
+  train_open_in:["Open →","Abrir →"],
+  train_video:["▶ Watch video","▶ Ver video"],
   topbar_missing:["FRIDAY REPORTS — <b>%1 of %2</b> submitted for %3 · waiting on %4","REPORTES DEL VIERNES — <b>%1 de %2</b> entregados para %3 · faltan %4"],
   topbar_all:["FRIDAY REPORTS — all <b>%1</b> in for %2 🎉","REPORTES DEL VIERNES — ¡los <b>%1</b> completos para %2! 🎉"],
   week_ending:["Week ending %1","Semana que termina %1"],
@@ -1504,6 +1533,25 @@ function handleDocHash(){
 }
 window.addEventListener("hashchange",handleDocHash);
 
+/* ---------- training (adding a training = one line here; title/desc are [en,es]) ---------- */
+const TRAINING=[
+  {id:"storemap", title:["Store Map User Guide","Guía de Usuario del Store Map"], desc:["How to use the BLP Store Map: signing in, finding pianos, clocking work time, paperwork & photos.","Cómo usar el BLP Store Map: iniciar sesión, encontrar pianos, registrar el tiempo de trabajo, papeleo y fotos."], href:"https://docs.google.com/document/d/1aq3oTa6pxr6AhquS7pbJakAY4q4iPc_nUJW4yLMXDOM/edit?usp=sharing", ext:true, video:"https://youtu.be/1zDlnks5CC0"},
+  {id:"handbook", title:["BLP Restoration Handbook","Manual de Restauración BLP"], desc:["The complete BLP restoration handbook.","El manual completo de restauración BLP."], href:"#handbook"},
+  {id:"culture", title:["Professional Standards & Team Culture","Estándares Profesionales y Cultura de Equipo"], desc:["BLP professional standards: punctuality, dress code, safety, workplace conduct & cleanliness.","Estándares profesionales de BLP: puntualidad, código de vestimenta, seguridad, conducta en el trabajo y limpieza."], href:"#policies"},
+];
+(function renderTraining(){
+  const box=document.getElementById("trainList"); if(!box) return;
+  box.innerHTML=TRAINING.map(it=>{
+    I18N["train_"+it.id+"_t"]=it.title; I18N["train_"+it.id+"_d"]=it.desc;   // register so applyI18n/toggle picks them up
+    return `<div class="trainrow">
+      <div class="tr-main"><h3 data-i18n="train_${it.id}_t"></h3><div class="tr-desc" data-i18n="train_${it.id}_d"></div></div>
+      <span class="tr-acts">
+        <a href="${it.href}"${it.ext?` target="_blank" rel="noopener"`:""} data-i18n="${it.ext?"train_open":"train_open_in"}"></a>
+        ${it.video?`<a href="${it.video}" target="_blank" rel="noopener" data-i18n="train_video"></a>`:""}
+      </span></div>`;
+  }).join("");
+})();
+
 /* ---------- boot ---------- */
 let BOOTED=false;
 async function boot(){
@@ -1516,7 +1564,7 @@ async function boot(){
   applyI18n();
   renderAll();
   handleDocHash();  // deep links: #handbook / #policies (optionally -<section>)
-  if(/^#(cleaning|plating|whiteboard)$/.test(location.hash)) showView(location.hash.slice(1));  // e.g. the 3:30 cleaning text
+  if(/^#(cleaning|plating|whiteboard|training)$/.test(location.hash)) showView(location.hash.slice(1));  // e.g. the 3:30 cleaning text
   if(/^#(myweek|report|calendars)$/.test(location.hash)) showView(location.hash.slice(1));  // Store Map tech-dashboard deep links
   applyTeamRoster();  // Roster-tab adds/removals from the Shop Manager (async)
   loadLivePhases();   // CURRENT PHASE from the Piano Log via the Store Map API
