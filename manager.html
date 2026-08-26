@@ -326,6 +326,9 @@
   /* shop board */
   .sbtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
   .sbtile{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:3px}
+  .sbtile.away{background:#f2f5f9;border-color:#b9c6d4;border-style:dashed}
+  .sbtile.away b{color:#5a6b7c}
+  .awaywhat{color:#4a6076;font-size:12px;font-weight:600}
   .sbtile.on{border-color:#7fbb8c;background:#f4faf5}
   .sbtile.onday{border-color:#c9a227;background:#fffbef}
   .sbwhat.day{color:#8a6d1a;font-weight:600}
@@ -1901,6 +1904,16 @@ async function sbFetchLog(days){
   }catch(e){ SB.rows=[]; }
   SB.loading=false; renderShopBoard();
 }
+async function sbFetchWhere(){
+  // off / field / partial status per person, so a quiet tile reads "day off"
+  // or "field work" instead of a missed punch (Brigham 8/26)
+  try{
+    const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=whereis",{redirect:"follow"});
+    const j=await r.json();
+    SB.where=j.who||{};
+  }catch(e){ SB.where={}; }
+  if(ACTIVE==="shopboard") renderShopBoard();
+}
 async function sbFetchRates(){
   // per-person LOADED rates from the report sheet's "Pay Rates" tab (first-name
   // keyed, server-side); anyone blank costs at the blended rate input
@@ -1979,17 +1992,24 @@ function renderShopBoard(){
   // role sections (Brigham 8/25): Interns / Technicians / Refinishers,
   // classified from the Current Team sheet's Position column
   if(ACTIVE==="shopboard"&&!SB.roles&&!SB._rolesKick){ SB._rolesKick=true; sbFetchRoles(); }
+  if(ACTIVE==="shopboard"&&SB.where==null&&!SB._whereKick){ SB._whereKick=true; sbFetchWhere(); }
   const tileFor=n=>{
     const o=openBy[firstOf(n)];
     const d=payBy[firstOf(n)];
     const today=todayFor(n);
-    return `<div class="sbtile ${o?"on":d?"onday":""}">
+    // not punched in at all — but are they even due in? (Brigham 8/26)
+    const w=!o&&!d&&(SB.where||{})[firstOf(n)];
+    const away=w?(w.st==="off"?`🏖 ${esc(w.why||"day off")}`
+      :w.st==="field"?`🚗 field — ${esc(w.why||"appointment")}${w.until?" · until "+esc(w.until):""}`
+      :`🌗 ${esc(w.why||"partial day")}`):"";
+    return `<div class="sbtile ${o?"on":d?"onday":w?"away":""}">
       <b>${esc(n)}</b>
       ${o?`<span class="sbwhat">🎹 #${esc(o.serial)} · ${esc(o.phase||"working")}</span>
            <span class="sbtime">⏱ ${sbElapsed(o.start)}</span>
            ${d?"":`<span class="sbnopay">⚠ on a piano, no day punch</span>`}`
         :d?`<span class="sbwhat day">🕔 day clock — no piano</span>
            <span class="sbtime">⏱ ${sbElapsed(d.start)}</span>`
+        :w?`<span class="sbwhat awaywhat">${away}</span>`
          :`<span class="sbwhat off">not clocked in</span>`}
       <span class="sbtoday">today ${sbHours(today)} h</span></div>`;
   };
