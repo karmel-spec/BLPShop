@@ -327,6 +327,9 @@
   .sbtiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
   .sbtile{background:#fff;border:1.5px solid var(--line);border-radius:11px;padding:11px 13px;display:flex;flex-direction:column;gap:3px}
   .sbtile.on{border-color:#7fbb8c;background:#f4faf5}
+  .sbtile.onday{border-color:#c9a227;background:#fffbef}
+  .sbwhat.day{color:#8a6d1a;font-weight:600}
+  .sbnopay{display:block;color:#a03030;font-size:11px;font-weight:700}
   .sbtile b{font-size:14px}
   .sbwhat{font-size:12px;color:#333}
   .sbwhat.off{color:var(--mut2);font-style:italic}
@@ -1881,8 +1884,11 @@ function sbElapsed(startIso){
 function sbHours(min){ return (min/60).toFixed(1); }
 async function sbFetchState(){
   try{
-    const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=timeclock",{redirect:"follow"});
+    const [r,pr]=await Promise.all([
+      fetch(CONFIG.STOREMAP_BRIDGE+"?fn=timeclock",{redirect:"follow"}),
+      fetch(CONFIG.STOREMAP_BRIDGE+"?fn=payroll",{redirect:"follow"})]);
     const j=await r.json();
+    try{ const pj=await pr.json(); if(pj.open) SB.pay=pj; }catch(e2){}
     if(j.open){ SB.state=j; if(ACTIVE==="shopboard") renderShopBoard(); }
   }catch(e){}
 }
@@ -1946,7 +1952,8 @@ function renderShopBoard(){
   const BOARD_ADD={"Josh Larson":"mover","JoJo Larson":"mover","Lisa Litton":"admin"};
   const firstOf=n=>{const f=String(n).trim().split(/\s+/)[0].toLowerCase();return NAME_ALIAS[f]||f;};
   const canon={};
-  [...ROSTER,...st.open.map(o=>o.tech),...Object.keys(st.todayMinutes),...(SB.seed||[]),...Object.keys(BOARD_ADD)].forEach(n=>{
+  const pay=SB.pay||{open:[]};
+  [...ROSTER,...st.open.map(o=>o.tech),...(pay.open||[]).map(o=>o.tech),...Object.keys(st.todayMinutes),...(SB.seed||[]),...Object.keys(BOARD_ADD)].forEach(n=>{
     const k=firstOf(n); if(!k) return;
     const disp=String(n).trim();
     const curr=canon[k];
@@ -1963,6 +1970,7 @@ function renderShopBoard(){
   BOARD_REMOVE.forEach(k=>delete canon[k]);
   const names=Object.values(canon).sort();
   const openBy={}; st.open.forEach(o=>openBy[firstOf(o.tech)]=o);
+  const payBy={}; (pay.open||[]).forEach(o=>payBy[firstOf(o.tech)]=o);
   const todayFor=n=>{ const k=firstOf(n); let m=0;
     for(const t in st.todayMinutes) if(firstOf(t)===k) m+=st.todayMinutes[t]||0;
     return m; };
@@ -1973,11 +1981,15 @@ function renderShopBoard(){
   if(ACTIVE==="shopboard"&&!SB.roles&&!SB._rolesKick){ SB._rolesKick=true; sbFetchRoles(); }
   const tileFor=n=>{
     const o=openBy[firstOf(n)];
+    const d=payBy[firstOf(n)];
     const today=todayFor(n);
-    return `<div class="sbtile ${o?"on":""}">
+    return `<div class="sbtile ${o?"on":d?"onday":""}">
       <b>${esc(n)}</b>
-      ${o?`<span class="sbwhat">#${esc(o.serial)} · ${esc(o.phase||"working")}</span>
-           <span class="sbtime">⏱ ${sbElapsed(o.start)}</span>`
+      ${o?`<span class="sbwhat">🎹 #${esc(o.serial)} · ${esc(o.phase||"working")}</span>
+           <span class="sbtime">⏱ ${sbElapsed(o.start)}</span>
+           ${d?"":`<span class="sbnopay">⚠ on a piano, no day punch</span>`}`
+        :d?`<span class="sbwhat day">🕔 day clock — no piano</span>
+           <span class="sbtime">⏱ ${sbElapsed(d.start)}</span>`
          :`<span class="sbwhat off">not clocked in</span>`}
       <span class="sbtoday">today ${sbHours(today)} h</span></div>`;
   };
