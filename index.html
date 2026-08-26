@@ -311,12 +311,6 @@
     <h1 data-i18n="gate_title">SHOP REPORTS</h1>
     <button class="btn" id="gateGo" data-i18n="gate_enter" style="font-size:15px;padding:12px 22px;width:100%">Sign in with Google</button>
     <div class="msg" id="gateMsg" data-i18n="gate_msg">Sign in with your BLP Google account — your reports and check-offs are logged under your name.</div>
-    <div style="display:flex;gap:8px;width:100%;margin-top:6px;align-items:center">
-      <input type="password" id="gatePw" data-i18n-ph="gate_pw" placeholder="Temporary password" autocomplete="off"
-        style="flex:1;border:1px solid #cfc9bf;border-radius:6px;padding:9px 12px;font:inherit;font-size:13.5px">
-      <button class="btn2" id="gatePwGo" data-i18n="gate_pw_go">Enter</button>
-    </div>
-    <div class="msg" style="font-size:11.5px" data-i18n="gate_pw_hint">Temporary access while Google sign-in is being fixed — pick your name in the sidebar after entering.</div>
   </div>
 </div>
 <div class="shell">
@@ -1650,12 +1644,12 @@ function matchTech(user){
    survive Safari/iOS redirects. A TEMPORARY password ("pianoman") also
    unlocks the app while sign-in issues are being shaken out. ================= */
 const OAUTH_CLIENT="110628682621-v65mkaoanv87sp75ggdfcrglfr7bkr8p.apps.googleusercontent.com";
-const SHOP_PW="pianoman";   // TEMPORARY bypass — remove once Google sign-in is confirmed solid
+// Google sign-in is the only door (temporary password removed 8/26 per Brigham)
 const OWN_OK=e=>{e=(e||"").toLowerCase();return e.endsWith("@brighamlarsonpianos.com")||/\.blp@gmail\.com$/.test(e)||OWNERS.includes(e)||["brighamlarsonpianos@gmail.com","pianoshop.blp@gmail.com"].includes(e);};
 const isOwner=()=>!!USER&&(OWNERS.includes((USER.email||"").toLowerCase())||(USER.email||"").toLowerCase().endsWith("@brighamlarsonpianos.com"));
 const isLocal=["localhost","127.0.0.1"].includes(location.hostname);
 const devBypass=()=>isLocal&&new URLSearchParams(location.search).get("dev")==="1";
-const pwOk=()=>((localStorage.getItem("blp.appkey")||"").trim().toLowerCase()===SHOP_PW);
+
 function rnd(){ return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2); }
 function googleLogin(silent){
   const state=rnd(), nonce=rnd();
@@ -1681,7 +1675,7 @@ function switchAccount(){
   googleLogin(false);   // prompt=select_account → Google shows every account + "Use another account"
 }
 function renewSession(){
-  if(!USER||shopToken()||devBypass()||pwOk()) return;
+  if(!USER||shopToken()||devBypass()) return;
   const last=+(localStorage.getItem("blp.oauth.silent")||0);
   if(Date.now()-last<5*60*1000) return;   // at most one quiet renewal per 5 min
   localStorage.setItem("blp.oauth.silent",String(Date.now()));
@@ -1691,14 +1685,6 @@ function showGate(msg){
   $("#gate").style.display=""; document.querySelector(".shell").style.display="none";
   if(msg) $("#gateMsg").innerHTML=msg;
   $("#gateGo").onclick=()=>switchAccount();
-  const pin=$("#gatePw"), pgo=$("#gatePwGo");
-  const tryPw=()=>{
-    if(pin.value.trim().toLowerCase()!==SHOP_PW){ $("#gateMsg").textContent=t("gate_pw_wrong"); pin.select(); return; }
-    localStorage.setItem("blp.appkey",pin.value.trim());
-    hideGate(); if(!BOOTED) boot(); else renderAll();
-  };
-  pgo.onclick=tryPw;
-  pin.onkeydown=e=>{ if(e.key==="Enter") tryPw(); };
 }
 function hideGate(){ $("#gate").style.display="none"; document.querySelector(".shell").style.display="grid"; }
 
@@ -2256,7 +2242,7 @@ if(location.hash==="#signin"){ history.replaceState(null,"",location.pathname); 
 else if(USER&&!OWN_OK(USER.email)){
   showGate(`<b>${esc(USER.email)}</b> — ${t("gate_wrongacct")}`);
 }
-else if(USER||pwOk()||devBypass()){ hideGate(); boot(); renewSession(); }
+else if(USER||devBypass()){ hideGate(); boot(); renewSession(); }
 else showGate();
 </script>
 </body>
