@@ -828,6 +828,10 @@ let USER = null;   // Google identity {email,name,given,picture}
 try{ USER = JSON.parse(localStorage.getItem("blp-shop-reports.user")||"null"); }catch(e){}
 const OWNERS = ["brighamlarson@gmail.com","brigham@brighamlarsonpianos.com",
                 "walter@brighamlarsonpianos.com","karmel@brighamlarsonpianos.com"];
+// shop managers: unlocks the Shop Manager button in the sidebar (their full
+// access is enforced by manager.html's own ADMINS gate)
+const MANAGERS = ["markhales.blp@gmail.com"];
+const isManager = () => !!USER && (isOwner() || MANAGERS.includes((USER.email||"").toLowerCase()));
 let calToken = null;
 let ROSTER = [], ALL_TECHS = [];
 
@@ -1705,7 +1709,7 @@ function renderWho(){
         <span class="ur">${isOwner()?t("who_owner"):tech?t("who_tech",esc(tech)):t("who_nomatch")}</span></span>
       </div>
       ${isOwner()||!tech?rosterSelectHTML(isOwner()?t("who_acting"):t("who_which")):""}
-      ${isOwner()?`<a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>`:""}
+      ${isManager()?`<a href="manager.html" style="display:block;background:#242424;border:1px solid #3a3a3a;border-radius:4px;color:#fff;font-weight:700;font-size:12.5px;text-align:center;text-decoration:none;padding:8px 10px">Shop Manager →</a>`:""}
       <button class="signout" id="swBtn">${t("who_switch")}</button>
       <button class="signout" id="signOutBtn">${t("who_signout")}</button>`;
     $("#swBtn").onclick=switchAccount;
