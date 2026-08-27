@@ -20,6 +20,11 @@
 
   /* ---------- shell ---------- */
   .shell{display:grid;grid-template-columns:216px 1fr;min-height:100vh}
+  /* ?embed=1 — framed inside the Store Map dashboards: no sidebar/chrome,
+     the host app provides the navigation */
+  html.embed .shell{grid-template-columns:1fr!important}
+  html.embed .mbar,html.embed #sideNav,html.embed .mscrim{display:none!important}
+  html.embed main{padding:14px 16px 44px;max-width:none}
   .mbar{display:none}
   .mscrim{display:none}
   @media(max-width:900px){
@@ -906,6 +911,13 @@ const BLP_APPS=[
 let APPS_OPEN=false;
 const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["requests","nav_requests"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["training","nav_training"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
+// ?embed=1: framed by the Store Map dashboards — hide chrome, follow hash
+const EMBED = new URLSearchParams(location.search).has("embed");
+if(EMBED) document.documentElement.classList.add("embed");
+addEventListener("hashchange",()=>{
+  const v=location.hash.slice(1);
+  if(v&&v!==ACTIVE&&TABS.some(t=>t[0]===v)){ ACTIVE=v; renderAll(); }
+});
 // deep link from the Store Map: #client-<serial> opens Client Reports
 // with that piano's panel expanded
 let CLI_DEEP = null;
