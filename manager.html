@@ -705,6 +705,7 @@ function switchAccount(){
   googleLogin(false);
 }
 function renewSession(){
+  if(EMBED_MODE){ try{ parent.postMessage({blpAuthRequest:1}, "*"); }catch(e){} return; }
   if(!USER||curToken()) return;
   if(isLocal&&new URLSearchParams(location.search).get("dev")==="1") return;
   const last=+(localStorage.getItem("blp.oauth.silent")||0);
@@ -712,7 +713,39 @@ function renewSession(){
   localStorage.setItem("blp.oauth.silent",String(Date.now()));
   googleLogin(true);
 }
+/* EMBEDDED in the Store Map dashboards (?embed=1): Google's sign-in page
+   refuses to render inside an iframe, so never redirect here. Instead ask
+   the parent app for its already-signed-in identity — both apps share the
+   same OAuth client, so the parent's idToken works on every function. */
+const EMBED_MODE = new URLSearchParams(location.search).has("embed");
+const EMBED_PARENTS = ["https://blpstoremap.netlify.app","http://localhost:8641"];
+function embedGate(){
+  $("#gateMsg").innerHTML = LANG==="es"
+    ? "Conectando con tu sesión del Store Map…"
+    : "Connecting to your Store Map sign-in…";
+  const go=$("#gateGo"); if(go) go.style.display="none";
+  let got=false;
+  addEventListener("message", ev=>{
+    if(!EMBED_PARENTS.includes(ev.origin)) return;
+    const a = ev.data && ev.data.blpAuth;
+    if(!a || !a.email) return;
+    got=true;
+    USER = {email:a.email, name:a.name||a.email};
+    try{ localStorage.setItem("blp-shop-reports.user", JSON.stringify(USER)); }catch(e){}
+    if(a.idToken){ try{ sessionStorage.setItem("blpshop.idtok", a.idToken); }catch(e){} }
+    if(isAdmin(USER)) enter();
+    else $("#gateMsg").innerHTML = `<b>${USER.email}</b> — `+(LANG==="es"
+      ?"esa cuenta no tiene acceso de administración."
+      :"that account doesn't have management access.");
+  });
+  const ask=()=>{ try{ parent.postMessage({blpAuthRequest:1}, "*"); }catch(e){} };
+  ask(); setTimeout(ask, 700); setTimeout(ask, 2000);
+  setTimeout(()=>{ if(!got) $("#gateMsg").innerHTML = LANG==="es"
+    ? 'Inicia sesión en el Store Map primero (☰ menú), luego reabre esta pestaña.'
+    : 'Sign in on the Store Map first (☰ menu), then reopen this tab.'; }, 4000);
+}
 function checkGate(){
+  if(EMBED_MODE){ embedGate(); return; }
   if(isLocal && new URLSearchParams(location.search).get("dev")==="1"){
     USER = USER || {email:"brighamlarson@gmail.com", name:"Dev Preview"};
     enter(); return;
