@@ -1,2 +1,9 @@
 [functions]
   directory = "netlify/functions"
+
+# the Store Map's native Scheduling dashboard reads the report history
+# cross-origin (Shop App sunset — pages recreated in the Store Map, 8/29)
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
