@@ -360,6 +360,13 @@
     <h1>SHOP MANAGER</h1>
     <button class="btn" id="gateGo" style="background:var(--red);color:#fff;border:none;border-radius:6px;padding:12px;font-weight:700;font-size:15px;cursor:pointer;width:100%">Sign in with Google</button>
     <div class="msg" id="gateMsg">Management access only. Sign in with your BLP Google account (use the account picker to choose brigham@brighamlarsonpianos.com).</div>
+    <div style="display:flex;flex-direction:column;gap:7px;width:100%;margin-top:8px">
+      <input type="password" id="gatePw" placeholder="Temporary password" autocomplete="off"
+        style="border:1px solid #cfc9bf;border-radius:6px;padding:9px 12px;font:inherit;font-size:13.5px">
+      <input id="gateName" placeholder="Your name (for the activity log)" maxlength="40"
+        style="border:1px solid #cfc9bf;border-radius:6px;padding:9px 12px;font:inherit;font-size:13.5px">
+      <button class="btn2" id="gatePwGo" style="padding:9px">Enter with temporary password</button>
+    </div>
   </div>
 </div>
 
@@ -681,7 +688,8 @@ function enter(){
    TEMPORARY password ("pianoman") also opens the manager while sign-in
    issues are being shaken out. */
 const OAUTH_CLIENT="110628682621-v65mkaoanv87sp75ggdfcrglfr7bkr8p.apps.googleusercontent.com";
-// Google sign-in is the only door (temporary password removed 8/26 per Brigham)
+const SHOP_PW="pianoman";   // password door restored 8/29 per Brigham (Google gate was locking him out)
+const pwOk=()=>((localStorage.getItem("blp.appkey")||"").trim().toLowerCase()===SHOP_PW);
 
 function rnd(){ return Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2); }
 function googleLogin(silent){
@@ -706,7 +714,7 @@ function switchAccount(){
 }
 function renewSession(){
   if(EMBED_MODE){ try{ parent.postMessage({blpAuthRequest:1}, "*"); }catch(e){} return; }
-  if(!USER||curToken()) return;
+  if(!USER||curToken()||pwOk()) return;
   if(isLocal&&new URLSearchParams(location.search).get("dev")==="1") return;
   const last=+(localStorage.getItem("blp.oauth.silent")||0);
   if(Date.now()-last<5*60*1000) return;
@@ -751,9 +759,27 @@ function checkGate(){
     enter(); return;
   }
   if(location.hash==="#signin") history.replaceState(null,"",location.pathname);
+  else if(pwOk()){
+    USER = USER && isAdmin(USER) ? USER : {email:"", name:localStorage.getItem("blpmgr.name")||"Manager"};
+    enter(); return;
+  }
   else if(isAdmin(USER)){ enter(); renewSession(); return; }
   else if(USER){ $("#gateMsg").innerHTML = `<b>${USER.email}</b> — ${LANG==="es"?"esa cuenta no tiene acceso de administración. Toca el botón y elige tu cuenta @brighamlarsonpianos.com, o pide acceso a Brigham.":"that account doesn't have management access. Tap the button and pick your @brighamlarsonpianos.com account, or ask Brigham for access."}`; }
   $("#gateGo").onclick=()=>switchAccount();
+  const pin=$("#gatePw"), nameIn=$("#gateName");
+  if(localStorage.getItem("blpmgr.name")) nameIn.value=localStorage.getItem("blpmgr.name");
+  const go=()=>{
+    if(pin.value.trim().toLowerCase()!==SHOP_PW){ $("#gateMsg").textContent=LANG==="es"?"Contraseña temporal incorrecta.":"Wrong temporary password."; return; }
+    const nm=nameIn.value.trim()||"Manager";
+    localStorage.setItem("blp.appkey",pin.value.trim());
+    localStorage.setItem("blpmgr.name",nm);
+    USER={email:"",name:nm};
+    localStorage.setItem("blp-shop-reports.user",JSON.stringify(USER));
+    enter();
+  };
+  $("#gatePwGo").onclick=go;
+  pin.onkeydown=e=>{ if(e.key==="Enter") go(); };
+  nameIn.onkeydown=e=>{ if(e.key==="Enter") go(); };
 }
 
 /* ================= DATA ================= */
