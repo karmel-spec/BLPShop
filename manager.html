@@ -309,6 +309,7 @@
   .rqfilters input{width:170px}
   /* app requests */
   .rqcard{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;margin-bottom:10px}
+  .rqcard.rqdone{background:#f6f7f6;border-style:dashed;opacity:.85}
   .rqtop{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
   .rqid{font-family:monospace;font-size:11px;color:var(--mut2)}
   .rqshot{font-size:12px}
@@ -1759,14 +1760,20 @@ function trxWire(v,G){
    Requested -> In progress -> Live -> Tested. Flipping to Live texts the
    requester (request-notify on blpsalesapp); "Copy for Claude" packages the
    request for pasting into a Claude Code session. */
-let RQ={rows:null,loading:false,showDone:false,f:{type:"",status:"",who:"",q:""}};
+let RQ={rows:null,loading:false,f:{type:"",status:"",who:"",q:""}};
+// Tested = done = closed: it leaves the active list the moment it's marked,
+// same as Archived (Brigham 9/1). Closed items stay reachable through the
+// status dropdown, and a text search digs through closed history too.
+const rqClosed=x=>x.status==="Tested"||x.status==="Archived";
 function rqFiltered(){
   const f=RQ.f;
   return (RQ.rows||[]).filter(x=>
     (!f.type||x.type===f.type)&&
-    (!f.status||x.status===f.status)&&
     (!f.who||x.who===f.who)&&
-    (!f.q||(x.text+" "+x.context+" "+x.id).toLowerCase().includes(f.q.toLowerCase())));
+    (!f.q||(x.text+" "+x.context+" "+x.id+" "+x.who+" "+x.status).toLowerCase().includes(f.q.toLowerCase()))&&
+    (f.status==="all"?true
+     :f.status?x.status===f.status
+     :(!rqClosed(x)||!!f.q)));
 }
 function rqPrint(){
   const rows=rqFiltered();
@@ -1842,30 +1849,29 @@ function renderRequests(){
   const types=[...new Set(all.map(x=>x.type).filter(Boolean))].sort();
   const STATS=["Requested","In progress","Live","Tested","Archived"];
   const f=RQ.f;
-  // archived cards leave the list entirely unless filtered for explicitly
-  const rows=rqFiltered().filter(x=>f.status==="Archived"?x.status==="Archived"
-    :x.status!=="Archived"&&(RQ.showDone||f.status==="Tested"||x.status!=="Tested"));
+  const rows=rqFiltered();
+  const nOpen=all.filter(x=>!rqClosed(x)).length;
   v.innerHTML=`
     <div class="row1"><div><h2 class="page">App Requests</h2>
-      <div class="sub">Bugs, edits and ideas from the team (💡 in the Store Map). Flip to Live to auto-text the requester; they confirm Tested themselves.</div></div>
+      <div class="sub">Bugs, edits and ideas from the team (💡 in the Store Map). Flip to Live to auto-text the requester; they confirm Tested themselves — tested requests close automatically (browse them with the status filter).</div></div>
       <div style="display:flex;gap:8px">
-        <button class="btn2" id="rqToggle">${RQ.showDone?"Hide":"Show"} tested</button>
         <button class="btn2" id="rqPrint">🖨 Print report</button>
         <button class="btn2" id="rqCsv">⬇ CSV</button>
         <button class="btn2" id="rqReload">↻ Refresh</button></div></div>
     <div class="rqfilters">
       <select class="rqf" data-f="type"><option value="">all types</option>
         ${types.map(t0=>`<option ${f.type===t0?"selected":""}>${esc(t0)}</option>`).join("")}</select>
-      <select class="rqf" data-f="status"><option value="">all statuses</option>
-        ${STATS.map(t0=>`<option ${f.status===t0?"selected":""}>${esc(t0)}</option>`).join("")}</select>
+      <select class="rqf" data-f="status"><option value="">open requests</option>
+        ${STATS.map(t0=>`<option ${f.status===t0?"selected":""}>${esc(t0)}${rqClosed({status:t0})?" (closed)":""}</option>`).join("")}
+        <option value="all" ${f.status==="all"?"selected":""}>everything</option></select>
       <select class="rqf" data-f="who"><option value="">everyone</option>
         ${whos.map(t0=>`<option ${f.who===t0?"selected":""}>${esc(t0)}</option>`).join("")}</select>
       <input class="rqf" data-f="q" placeholder="search text / id…" value="${esc(f.q)}">
-      <span class="lite" style="font-size:12px">${rows.length}${rows.length!==all.length?" of "+all.length:""} shown</span>
+      <span class="lite" style="font-size:12px">${rows.length} shown · ${nOpen} open · ${all.length-nOpen} closed</span>
       ${(f.type||f.status||f.who||f.q)?'<button id="rqClear" class="btn2" style="padding:4px 10px">✕ clear</button>':""}
     </div>
     ${RQ.loading?'<div class="curmsg">Loading…</div>':rows.length?rows.map(x=>`
-      <div class="rqcard">
+      <div class="rqcard${rqClosed(x)?" rqdone":""}">
         <div class="rqtop">
           <span class="rqid">${esc(x.id)}</span>
           <b>${ICONS[x.type]||"💡"} ${esc(x.who)}</b>
@@ -1893,7 +1899,7 @@ function renderRequests(){
             <span class="rqsmsout"></span>
           </div>
         </div>
-      </div>`).join(""):'<div class="curmsg">No open requests — the box is empty. 🎉</div>'}`;
+      </div>`).join(""):`<div class="curmsg">${(f.type||f.status||f.who||f.q)?"Nothing matches these filters.":"No open requests — the box is empty. 🎉"}</div>`}`;
   $("#rqReload")&&($("#rqReload").onclick=rqFetch);
   $("#rqPrint")&&($("#rqPrint").onclick=rqPrint);
   $("#rqCsv")&&($("#rqCsv").onclick=rqCsv);
@@ -1905,7 +1911,6 @@ function renderRequests(){
     if(el.tagName==="SELECT") el.onchange=apply;
     else el.oninput=()=>{clearTimeout(el._t);el._t=setTimeout(apply,350);};
   });
-  $("#rqToggle")&&($("#rqToggle").onclick=()=>{RQ.showDone=!RQ.showDone;renderRequests();});
   v.querySelectorAll(".rqst").forEach(b=>b.onclick=()=>{ if(!b.classList.contains("on")) rqSetStatus(b.dataset.id,b.dataset.st,b); });
   v.querySelectorAll(".rqcopy:not(.rqsmsbtn)").forEach(b=>b.onclick=async()=>{
     const x=(RQ.rows||[]).find(r=>r.id===b.dataset.id); if(!x) return;
