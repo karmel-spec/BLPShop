@@ -322,6 +322,8 @@
   .rqst.on.sInprogress{background:#fdf3ec;border-color:#e0b57e;color:#9a5b13}
   .rqst.on.sLive{background:#eaf2fd;border-color:#8db4e0;color:#2c5d96}
   .rqst.on.sTested{background:#eaf5ec;border-color:#7fbb8c;color:#2f7d4f}
+  .rqst.on.sTexted{background:#f5eefd;border-color:#b394d9;color:#6a3aa0}
+  .rqres{border-color:#7fbb8c;color:#2f7d4f}
   .rqsmsbox{margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:9px;background:#fbfaf8}
   .rqpresets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
   .rqpre{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;font:600 11.5px inherit;color:#6f6a63;cursor:pointer}
@@ -1761,10 +1763,11 @@ function trxWire(v,G){
    requester (request-notify on blpsalesapp); "Copy for Claude" packages the
    request for pasting into a Claude Code session. */
 let RQ={rows:null,loading:false,f:{type:"",status:"",who:"",q:""}};
-// Tested = done = closed: it leaves the active list the moment it's marked,
-// same as Archived (Brigham 9/1). Closed items stay reachable through the
-// status dropdown, and a text search digs through closed history too.
-const rqClosed=x=>x.status==="Tested"||x.status==="Archived";
+// Tested/Resolved = done = closed: they leave the active list the moment
+// they're marked, same as Archived (Brigham 9/1). Closed items stay
+// reachable through the status dropdown, and a text search digs through
+// closed history too. "Texted for info" = open, waiting on the requester.
+const rqClosed=x=>x.status==="Tested"||x.status==="Archived"||x.status==="Resolved";
 function rqFiltered(){
   const f=RQ.f;
   return (RQ.rows||[]).filter(x=>
@@ -1820,12 +1823,24 @@ async function rqSetStatus(id,status,btn){
   const row=(RQ.rows||[]).find(x=>x.id===id); if(!row) return;
   if(btn){ btn.disabled=true; btn.textContent="…"; }
   try{
-    const r=await fetch(CONFIG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
-      headers:{"content-type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action:"requeststatus",id,status,pin:localStorage.getItem("blp.appkey")||"pianoman",
-        idToken:localStorage.getItem("blpshop.idtok")||sessionStorage.getItem("blpshop.idtok")||"",
-        user:{name:localStorage.getItem("blpmgr.name")||"Shop Manager"}})});
-    const j=await r.json();
+    // Apps Script sometimes answers with an HTML error page, or with the
+    // generic service ping without running the action (9/1) — retry through
+    // both instead of surfacing "Unexpected token '<'" at Brigham
+    let j=null;
+    for(let a=0;a<3;a++){
+      const r=await fetch(CONFIG.STOREMAP_BRIDGE,{method:"POST",redirect:"follow",
+        headers:{"content-type":"text/plain;charset=utf-8"},
+        body:JSON.stringify({action:"requeststatus",id,status,pin:localStorage.getItem("blp.appkey")||"pianoman",
+          idToken:localStorage.getItem("blpshop.idtok")||sessionStorage.getItem("blpshop.idtok")||"",
+          user:{name:localStorage.getItem("blpmgr.name")||"Shop Manager"}})});
+      const txt=await r.text();
+      try{ j=JSON.parse(txt); }catch(e2){ j=null; }
+      if(j&&j.error) break;                      // real rejection — don't retry
+      if(j&&j.ok&&j.id) break;                   // really saved (the ping has no id)
+      j=null;
+      await new Promise(res=>setTimeout(res,1200*(a+1)));
+    }
+    if(!j) throw new Error("the Google bridge hiccuped — give it a few seconds and try again");
     if(j.error) throw new Error(j.error);
     row.status=status;
     if(status==="Live"){
@@ -1847,7 +1862,7 @@ function renderRequests(){
   const all=RQ.rows||[];
   const whos=[...new Set(all.map(x=>x.who).filter(Boolean))].sort();
   const types=[...new Set(all.map(x=>x.type).filter(Boolean))].sort();
-  const STATS=["Requested","In progress","Live","Tested","Archived"];
+  const STATS=["Requested","In progress","Texted for info","Live","Tested","Resolved","Archived"];
   const f=RQ.f;
   const rows=rqFiltered();
   const nOpen=all.filter(x=>!rqClosed(x)).length;
@@ -1883,8 +1898,11 @@ function renderRequests(){
         <div class="rqtext">${esc(x.text)}</div>
         <div class="rqflow">${STAT.map(st=>`<button class="rqst ${x.status===st?"on":""} s${st.replace(/\s/g,"")}"
           data-id="${esc(x.id)}" data-st="${esc(st)}">${st}${x.status===st?" ✓":""}</button>`).join("<span class='rqarrow'>→</span>")}
+          ${x.status==="Texted for info"?`<button class="rqst on sTexted" data-id="${esc(x.id)}" data-st="Texted for info">💬 Texted for info ✓</button>`
+            :rqClosed(x)?"":`<button class="rqst sTexted" data-id="${esc(x.id)}" data-st="Texted for info" title="Waiting on the requester — you texted them for more detail">💬 Texted for info</button>`}
+          ${rqClosed(x)?"":`<button class="rqst rqres" data-id="${esc(x.id)}" data-st="Resolved" title="Handled without a code change (answered, duplicate, already works) — closes the item">✓ Resolved</button>`}
           ${x.status==="Tested"?`<button class="rqst rqarch" data-id="${esc(x.id)}" data-st="Archived" title="Fully done — remove from this list (find it later under the Archived filter)">🗄 Archive</button>`:""}
-          ${x.status==="Archived"?`<button class="rqst" data-id="${esc(x.id)}" data-st="Tested" title="Bring it back to the list">↩ Unarchive</button>`:""}</div>
+          ${rqClosed(x)?`<button class="rqst" data-id="${esc(x.id)}" data-st="Requested" title="Bring it back to the open list">↩ Reopen</button>`:""}</div>
         <div class="rqsmsbox" data-id="${esc(x.id)}" hidden>
           <div class="rqpresets">
             <button class="rqpre" data-t="Could you send that screenshot again through the 💡 button? It didn't come through.">📷 resend screenshot</button>
@@ -1944,6 +1962,8 @@ function renderRequests(){
         if(j.error) throw new Error(j.error);
         if(j.sent===false) throw new Error(j.reason||"not sent");
         out.textContent=`✓ texted ${x.who.split(" ")[0]}`; ta.value="";
+        // an open request you just texted about is now waiting on them
+        if(!rqClosed(x)&&x.status!=="Live") rqSetStatus(x.id,"Texted for info");
         setTimeout(()=>{ box.hidden=true; out.textContent=""; },2200);
       }catch(e){ out.textContent="✗ "+e.message; }
       btn.disabled=false; btn.textContent="Send text";
