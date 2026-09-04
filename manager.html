@@ -1428,6 +1428,8 @@ async function loadProposal(box){
     const r=await fetch(CONFIG.STOREMAP_BRIDGE+"?fn=proposal",{redirect:"follow"});
     const j=await r.json();
     if(j.ok) got=j;
+    // a double-encoded save leaves plan as a JSON string — parse, don't blank
+    if(got&&typeof got.plan==="string"){ try{got.plan=JSON.parse(got.plan);}catch(e2){got=null;} }
   }catch(e){/* bridge not deployed yet — fall through */}
   if(!got){
     try{
