@@ -330,7 +330,7 @@
     <nav id="tabs">
       <a class="ext" href="https://identity.myisolved.com" target="_blank" rel="noreferrer"><span class="dot"></span><span data-i18n="nav_paylogics">Paylogics Payroll ↗</span></a>
       <button data-view="myweek"><span class="dot"></span><span data-i18n="nav_myweek">My Week</span></button>
-      <button data-view="report"><span class="dot"></span><span data-i18n="nav_report">My Friday Report</span></button>
+      <button data-view="report"><span class="dot"></span><span data-i18n="nav_report">My Weekly Report (due Thursday)</span></button>
       <button data-view="history"><span class="dot"></span><span data-i18n="nav_history">History</span></button>
       <button data-view="pianos"><span class="dot"></span><span data-i18n="nav_pianos">Pianos</span></button>
       <button data-view="calendars" class="on"><span class="dot"></span><span data-i18n="nav_calendars">Calendars</span></button>
@@ -356,9 +356,9 @@
         <div class="row1">
           <div>
             <h2 class="page" id="mwTitle">My week</h2>
-            <div class="sub" data-i18n="myweek_sub">Your work items this week — carried over from last Friday's report, pulled from your calendar, or added by hand. They flow straight into your Friday report.</div>
+            <div class="sub" data-i18n="myweek_sub">Your work items this week — carried over from last week's report, pulled from your calendar, or added by hand. They flow straight into your weekly report (due Thursday).</div>
           </div>
-          <button class="btn" onclick="showView('report')" data-i18n="open_report">Open Friday report →</button>
+          <button class="btn" onclick="showView('report')" data-i18n="open_report">Open weekly report →</button>
         </div>
         <div class="wgrid" id="weekCards"></div>
       </section>
@@ -366,7 +366,7 @@
       <!-- ============ FRIDAY REPORT ============ -->
       <section class="view" id="view-report">
         <div class="row1">
-          <div><h2 class="page" id="reportTitle">Friday report</h2><div class="sub" id="reportSub"></div></div>
+          <div><h2 class="page" id="reportTitle">Weekly report (due Thursday)</h2><div class="sub" id="reportSub"></div></div>
         </div>
         <div class="panel">
           <div class="ph"><span data-i18n="ph_pianos">Which pianos did you work on this week?</span><span data-i18n="ph_pianos_hint">click ↗ to open in the Piano Log</span></div>
@@ -381,7 +381,7 @@
             <span class="save" id="draftStatus" data-i18n="draft_note">Draft saves automatically on this device.</span>
             <span style="display:flex;gap:10px">
               <button class="btn2" id="copyBtn" data-i18n="copy_sheet">Copy for spreadsheet</button>
-              <button class="btn" id="submitBtn" data-i18n="submit">Submit Friday report</button>
+              <button class="btn" id="submitBtn" data-i18n="submit">Submit weekly report</button>
             </span>
           </div>
         </div>
@@ -392,7 +392,7 @@
       <!-- ============ HISTORY ============ -->
       <section class="view" id="view-history">
         <div class="row1">
-          <div><h2 class="page" data-i18n="hist_title">Shop history</h2><div class="sub" id="histSub">Every Friday report ever submitted, searchable.</div></div>
+          <div><h2 class="page" data-i18n="hist_title">Shop history</h2><div class="sub" id="histSub">Every weekly report ever submitted, searchable.</div></div>
         </div>
         <div class="searchbar">
           <input type="search" id="q" data-i18n-ph="q_ph" placeholder="Search pianos, serials, technicians, work — e.g. “Cable-Nelson 139681” or “restringing”">
@@ -569,7 +569,7 @@ const I18N = {
   nav_dashboard:["Shop Dashboard","Panel del Taller"],
   nav_planner:["Assignment Planner","Planificador"],
   nav_myweek:["My Week","Mi Semana"],
-  nav_report:["My Friday Report","Mi Reporte del Viernes"],
+  nav_report:["My Weekly Report (due Thursday)","Mi Reporte Semanal (para el jueves)"],
   nav_history:["History","Historial"],
   nav_pianos:["Current Shop Pianos","Pianos Actuales del Taller"],
   nav_calendars:["My Calendar","Mi Calendario"],
@@ -643,10 +643,10 @@ const I18N = {
   train_open:["Open ↗","Abrir ↗"],
   train_open_in:["Open →","Abrir →"],
   train_video:["▶ Watch video","▶ Ver video"],
-  topbar_missing:["FRIDAY REPORTS — <b>%1 of %2</b> submitted for %3 · waiting on %4","REPORTES DEL VIERNES — <b>%1 de %2</b> entregados para %3 · faltan %4"],
-  topbar_all:["FRIDAY REPORTS — all <b>%1</b> in for %2 🎉","REPORTES DEL VIERNES — ¡los <b>%1</b> completos para %2! 🎉"],
+  topbar_missing:["WEEKLY REPORTS (due Thu) — <b>%1 of %2</b> submitted for %3 · waiting on %4","REPORTES SEMANALES (jueves) — <b>%1 de %2</b> entregados para %3 · faltan %4"],
+  topbar_all:["WEEKLY REPORTS — all <b>%1</b> in for %2 🎉","REPORTES SEMANALES — ¡los <b>%1</b> completos para %2! 🎉"],
   week_ending:["Week ending %1","Semana que termina %1"],
-  dash_open_report:["+ My Friday report","+ Mi reporte del viernes"],
+  dash_open_report:["+ My weekly report","+ Mi reporte semanal"],
   dash_sub:["Shop overview · %1 active technicians · %2 reports on file since 2017","Resumen del taller · %1 técnicos activos · %2 reportes archivados desde 2017"],
   st_reports_in:["Reports in","Reportes entregados"],
   st_pending:["%1 pending","faltan: %1"],
@@ -671,7 +671,7 @@ const I18N = {
   copied:["Copied ✓","Copiado ✓"],
   planner_status:["<b>%1 of %2</b> reports in for %3. ","<b>%1 de %2</b> reportes entregados para %3. "],
   planner_good:["Most reports are in — good time to plan next week.","La mayoría de los reportes están — buen momento para planear la próxima semana."],
-  planner_wait:["The plan fills in as Friday reports arrive; technicians without a report this week fall back to last week's.","El plan se llena conforme llegan los reportes del viernes; los técnicos sin reporte esta semana usan el de la semana pasada."],
+  planner_wait:["The plan fills in as weekly reports arrive; technicians without a report this week fall back to last week's.","El plan se llena conforme llegan los reportes semanales; los técnicos sin reporte esta semana usan el de la semana pasada."],
   no_recent:["No recent report","Sin reporte reciente"],
   nothing_carry:["Nothing to carry over — assign fresh work.","Nada pendiente — asignar trabajo nuevo."],
   from_date:["from %1","del %1"],
@@ -682,8 +682,8 @@ const I18N = {
   in_flight:[" (pianos in flight: %1)"," (pianos en proceso: %1)"],
   myweek:["My week","Mi semana"],
   myweek_of:["%1's week","Semana de %1"],
-  myweek_sub:["Your work items this week — carried over from last Friday's report, pulled from your calendar, or added by hand. They flow straight into your Friday report.","Tus tareas de esta semana — traídas del reporte del viernes pasado, de tu calendario o agregadas a mano. Pasan directo a tu reporte del viernes."],
-  open_report:["Open Friday report →","Abrir reporte del viernes →"],
+  myweek_sub:["Your work items this week — carried over from last week's report, pulled from your calendar, or added by hand. They flow straight into your weekly report (due Thursday).","Tus tareas de esta semana — traídas del reporte de la semana pasada, de tu calendario o agregadas a mano. Pasan directo a tu reporte semanal (para el jueves)."],
+  open_report:["Open weekly report →","Abrir reporte semanal →"],
   st_todo:["Not started","Sin empezar"],
   st_part:["Partly done","A medias"],
   st_done:["Done","Terminado"],
@@ -692,13 +692,13 @@ const I18N = {
   src_by_hand:["added by hand","agregado a mano"],
   src_carried:["carried from last week","traído de la semana pasada"],
   src_recent:["from recent reports","de reportes recientes"],
-  myweek_none:["No work items yet — add pianos on the Friday Report tab, or connect your calendar.","Aún no hay tareas — agrega pianos en la pestaña Mi Reporte del Viernes o conecta tu calendario."],
+  myweek_none:["No work items yet — add pianos on the Weekly Report tab, or connect your calendar.","Aún no hay tareas — agrega pianos en la pestaña Mi Reporte Semanal o conecta tu calendario."],
   myweek_pick:["Select your name in the sidebar to see your week.","Elige tu nombre en la barra lateral para ver tu semana."],
   add_item:["+ Add a work item","+ Agregar tarea"],
   prompt_piano:["Piano (make + serial), or a task name:","Piano (marca + serie), o nombre de la tarea:"],
   greet_am:["Good morning, %1","Buenos días, %1"],
   greet_pm:["Good afternoon, %1","Buenas tardes, %1"],
-  report_title:["Friday report","Reporte del viernes"],
+  report_title:["Weekly report (due Thursday)","Reporte semanal (para el jueves)"],
   report_sub:["Week of %1 – %2 · goes into the <a href=\"%3\" target=\"_blank\" rel=\"noreferrer\">report spreadsheet</a>","Semana del %1 – %2 · va a la <a href=\"%3\" target=\"_blank\" rel=\"noreferrer\">hoja de reportes</a>"],
   ph_pianos:["Which pianos did you work on this week?","¿En qué pianos trabajaste esta semana?"],
   ph_pianos_hint:["click ↗ to open in the Piano Log","toca ↗ para abrirlo en el Piano Log"],
@@ -709,7 +709,7 @@ const I18N = {
   draft_note:["Draft saves automatically on this device.","El borrador se guarda automáticamente en este dispositivo."],
   draft_saved:["Draft saved %1 (this device).","Borrador guardado %1 (este dispositivo)."],
   copy_sheet:["Copy for spreadsheet","Copiar para la hoja"],
-  submit:["Submit Friday report","Enviar reporte del viernes"],
+  submit:["Submit weekly report","Enviar reporte semanal"],
   submitting:["Submitting…","Enviando…"],
   pick_first:["Pick your name in the sidebar first.","Primero elige tu nombre en la barra lateral."],
   add_first:["Add at least one work item or a note first.","Agrega al menos una tarea o una nota primero."],
@@ -728,7 +728,7 @@ const I18N = {
   lastweek_head:["Your report last week (%1):","Tu reporte de la semana pasada (%1):"],
   lastweek_none:["No report on file for you last week (%1).","No hay reporte tuyo de la semana pasada (%1)."],
   hist_title:["Shop history","Historial del taller"],
-  hist_sub:["%1 Friday reports from %2 technicians, %3–%4.","%1 reportes del viernes de %2 técnicos, %3–%4."],
+  hist_sub:["%1 weekly reports from %2 technicians, %3–%4.","%1 reportes semanales de %2 técnicos, %3–%4."],
   q_ph:["Search pianos, serials, technicians, work — e.g. “Cable-Nelson 139681” or “restringing”","Busca pianos, series, técnicos, trabajo — p. ej. “Cable-Nelson 139681” o “restringing”"],
   all_techs:["All technicians","Todos los técnicos"],
   all_years:["All years","Todos los años"],
