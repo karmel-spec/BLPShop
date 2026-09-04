@@ -183,7 +183,7 @@
   .ptnotes textarea::placeholder{color:#b6afa2;font-style:italic}
   .ptnotes .ntag{font-size:9px;letter-spacing:1.4px;color:#a49d90;text-transform:uppercase;padding:7px 11px 0}
   .adjustbar{display:flex;gap:12px;align-items:flex-start;background:#f7f5f0;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:4px 0 14px}
-  .adjustbar textarea{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:12.5px/1.5 inherit;min-height:52px;resize:vertical}
+  .adjustbar textarea{flex:1;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font:12.5px/1.5 inherit;min-height:86px;resize:vertical}
   .adjustbar .abtn{background:var(--red);color:#fff;border:0;border-radius:8px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap}
   .adjustbar .abtn[disabled]{background:#b9b2a4;cursor:default}
   .adjustout{border-radius:8px;padding:10px 13px;font-size:12.5px;margin:0 0 14px;display:none}
@@ -1454,6 +1454,14 @@ async function loadProposal(box){
       </div>
       <div class="adjustout" id="adjOut"></div>
       <div class="adjhist" id="adjHist" hidden></div>
+      ${(plan.bottlenecks||[]).length?`<div class="bnhead" style="margin-top:8px;padding-top:0;border-top:none"><h4>🛎 Manager Clarification Needed — answer these FIRST</h4>
+        <div class="bnsub">Answer any of these in its box — Claude will make the Store Map / schedule updates, clear the resolved items, and remember any standing rules. The week plan below assumes these answers.</div></div>`:""}
+      <div class="propboxes">${(plan.bottlenecks||[]).map((bn,i)=>
+        `<div class="propbn" data-bi="${i}"><b>⚠ ${esc(bn[0])}</b>${esc(bn[1])}
+           <textarea class="bnanswer" data-title="${esc(bn[0])}" data-body="${esc(bn[1])}"
+             placeholder="Your answer / clarification for Claude… ('put it in spot 84', 'yes it spans both', 'the serial is actually …')"></textarea></div>`).join("")}</div>
+      ${(plan.bottlenecks||[]).length?`<div class="bnbar"><button class="abtn" id="bnApply">🪄 Send answers to Claude</button></div>
+      <div class="adjustout" id="bnOut"></div>`:""}
       ${(plan.techs||[]).map(tc=>`<div class="proptech">
         <h5>${esc(tc.name)} <small>${esc(tc.hours||"")}</small><small style="margin-left:auto">${esc(tc.who||"")}</small></h5>
         <div class="ptflex"><div class="ptmain">
@@ -1469,14 +1477,6 @@ async function loadProposal(box){
         <textarea data-tech="${esc(tc.name)}" placeholder="Adjustments for ${esc(tc.name)}'s week… ('swap Tue/Wed', 'he's out Thursday', 'rule: never schedule him on QC')"></textarea>
         </aside></div>
       </div>`).join("")}
-      ${(plan.bottlenecks||[]).length?`<div class="bnhead"><h4>🛎 Manager Clarification Needed</h4>
-        <div class="bnsub">Answer any of these in its box — Claude will make the Store Map / schedule updates, clear the resolved items, and remember any standing rules.</div></div>`:""}
-      <div class="propboxes">${(plan.bottlenecks||[]).map((bn,i)=>
-        `<div class="propbn" data-bi="${i}"><b>⚠ ${esc(bn[0])}</b>${esc(bn[1])}
-           <textarea class="bnanswer" data-title="${esc(bn[0])}" data-body="${esc(bn[1])}"
-             placeholder="Your answer / clarification for Claude… ('put it in spot 84', 'yes it spans both', 'the serial is actually …')"></textarea></div>`).join("")}</div>
-      ${(plan.bottlenecks||[]).length?`<div class="bnbar"><button class="abtn" id="bnApply">🪄 Send answers to Claude</button></div>
-      <div class="adjustout" id="bnOut"></div>`:""}
     </div>
     <div id="applyOut"></div>
   </div>`;
