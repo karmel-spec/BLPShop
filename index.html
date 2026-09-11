@@ -1773,7 +1773,11 @@ function renderAll(){
   $("#dataStamp").textContent=t("stamp",DATA.entries.length.toLocaleString(),new Date().getFullYear())+(DATA.live?t("stamp_live"):t("stamp_snap",DATA.generated||""));
 }
 
-const weekEntries=(fISO)=>DATA.entries.filter(e=>e.date===fISO);
+// week headers drift between Thursday (report due date) and Friday labels —
+// compare by WEEK (Monday key), never the exact day (9/11/26 lesson)
+const weekKeyOf=(isoD)=>{ if(!isoD)return null; const d=new Date(isoD+"T12:00:00"); if(isNaN(d))return null;
+  d.setDate(d.getDate()-((d.getDay()+6)%7)); return iso(d); };
+const weekEntries=(fISO)=>{ const wk=weekKeyOf(fISO); return DATA.entries.filter(e=>weekKeyOf(e.date)===wk); };
 
 function complianceHTML(){
   const fri=reportFriday();

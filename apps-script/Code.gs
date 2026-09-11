@@ -55,11 +55,15 @@ function submitReport(tech, dateISO, text) {
   var sheet = findYearSheet_(ss, year);
   if (!sheet) throw new Error("no tab found for year " + year);
 
-  // find the date column on row 1
+  // find the week's column on row 1 — match by WEEK, not exact date: the
+  // sheet's headers drift between Thursday (report due date) and Friday
+  // labels, and an exact match once stranded a report in a brand-new
+  // far-right "9/11/26" column while the week's header read "9/10/26"
   var header = sheet.getRange(1, 1, 1, Math.max(sheet.getLastColumn(), 2)).getDisplayValues()[0];
+  var target = weekKey_(label);
   var col = -1;
   for (var c = 1; c < header.length; c++) {
-    if (normDate_(header[c]) === normDate_(label)) { col = c + 1; break; }
+    if (weekKey_(header[c]) !== null && weekKey_(header[c]) === target) { col = c + 1; break; }
   }
   if (col === -1) { col = header.length + 1; sheet.getRange(1, col).setValue(label); }
 
@@ -191,4 +195,13 @@ function normDate_(s) {
   if (!m) return null;
   var y = m[3].length === 2 ? "20" + m[3] : m[3];
   return Number(m[1]) + "/" + Number(m[2]) + "/" + y;
+}
+// M/D/YY(YY) -> that week's Monday as "yyyy-m-d" (null for non-dates)
+function weekKey_(s) {
+  var m = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/.exec(String(s || "").trim());
+  if (!m) return null;
+  var y = m[3].length === 2 ? "20" + m[3] : m[3];
+  var d = new Date(Number(y), Number(m[1]) - 1, Number(m[2]), 12);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return d.getFullYear() + "-" + (d.getMonth() + 1) + "-" + d.getDate();
 }
