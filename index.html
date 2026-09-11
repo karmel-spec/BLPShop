@@ -1782,7 +1782,7 @@ const weekEntries=(fISO)=>{ const wk=weekKeyOf(fISO); return DATA.entries.filter
 function complianceHTML(){
   const fri=reportFriday();
   const weeks=[]; for(let i=0;i<12;i++){ const d=new Date(fri); d.setDate(d.getDate()-7*i); weeks.push(iso(d)); }
-  return ROSTER.map(t=>({t,n:weeks.filter(w=>DATA.entries.some(e=>e.tech===t&&e.date===w)).length}))
+  return ROSTER.map(t=>({t,n:weeks.filter(w=>DATA.entries.some(e=>e.tech===t&&weekKeyOf(e.date)===weekKeyOf(w))).length}))
     .sort((a,b)=>b.n-a.n)
     .map(c=>`<div class="brow"><span>${esc(c.t)}</span><div class="btrack"><i class="bfill ${c.n<6?"hot":""}" style="width:${Math.round(c.n/12*100)}%"></i></div><b class="num">${c.n}/12</b></div>`).join("");
 }
@@ -1815,7 +1815,7 @@ function seedItems(){
   const seededKey=itemsKey()+".seeded";
   if(localStorage.getItem(seededKey)) return;
   const prev=new Date(thisFriday()); prev.setDate(prev.getDate()-7);
-  const last=DATA.entries.find(e=>e.tech===ME&&e.date===iso(prev));
+  const last=DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(prev)));
   const items=getItems();
   if(last){
     carryLines(last.text).slice(0,6).forEach(line=>{
@@ -1901,12 +1901,12 @@ function renderReportForm(){
   renderWorkItems();
 
   const prev=new Date(fri); prev.setDate(prev.getDate()-7);
-  const last=DATA.entries.find(e=>e.tech===ME&&e.date===iso(prev));
+  const last=DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(prev)));
   $("#lastWeekBox").innerHTML=last
     ? `<b>${t("lastweek_head",fmtShort(last.date))}</b> “${esc(last.text.slice(0,400))}${last.text.length>400?"…":""}”`
     : (ME?`<b>${t("lastweek_none",fmtShort(iso(prev)))}</b>`:"");
 
-  const already=DATA.entries.find(e=>e.tech===ME&&e.date===iso(fri));
+  const already=DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(fri)));
   $("#submitNotice").innerHTML=already
     ? `<div class="notice ok">${t("already",fmtShort(iso(fri)))}</div>`
     : (CONFIG.APPS_SCRIPT_URL?"":`<div class="notice">Direct submission isn't wired up yet — an admin deploys <code>shop-reports-apps-script.gs</code> and pastes its URL into <code>CONFIG.APPS_SCRIPT_URL</code> (see <code>docs/shop-reports-setup.md</code>). Until then use <b>Copy for spreadsheet</b>.</div>`);
@@ -2212,7 +2212,7 @@ async function loadCalendars(){
     const blocks=await Promise.all(techCals.map(async({tech,cal})=>{
       const out=await gcal(`calendars/${encodeURIComponent(cal.id)}/events?singleEvents=true&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}`);
       const evs=(out.items||[]).filter(e=>e.status!=="cancelled");
-      const rep=(DATA.entries.find(x=>x.tech===tech&&x.date===friISO)||{}).text||"";
+      const rep=(DATA.entries.find(x=>x.tech===tech&&weekKeyOf(x.date)===weekKeyOf(friISO))||{}).text||"";
       return `<div class="card" style="margin-top:14px">
         <h4>${esc(tech)} <span class="lite">${evs.length} assignment${evs.length===1?"":"s"} · ${rep?"report in":"no report yet"}</span></h4>
         ${evs.length?evs.map(e=>evRow(e,rep)).join(""):`<div style="padding:12px 16px;color:var(--mut2);font-size:13px">Nothing on the calendar this week.</div>`}
@@ -2225,7 +2225,7 @@ async function loadCalendars(){
     $("#calBody").style.display="";
     const out=await gcal(`calendars/primary/events?singleEvents=true&orderBy=startTime&timeMin=${timeMin}&timeMax=${timeMax}`);
     const evs=(out.items||[]).filter(e=>e.status!=="cancelled");
-    const myText=(DATA.entries.find(e=>e.tech===ME&&e.date===iso(fri))||{}).text||composeText();
+    const myText=(DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(fri)))||{}).text||composeText();
     $("#calEvents").innerHTML=evs.length?evs.map(e=>evRow(e,myText)).join(""):`<div style="padding:14px 16px;color:var(--mut);font-size:13.5px">No events on your calendar this week.</div>`;
     $("#calNotice").innerHTML=`<div class="notice ok">Connected — showing your primary calendar. (Owner accounts with technician calendars shared see the whole team here.)</div>`;
   }
@@ -2240,7 +2240,7 @@ function evRow(e,reportText){
 }
 function renderCalReport(){
   const fri=thisFriday();
-  const mine=DATA.entries.find(e=>e.tech===ME&&e.date===iso(fri));
+  const mine=DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(fri)));
   $("#calReport").textContent=mine?mine.text:(ME?(composeText()?"Draft: "+composeText():"No report yet for this week."):"Select your name in the sidebar.");
 }
 

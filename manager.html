@@ -1303,7 +1303,7 @@ const weekEntries=isoD=>{ const wk=weekKeyOf(isoD); return REPORTS.entries.filte
 function fmtLong(d){ return d.toLocaleDateString(LANG==="es"?"es-MX":"en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
 function complianceHTML(){
   const weeks=[]; for(let i=0;i<12;i++){ const d=new Date(FRI); d.setDate(d.getDate()-7*i); weeks.push(iso(d)); }
-  return ROSTER.map(tc=>({tc,n:weeks.filter(w=>REPORTS.entries.some(e=>e.tech===tc&&e.date===w)).length}))
+  return ROSTER.map(tc=>({tc,n:weeks.filter(w=>REPORTS.entries.some(e=>e.tech===tc&&weekKeyOf(e.date)===weekKeyOf(w))).length}))
     .sort((a,b)=>b.n-a.n)
     .map(c=>`<div class="brow"><span>${esc(c.tc)}</span><div class="btrack"><i class="bfill ${c.n<6?"hot":""}" style="width:${Math.round(c.n/12*100)}%"></i></div><b class="num">${c.n}/12</b></div>`).join("");
 }
