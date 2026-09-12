@@ -323,6 +323,8 @@
   .rqst.on.sLive{background:#eaf2fd;border-color:#8db4e0;color:#2c5d96}
   .rqst.on.sTested{background:#eaf5ec;border-color:#7fbb8c;color:#2f7d4f}
   .rqst.on.sTexted{background:#f5eefd;border-color:#b394d9;color:#6a3aa0}
+  .rqst.on.sDuplicate{background:#f1f3f5;border-color:#c5ccd3;color:#5a636b}
+  .rqst.on.sDeclined{background:#fdecec;border-color:#e6a5a5;color:#8a1b1b}
   .rqres{border-color:#7fbb8c;color:#2f7d4f}
   .rqsmsbox{margin-top:10px;padding:10px;border:1px dashed var(--line);border-radius:9px;background:#fbfaf8}
   .rqpresets{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:7px}
@@ -1739,7 +1741,7 @@ let RQ={rows:null,loading:false,f:{type:"",status:"",who:"",q:""}};
 // they're marked, same as Archived (Brigham 9/1). Closed items stay
 // reachable through the status dropdown, and a text search digs through
 // closed history too. "Texted for info" = open, waiting on the requester.
-const rqClosed=x=>x.status==="Tested"||x.status==="Archived"||x.status==="Resolved";
+const rqClosed=x=>x.status==="Tested"||x.status==="Archived"||x.status==="Resolved"||x.status==="Duplicate"||x.status==="Declined";
 function rqFiltered(){
   const f=RQ.f;
   return (RQ.rows||[]).filter(x=>
@@ -1829,12 +1831,12 @@ async function rqSetStatus(id,status,btn){
 function renderRequests(){
   const v=$("#view-requests"); if(!v) return;
   if(ACTIVE==="requests"&&RQ.rows===null&&!RQ.loading) rqFetch();
-  const STAT=["Requested","In progress","Live","Tested"];
+  const STAT=["Requested","In progress","Live","Tested","Duplicate"];   // Duplicate = same ask already filed (Brigham 9/11)
   const ICONS={bug:"🐛",edit:"✏️",idea:"💡"};
   const all=RQ.rows||[];
   const whos=[...new Set(all.map(x=>x.who).filter(Boolean))].sort();
   const types=[...new Set(all.map(x=>x.type).filter(Boolean))].sort();
-  const STATS=["Requested","In progress","Texted for info","Live","Tested","Resolved","Archived"];
+  const STATS=["Requested","In progress","Texted for info","Live","Tested","Resolved","Archived","Declined","Duplicate"];
   const f=RQ.f;
   const rows=rqFiltered();
   const nOpen=all.filter(x=>!rqClosed(x)).length;
