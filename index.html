@@ -138,7 +138,17 @@
 
   .item{display:grid;grid-template-columns:minmax(150px,1fr) 214px 230px minmax(200px,1.6fr) 30px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)}
   .item input[type=number][data-act=days]{width:100%;min-width:200px}   /* outranks the 80px number-input rule below */
-  @media (max-width:900px){.item{grid-template-columns:1fr 1fr;row-gap:8px}}
+  /* phones (Mark 9/24, 092426hales44): the status pill was squeezed into a half-width
+     column and "Continue next week" ran off the edge — stack the row instead:
+     piano + ✕ on the first line, then the full-width pill, the day estimate, the notes */
+  @media (max-width:900px){
+    .item{grid-template-columns:1fr 30px;row-gap:8px}
+    .item .del{grid-row:1;grid-column:2}
+    .item .seg,.item input[data-act=days],.item input[type=text]{grid-column:1/-1}
+    .item .seg{display:flex;width:100%}
+    .item .seg button{flex:1;padding:9px 8px;white-space:normal;line-height:1.2}
+    .item > span:empty{display:none}
+  }
   .item .plabel{font-weight:700;font-size:13.5px;font-family:Georgia,serif}
   .item input[type=number]{border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:80px;font-size:13px}
   .item input[type=text]{border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%;font-size:13px}
