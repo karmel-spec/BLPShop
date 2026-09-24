@@ -1660,7 +1660,11 @@ function googleLogin(silent){
   const state=rnd(), nonce=rnd();
   localStorage.setItem("blp.oauth.state",state);
   localStorage.setItem("blp.oauth.nonce",nonce);
-  localStorage.setItem("blp.oauth.return",location.pathname.split("/").pop()||"index.html");
+  // keep the deep link: the Store Map's Weekly Report tile opens #report, and
+  // dropping the hash here sent people back to the default Calendars view
+  // ("Assigned vs. reported") after sign-in with no idea where the report was
+  // (Walter 9/24)
+  localStorage.setItem("blp.oauth.return",(location.pathname.split("/").pop()||"index.html")+(location.hash&&location.hash!=="#signin"?location.hash:""));
   const p=new URLSearchParams({
     client_id:OAUTH_CLIENT,
     redirect_uri:location.origin+"/auth.html",
@@ -1697,6 +1701,18 @@ function rosterSelectHTML(label){
   return `<label for="whoSelect">${label}</label>
     <select id="whoSelect"><option value="">${t("who_pick")}</option>
     ${ROSTER.map(t=>`<option${t===ME?" selected":""}>${esc(t)}</option>`).join("")}</select>`;
+}
+// Inline name picker (Walter 9/24): on a phone the sidebar is behind ☰, so
+// "pick your name in the sidebar" stranded anyone whose Google account did not
+// match a roster name. Same roster, same ME, just reachable where they are.
+function inlineWhoHTML(){
+  return `<span class="inlinewho" style="display:inline-flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--mut)">${t("who_which")}
+    <select class="whoInline">${`<option value="">${t("who_pick")}</option>`+ROSTER.map(n=>`<option${n===ME?" selected":""}>${esc(n)}</option>`).join("")}</select></span>`;
+}
+function wireInlineWho(root){
+  (root||document).querySelectorAll("select.whoInline").forEach(sel=>{
+    sel.onchange=()=>{ ME=sel.value; localStorage.setItem("blp-shop-reports.me",ME); renderAll(); };
+  });
 }
 function renderWho(){
   const area=$("#whoArea");
@@ -1884,8 +1900,9 @@ function renderReportForm(){
       <span class="chip${inItems.has(p.label)?" on":""}">
         <button data-piano="${esc(p.label)}" title="${t("chip_add_title")}">${inItems.has(p.label)?"✓ ":"+ "}${esc(p.label)}</button>
         <a href="${CONFIG.PIANOLOG_URL}?q=${encodeURIComponent(p.serial||p.label)}" target="_blank" rel="noreferrer" title="Piano Log ↗">↗</a>
-      </span>`).join(""):`<span style="color:var(--mut);font-size:13px">${t("pick_first")}</span>`)
+      </span>`).join(""):inlineWhoHTML())
     + (ME?`<span class="chip add"><input id="newPiano" placeholder="${t("add_piano_ph")}"><button onclick="addPianoFromInput()">${t("add_btn")}</button></span>`:"");
+  wireInlineWho($("#pianoChips"));
   document.querySelectorAll("#pianoChips button[data-piano]").forEach(b=>{
     b.onclick=()=>{
       const label=b.dataset.piano; const items=getItems();
@@ -1970,7 +1987,7 @@ $("#copyBtn").onclick=async()=>{
 };
 $("#submitBtn").onclick=async()=>{
   const text=composeText().trim();
-  if(!ME){ $("#submitNotice").innerHTML=`<div class="notice err">${t("pick_first")}</div>`; return; }
+  if(!ME){ $("#submitNotice").innerHTML=`<div class="notice err">${t("pick_first")} ${inlineWhoHTML()}</div>`; wireInlineWho($("#submitNotice")); return; }
   if(!text){ $("#submitNotice").innerHTML=`<div class="notice err">${t("add_first")}</div>`; return; }
   if(!CONFIG.APPS_SCRIPT_URL){
     $("#submitNotice").innerHTML=`<div class="notice">Submission endpoint not configured yet — use <b>Copy for spreadsheet</b> and paste into your ${fmtShort(iso(thisFriday()))} cell on the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">sheet</a>.</div>`;
@@ -2241,7 +2258,8 @@ function evRow(e,reportText){
 function renderCalReport(){
   const fri=thisFriday();
   const mine=DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(fri)));
-  $("#calReport").textContent=mine?mine.text:(ME?(composeText()?"Draft: "+composeText():"No report yet for this week."):"Select your name in the sidebar.");
+  if(!ME){ $("#calReport").innerHTML=inlineWhoHTML(); wireInlineWho($("#calReport")); return; }
+  $("#calReport").textContent=mine?mine.text:(composeText()?"Draft: "+composeText():"No report yet for this week.");
 }
 
 /* entry: Google session or temporary password → in; unauthorized Google
