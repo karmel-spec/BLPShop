@@ -136,7 +136,8 @@
   .chip.add{border-style:dashed;color:var(--red);font-weight:700}
   .chip input{border:0;outline:none;width:150px;font-size:13px}
 
-  .item{display:grid;grid-template-columns:minmax(150px,1fr) 86px 176px minmax(200px,1.6fr) 30px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)}
+  .item{display:grid;grid-template-columns:minmax(150px,1fr) 214px 190px minmax(200px,1.6fr) 30px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)}
+  .item input[data-act=days]{width:100%}
   @media (max-width:900px){.item{grid-template-columns:1fr 1fr;row-gap:8px}}
   .item .plabel{font-weight:700;font-size:13.5px;font-family:Georgia,serif}
   .item input[type=number]{border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:80px;font-size:13px}
@@ -689,7 +690,7 @@ const I18N = {
   st_todo:["Not started","Sin empezar"],
   st_part:["Partly done","A medias"],
   st_done:["Done","Terminado"],
-  st_carry:["Carry over","Pendiente"],
+  st_carry:["Continue next week","Continuar la próxima semana"],
   src_added_week:["added this week","agregado esta semana"],
   src_by_hand:["added by hand","agregado a mano"],
   src_carried:["carried from last week","traído de la semana pasada"],
@@ -704,7 +705,7 @@ const I18N = {
   report_sub:["Week of %1 – %2 · goes into the <a href=\"%3\" target=\"_blank\" rel=\"noreferrer\">report spreadsheet</a>","Semana del %1 – %2 · va a la <a href=\"%3\" target=\"_blank\" rel=\"noreferrer\">hoja de reportes</a>"],
   ph_pianos:["Which pianos did you work on this week?","¿En qué pianos trabajaste esta semana?"],
   ph_pianos_hint:["click ↗ to open in the Piano Log","toca ↗ para abrirlo en el Piano Log"],
-  ph_items:["Work items — mark each Completed or Carry over, add notes & hours","Tareas — marca cada una Terminado o Pendiente, agrega notas y horas"],
+  ph_items:["Work items — mark each Completed or Continue next week, add notes","Tareas — marca cada una Terminado o Continuar la próxima semana, agrega notas"],
   ph_notes:["Anything else? (general notes)","¿Algo más? (notas generales)"],
   ph_sheet:["This is what goes on the sheet","Esto es lo que va a la hoja"],
   extra_ph:["Anything not tied to one piano — shop help, blockers, parts to order…","Lo que no sea de un piano en particular — ayuda en el taller, bloqueos, piezas por pedir…"],
@@ -721,9 +722,10 @@ const I18N = {
   add_piano_ph:["+ add piano (make + serial)","+ agregar piano (marca + serie)"],
   add_btn:["Add","Agregar"],
   chip_add_title:["Add to this week's work items","Agregar a las tareas de esta semana"],
-  items_count:["%1 item%2 · %3 hrs total","%1 tarea%2 · %3 hrs en total"],
+  items_count:["%1 item%2","%1 tarea%2"],
   done_btn:["✓ Completed","✓ Terminado"],
-  carry_btn:["⟳ Carry over","⟳ Pendiente"],
+  carry_btn:["⟳ Continue next week","⟳ Continuar la próxima semana"],
+  days_ph:["How many days to finish?","¿Cuántos días para terminar?"],
   notes_ph:["notes — what happened, what's left…","notas — qué se hizo, qué falta…"],
   no_items:["No work items yet — click a piano chip above or “+ add piano”.","Aún no hay tareas — toca un piano arriba o “+ agregar piano”."],
   chars:["%1 characters","%1 caracteres"],
@@ -1940,15 +1942,15 @@ function addPianoFromInput(){
 
 function renderWorkItems(){
   const items=getItems();
-  $("#itemCount").textContent=items.length?t("items_count",items.length,items.length===1?"":"s",items.reduce((s,i)=>s+(parseFloat(i.hours)||0),0)):"";
+  $("#itemCount").textContent=items.length?t("items_count",items.length,items.length===1?"":"s"):"";
   $("#workItems").innerHTML=items.length?items.map(it=>`
     <div class="item" data-id="${it.id}">
       <span class="plabel">${esc(it.piano)}</span>
-      <input type="number" min="0" step="0.5" placeholder="hrs" value="${esc(it.hours||"")}" data-act="hours" aria-label="hours on ${esc(it.piano)}">
       <span class="seg">
         <button class="done${it.status==="done"?" on":""}" data-act="done">${t("done_btn")}</button>
         <button class="carry${it.status!=="done"?" on":""}" data-act="carry">${t("carry_btn")}</button>
       </span>
+      ${it.status==="done"?`<span></span>`:`<input type="number" min="0" step="1" placeholder="${t("days_ph")}" value="${esc(it.days||"")}" data-act="days" aria-label="${t("days_ph")} — ${esc(it.piano)}">`}
       <input type="text" placeholder="${t("notes_ph")}" value="${esc(it.notes||"")}" data-act="notes">
       <button class="del" data-act="del" title="✕">✕</button>
     </div>`).join("")
@@ -1956,7 +1958,7 @@ function renderWorkItems(){
   document.querySelectorAll("#workItems .item").forEach(rowEl=>{
     const id=rowEl.dataset.id;
     const update=(fn)=>{ const items=getItems(); const it=items.find(x=>String(x.id)===id); if(it){ fn(it); localStorage.setItem(itemsKey(),JSON.stringify(items)); markSaved(); renderMyWeek(); updatePreview(); } };
-    rowEl.querySelector('[data-act=hours]').oninput=(e)=>update(it=>it.hours=e.target.value);
+    const dz=rowEl.querySelector('[data-act=days]'); if(dz) dz.oninput=(e)=>update(it=>it.days=e.target.value);
     rowEl.querySelector('[data-act=notes]').oninput=(e)=>update(it=>it.notes=e.target.value);
     rowEl.querySelector('[data-act=done]').onclick=()=>{ update(it=>it.status="done"); renderWorkItems(); };
     rowEl.querySelector('[data-act=carry]').onclick=()=>{ update(it=>it.status="carry"); renderWorkItems(); };
@@ -1968,9 +1970,9 @@ function renderWorkItems(){
 function composeText(){
   const items=getItems();
   const lines=items.map(it=>{
-    const hrs=parseFloat(it.hours)?` — ${parseFloat(it.hours)} hrs`:"";
-    const st=it.status==="done"?"DONE":it.status==="part"?"PARTLY DONE":it.status==="carry"?"CARRY OVER to next week":"NOT STARTED";
-    return `${it.piano}${hrs} — ${st}${it.notes?` — ${it.notes}`:""}`;
+    const days=it.status!=="done"&&parseFloat(it.days)>=0&&it.days!==""?` (${parseFloat(it.days)} day${parseFloat(it.days)===1?"":"s"} to finish)`:"";
+    const st=it.status==="done"?"DONE":it.status==="part"?"PARTLY DONE":it.status==="carry"?"CONTINUE NEXT WEEK":"NOT STARTED";
+    return `${it.piano} — ${st}${days}${it.notes?` — ${it.notes}`:""}`;
   });
   const extra=($("#extraNotes").value||"").trim();
   return [lines.join("\n"),extra].filter(Boolean).join("\n\n");
