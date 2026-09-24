@@ -380,7 +380,9 @@
           <div class="foot">
             <span class="save" id="draftStatus" data-i18n="draft_note">Draft saves automatically on this device.</span>
             <span style="display:flex;gap:10px">
-              <button class="btn2" id="copyBtn" data-i18n="copy_sheet">Copy for spreadsheet</button>
+              <!-- fallback only (Walter 9/24): shown when a submission fails, so nobody thinks
+                   the report has to go in twice — Submit is the one and only normal path -->
+              <button class="btn2" id="copyBtn" data-i18n="copy_sheet" hidden>Copy for spreadsheet</button>
               <button class="btn" id="submitBtn" data-i18n="submit">Submit weekly report</button>
             </span>
           </div>
@@ -1990,6 +1992,7 @@ $("#submitBtn").onclick=async()=>{
   if(!ME){ $("#submitNotice").innerHTML=`<div class="notice err">${t("pick_first")} ${inlineWhoHTML()}</div>`; wireInlineWho($("#submitNotice")); return; }
   if(!text){ $("#submitNotice").innerHTML=`<div class="notice err">${t("add_first")}</div>`; return; }
   if(!CONFIG.APPS_SCRIPT_URL){
+    $("#copyBtn").hidden=false;
     $("#submitNotice").innerHTML=`<div class="notice">Submission endpoint not configured yet — use <b>Copy for spreadsheet</b> and paste into your ${fmtShort(iso(thisFriday()))} cell on the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">sheet</a>.</div>`;
     return;
   }
@@ -1999,9 +2002,11 @@ $("#submitBtn").onclick=async()=>{
       body:JSON.stringify({action:"submit",tech:ME,date:iso(thisFriday()),text})});
     const out=await r.json();
     if(!out.ok) throw new Error(out.error||"unknown error");
+    $("#copyBtn").hidden=true;
     $("#submitNotice").innerHTML=`<div class="notice ok">${t("submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
     DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
   }catch(e){
+    $("#copyBtn").hidden=false;   // the fallback appears only now, next to the error that explains it
     $("#submitNotice").innerHTML=`<div class="notice err">${t("submit_fail",esc(String(e.message||e)))}</div>`;
   }
   btn.disabled=false; btn.textContent=t("submit");
