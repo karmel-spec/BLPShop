@@ -137,7 +137,7 @@
   .chip input{border:0;outline:none;width:150px;font-size:13px}
 
   .item{display:grid;grid-template-columns:minmax(150px,1fr) 214px 230px minmax(200px,1.6fr) 30px;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line-soft)}
-  .item input[data-act=days]{width:100%}
+  .item input[type=number][data-act=days]{width:100%;min-width:200px}   /* outranks the 80px number-input rule below */
   @media (max-width:900px){.item{grid-template-columns:1fr 1fr;row-gap:8px}}
   .item .plabel{font-weight:700;font-size:13.5px;font-family:Georgia,serif}
   .item input[type=number]{border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:80px;font-size:13px}
