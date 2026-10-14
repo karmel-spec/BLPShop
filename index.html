@@ -570,7 +570,9 @@ const CONFIG = {
   PLATING_SHEET_URL: "https://docs.google.com/spreadsheets/d/1lIGUxeI-Em3CxhBTSHTrlVM7VFTgjwFCzNxFZNwPTWE/edit",
   PIANO_TASKS_API: "https://blpsalesapp.netlify.app/.netlify/functions/piano-tasks",  // per-piano concurrent-task stamps (shared with Store Map)
   CLEANING_API: "https://blpsalesapp.netlify.app/.netlify/functions/cleaning",        // Friday cleaning cards + log
-  WHITEBOARD_API: "https://blpsalesapp.netlify.app/.netlify/functions/whiteboard",     // parts/supplies/tools request board
+  WHITEBOARD_API: "https://blpsalesapp.netlify.app/.netlify/functions/whiteboard",
+  // weekly-report submit (Avery 10/9, 100926moore06): week matched by week, a resend is a no-op
+  REPORT_API: "https://blpsalesapp.netlify.app/.netlify/functions/weekly-report",     // parts/supplies/tools request board
   ACTIVE_WEEKS: 8,
   SHEET_URL: "https://docs.google.com/spreadsheets/d/11RoeVRETag5rZYX6_tEH-rf6x8JL0JeZU0P5AT0WI-I/edit"
 };
@@ -728,7 +730,9 @@ const I18N = {
   add_first:["Add at least one work item or a note first.","Agrega al menos una tarea o una nota primero."],
   submitted_ok:["<b>Submitted.</b> Your report is on the sheet in the %1 column.","<b>Enviado.</b> Tu reporte está en la hoja, en la columna %1."],
   submit_fail:["Submission failed (%1). Your draft is safe on this device — use <b>Copy for spreadsheet</b> as a fallback.","No se pudo enviar (%1). Tu borrador está a salvo en este dispositivo — usa <b>Copiar para la hoja</b> como alternativa."],
-  already:["A report from you is already on the sheet for %1. Submitting again will <b>append</b>, not overwrite.","Ya hay un reporte tuyo en la hoja para %1. Enviar otra vez <b>agrega</b>, no reemplaza."],
+  already:["A report from you is already on the sheet for %1. Submitting again <b>adds</b> anything new below it; the same report is never added twice.","Ya hay un reporte tuyo en la hoja para %1. Enviar otra vez <b>agrega</b> lo nuevo debajo; el mismo reporte nunca se agrega dos veces."],
+  submitted_dup:["Already on the sheet for %1 — nothing was added twice.","Ya está en la hoja para %1 — no se agregó dos veces."],
+  submit_slow:["The sheet is slow to answer. Your report may already be in — press Submit again; it will not be added twice.","La hoja tarda en responder. Tu reporte puede que ya esté — presiona Enviar otra vez; no se agregará dos veces."],
   add_piano_ph:["+ add piano (make + serial)","+ agregar piano (marca + serie)"],
   add_btn:["Add","Agregar"],
   chip_add_title:["Add to this week's work items","Agregar a las tareas de esta semana"],
@@ -1819,6 +1823,16 @@ function complianceHTML(){
 
 /* ---------- carry-over + hours parsing ---------- */
 const CARRY_RE=/carry\s*over|carried\s*over|next week|didn'?t (get|finish)|not (done|finished|complete)|waiting (on|for)|still (need|working)|unfinished|in progress/i;
+// last week's line already reads "Kimball 85614 — CONTINUE NEXT WEEK — notes";
+// composeText adds that prefix again, so it stacked one more time every week
+// (Avery's 10/9 report). Strip every leading "<piano> — STATUS — " copy.
+function stripStatusPrefix(line){
+  const re=/^[^—\n]{1,80}?\s+—\s+(?:DONE|PARTLY DONE|CONTINUE NEXT WEEK|NOT STARTED)(?:\s*\(\d+(?:\.\d+)?\s+days?\s+to\s+finish\))?\s+—\s+/;
+  let s=String(line||"").trim(), prev;
+  do{ prev=s; s=s.replace(re,"").trim(); }while(s!==prev);
+  // a bare "<piano> — " left in front of the notes
+  return s.replace(/^[A-Z][^—\n]{0,40}\d[\w-]*\s+—\s+/,"").trim()||String(line||"").trim();
+}
 function carryLines(text){
   return text.split(/\n+|(?<=\.)\s{2,}/).map(s=>s.trim()).filter(s=>s.length>8 && CARRY_RE.test(s));
 }
@@ -1850,7 +1864,7 @@ function seedItems(){
   if(last){
     carryLines(last.text).slice(0,6).forEach(line=>{
       const p=extractPianos(line)[0];
-      items.push({id:Date.now()+Math.random(),piano:p?p.label:"General",notes:line.slice(0,160),hours:"",status:"carry",src:"carried from last week"});
+      items.push({id:Date.now()+Math.random(),piano:p?p.label:"General",notes:stripStatusPrefix(line).slice(0,160),hours:"",status:"carry",src:"carried from last week"});
     });
   }
   localStorage.setItem(seededKey,"1");
@@ -2009,18 +2023,24 @@ $("#submitBtn").onclick=async()=>{
     return;
   }
   const btn=$("#submitBtn"); btn.disabled=true; btn.textContent=t("submitting");
+  // Avery 10/9 (100926moore06): a slow submit pressed again landed 3 times.
+  // The submit now goes to the sales app, which never writes the same text
+  // twice — pressing again after a slow or failed reply is always safe.
+  const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),45000);
   try{
-    const r=await fetch(CONFIG.APPS_SCRIPT_URL,{method:"POST",headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body:JSON.stringify({action:"submit",tech:ME,date:iso(thisFriday()),text})});
+    const r=await fetch(CONFIG.REPORT_API,{method:"POST",headers:shopHeaders(true),signal:ctl.signal,
+      body:shopBody({tech:ME,date:iso(thisFriday()),text})});
     const out=await r.json();
     if(!out.ok) throw new Error(out.error||"unknown error");
     $("#copyBtn").hidden=true;
-    $("#submitNotice").innerHTML=`<div class="notice ok">${t("submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
-    DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
+    $("#submitNotice").innerHTML=`<div class="notice ok">${t(out.duplicate?"submitted_dup":"submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
+    if(!out.duplicate) DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
   }catch(e){
     $("#copyBtn").hidden=false;   // the fallback appears only now, next to the error that explains it
-    $("#submitNotice").innerHTML=`<div class="notice err">${t("submit_fail",esc(String(e.message||e)))}</div>`;
+    const msg=e&&e.name==="AbortError"?t("submit_slow"):t("submit_fail",esc(String(e.message||e)));
+    $("#submitNotice").innerHTML=`<div class="notice err">${msg}</div>`;
   }
+  clearTimeout(timer);
   btn.disabled=false; btn.textContent=t("submit");
 };
 
