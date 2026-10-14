@@ -1834,6 +1834,25 @@ function stripStatusPrefix(line){
   // a bare "<piano> — " left in front of the notes
   return s.replace(/^[A-Z][^—\n]{0,40}\d[\w-]*\s+—\s+/,"").trim()||String(line||"").trim();
 }
+/* A piano the tech last reported DONE stays off their list (Walter 10/14):
+ * not carried into the next report, not offered as a quick-add chip — else
+ * months of finished pianos pile up. Keyed by serial digits; the latest
+ * report line about a piano wins, so reporting it again with another status
+ * (e.g. CONTINUE NEXT WEEK) brings it back. */
+const LINE_STATUS_RE=/^\s*[^—\n]+?\s+—\s+(DONE|PARTLY DONE|CONTINUE NEXT WEEK|NOT STARTED)\b/;
+const pianoKey=p=>p&&p.serial?String(p.serial).replace(/\D/g,"")||String(p.serial).toLowerCase():"";
+function lineStatus(line){ const m=LINE_STATUS_RE.exec(String(line||"")); return m?m[1]:""; }
+function doneKeys(tech){
+  const done=new Set();
+  DATA.entries.filter(e=>e.tech===tech&&e.date).sort((a,b)=>a.date.localeCompare(b.date)).forEach(e=>{
+    String(e.text||"").split(/\n+/).forEach(line=>{
+      const st=lineStatus(line); if(!st) return;
+      const p=extractPianos(line)[0]; const k=pianoKey(p); if(!k) return;
+      if(st==="DONE") done.add(k); else done.delete(k);
+    });
+  });
+  return done;
+}
 function carryLines(text){
   return text.split(/\n+|(?<=\.)\s{2,}/).map(s=>s.trim()).filter(s=>s.length>8 && CARRY_RE.test(s));
 }
@@ -1863,7 +1882,12 @@ function seedItems(){
   const last=DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(prev)));
   const items=getItems();
   if(last){
-    carryLines(last.text).slice(0,6).forEach(line=>{
+    const done=doneKeys(ME);
+    carryLines(last.text).filter(line=>{
+      if(lineStatus(line)==="DONE") return false;   // marked complete — never carried, whatever its notes say
+      const k=pianoKey(extractPianos(line)[0]);
+      return !(k&&done.has(k));
+    }).slice(0,6).forEach(line=>{
       const p=extractPianos(line)[0];
       items.push({id:Date.now()+Math.random(),piano:p?p.label:"General",notes:stripStatusPrefix(line),hours:"",status:"carry",src:"carried from last week"});
     });
@@ -1921,7 +1945,8 @@ function renderReportForm(){
   // piano chips: recent pianos + currently-used ones
   const mine=DATA.entries.filter(e=>e.tech===ME&&e.date).sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
   const seen=new Map();
-  mine.forEach(e=>extractPianos(e.text).forEach(p=>{ if(p.serial&&!seen.has(p.label)) seen.set(p.label,p); }));
+  const doneNow=ME?doneKeys(ME):new Set();   // finished pianos aren't offered again (Walter 10/14)
+  mine.forEach(e=>extractPianos(e.text).forEach(p=>{ if(p.serial&&!seen.has(p.label)&&!doneNow.has(pianoKey(p))) seen.set(p.label,p); }));
   const items=getItems();
   const inItems=new Set(items.map(i=>i.piano));
   const chips=[...seen.values()].slice(0,8);
