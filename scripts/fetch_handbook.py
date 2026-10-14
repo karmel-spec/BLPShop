@@ -98,11 +98,35 @@ class DocCleaner(HTMLParser):
                 self.cur["videos"] += 1
         self.pending_videos = []
 
-    def start_section(self, title):
+    def start_section(self, title, marker=False):
         m = re.match(r"(\d+[a-z]?)\.\s*(.*)", title)
         num = m.group(1) if m else ""
-        self.cur = {"num": num, "title": title, "html": [], "videos": 0}
+        self.cur = {"num": num, "title": title, "html": [], "videos": 0, "marker": marker}
         self.sections.append(self.cur)
+
+    def sub_heading(self, text):
+        if self.cur is not None and not self.skip_index:
+            self.out(f"<h3>{html.escape(text)}</h3>")
+
+    def numbered_or_sub(self, title, tag, marker=False):
+        """A numbered heading starts a section only when it is an h1, or an h2
+        whose number does not go backwards (the doc's sections ascend 1 → 16);
+        anything else — e.g. "5. Check pinning" styled as Heading 2 inside the
+        appended 3b pathway — is a subhead inside the current section."""
+        m = re.match(r"(\d+)[a-z]?\.", title)
+        if marker or (m and tag == "h1"):
+            self.skip_index = False
+            self.flush_videos()
+            self.start_section(title, marker)
+            return
+        if m and tag == "h2" and not (self.cur and self.cur.get("marker")):
+            last = re.match(r"(\d+)", (self.cur or {}).get("num", "") or "0")
+            if int(m.group(1)) >= int(last.group(1) if last else 0):
+                self.skip_index = False
+                self.flush_videos()
+                self.start_section(title)
+                return
+        self.sub_heading(title)
 
     # ---- images ----
     def handle_img(self, attrs):
@@ -187,12 +211,22 @@ class DocCleaner(HTMLParser):
             if title.lower() == "index":
                 self.skip_index = True
                 self.cur = None
-            elif re.match(r"\d+[a-z]?\.", title):
-                self.skip_index = False
-                self.flush_videos()
-                self.start_section(title)
-            elif self.cur is not None and not self.skip_index:
-                self.out(f"<h3>{html.escape(title)}</h3>")
+            else:
+                # A raw text append (gog docs write, 10/14) can glue "# 3b. …"
+                # onto the last heading and leaves "## …" / "1. …" lines styled
+                # as Heading 2. Markers: "# " = a new section, "## " = a subhead.
+                if title.startswith("## "):
+                    self.sub_heading(title[3:].strip())
+                elif title.startswith("# "):
+                    self.numbered_or_sub(re.sub(r"\s*\(added .*$", "", title[2:].strip()), tag, True)
+                elif "# " in title:
+                    before, after = title.split("# ", 1)
+                    if before.strip():
+                        self.numbered_or_sub(before.strip(), tag)
+                    if after.strip():
+                        self.numbered_or_sub(re.sub(r"\s*\(added .*$", "", after.strip()), tag, True)
+                else:
+                    self.numbered_or_sub(title, tag)
             for im in imgs:
                 self.out(im)
             return
