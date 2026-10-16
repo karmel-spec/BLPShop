@@ -731,7 +731,8 @@ const I18N = {
   add_first:["Add at least one work item or a note first.","Agrega al menos una tarea o una nota primero."],
   submitted_ok:["<b>Submitted.</b> Your report is on the sheet in the %1 column.","<b>Enviado.</b> Tu reporte está en la hoja, en la columna %1."],
   submit_fail:["Submission failed (%1). Your draft is safe on this device — use <b>Copy for spreadsheet</b> as a fallback.","No se pudo enviar (%1). Tu borrador está a salvo en este dispositivo — usa <b>Copiar para la hoja</b> como alternativa."],
-  already:["A report from you is already on the sheet for %1. Submitting again <b>adds</b> anything new below it; the same report is never added twice.","Ya hay un reporte tuyo en la hoja para %1. Enviar otra vez <b>agrega</b> lo nuevo debajo; el mismo reporte nunca se agrega dos veces."],
+  already:["A report from you is already on the sheet for %1. Submitting again from this device <b>replaces</b> it with your updated report — it is never added twice.","Ya hay un reporte tuyo en la hoja para %1. Enviar otra vez desde este dispositivo lo <b>reemplaza</b> con tu reporte actualizado — nunca se agrega dos veces."],
+  submitted_upd:["<b>Updated.</b> Your report for %1 on the sheet now shows these changes.","<b>Actualizado.</b> Tu reporte de %1 en la hoja ahora muestra estos cambios."],
   submitted_dup:["Already on the sheet for %1 — nothing was added twice.","Ya está en la hoja para %1 — no se agregó dos veces."],
   submit_slow:["The sheet is slow to answer. Your report may already be in — press Submit again; it will not be added twice.","La hoja tarda en responder. Tu reporte puede que ya esté — presiona Enviar otra vez; no se agregará dos veces."],
   add_piano_ph:["+ add piano (make + serial)","+ agregar piano (marca + serie)"],
@@ -2058,14 +2059,19 @@ $("#submitBtn").onclick=async()=>{
   // The submit now goes to the sales app, which never writes the same text
   // twice — pressing again after a slow or failed reply is always safe.
   const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),45000);
+  // a resubmit REPLACES what this device sent earlier this week (Walter 10/16 —
+  // Avery fixed one status and the cell held both versions)
+  const sentKey=`blp-shop-reports.sent.${ME}.${iso(thisFriday())}`;
+  const prevSent=localStorage.getItem(sentKey)||"";
   try{
     const r=await fetch(CONFIG.REPORT_API,{method:"POST",headers:shopHeaders(true),signal:ctl.signal,
-      body:shopBody({tech:ME,date:iso(thisFriday()),text})});
+      body:shopBody({tech:ME,date:iso(thisFriday()),text,replaces:prevSent&&prevSent!==text?prevSent:""})});
     const out=await r.json();
     if(!out.ok) throw new Error(out.error||"unknown error");
+    try{ localStorage.setItem(sentKey,text); }catch(e){}
     $("#copyBtn").hidden=true;
-    $("#submitNotice").innerHTML=`<div class="notice ok">${t(out.duplicate?"submitted_dup":"submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
-    if(!out.duplicate) DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
+    $("#submitNotice").innerHTML=`<div class="notice ok">${t(out.duplicate?"submitted_dup":out.updated?"submitted_upd":"submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
+    if(!out.duplicate&&!out.updated) DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
   }catch(e){
     $("#copyBtn").hidden=false;   // the fallback appears only now, next to the error that explains it
     const msg=e&&e.name==="AbortError"?t("submit_slow"):t("submit_fail",esc(String(e.message||e)));
