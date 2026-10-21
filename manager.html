@@ -2101,7 +2101,7 @@ function renderShopBoard(){
   // job costing aggregation — per-tech LOADED rates from the Pay Rates tab
   // when present; the blended $/h input covers anyone unlisted
   if(ACTIVE==="shopboard"&&SB.rates==null&&!SB._ratesKick){ SB._ratesKick=true; sbFetchRates(); }
-  const rateFor=t=>((SB.rates||{})[firstOf(t)])||rate;
+  const rateFor=t=>{const v=(SB.rates||{})[firstOf(t)];return v!=null?v:rate;};   // 0 = unpaid intern (Brigham 10/20); only unlisted people use the blended rate
   const usingRates=Object.keys(SB.rates||{}).length;
   let jc="";
   if(SB.loading) jc=`<div class="curmsg">Loading time log…</div>`;
