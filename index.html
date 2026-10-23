@@ -159,6 +159,8 @@
   .seg button.done.on{background:var(--good);color:#fff}
   .seg button.carry.on{background:var(--warn);color:#fff}
   .item.needpick .seg{outline:2px solid #c0392b;outline-offset:2px}
+  .item .clnudge{grid-column:1/-1;background:#fff7e0;border:1px solid #e6c860;border-radius:8px;padding:7px 10px;font-size:12.5px;color:#5c4a00}
+  .item .clnudge img{display:block;max-width:100%;margin-top:6px;border-radius:6px;border:1px solid #e4dfd5}
   textarea.extra{display:block;width:calc(100% - 32px);margin:12px 16px 14px;border:1px solid #cfc9bf;border-radius:6px;padding:12px 14px;font-size:14px;line-height:1.6;min-height:90px;resize:vertical}
   textarea.extra:focus{outline:2px solid var(--red);outline-offset:1px}
   .preview{margin:0 16px 14px;background:#faf8f4;border:1px dashed var(--line);border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#3d3a35}
@@ -742,6 +744,7 @@ const I18N = {
   items_count:["%1 item%2","%1 tarea%2"],
   done_btn:["✓ Completed","✓ Terminado"],
   carry_btn:["⟳ Continue next week","⟳ Continuar la próxima semana"],
+  cl_nudge:["Please make sure you've advanced the piano card to the next phase / mini-QC by completing the checklist.","Asegúrate de haber avanzado la tarjeta del piano a la siguiente fase / mini-QC completando la lista de verificación."],
   pick_status:["Pick ✓ Completed or ⟳ Continue next week for each piano before submitting:","Elige ✓ Terminado o ⟳ Continuar la próxima semana para cada piano antes de enviar:"],
   days_ph:["Estimate # of days","Estima # de días"],
   notes_ph:["notes — what happened, what's left…","notas — qué se hizo, qué falta…"],
@@ -1998,6 +2001,12 @@ function addPianoFromInput(){
 // so reports went in saying NOT STARTED. Neither button is lit until the tech
 // taps one, and Submit waits until every piano has a pick.
 let WR_NEEDPICK=false;
+// ✓ Completed → a reminder to advance the piano card (Mark 10/23) — only for
+// the techs listed here (first names, any case); an optional sample image of
+// the finished checklist sits under it when CL_NUDGE_IMG is set
+const CL_NUDGE_TECHS=["Curtis","Jake","McKinly","Korban","Matthew","Garrett","Jacob","Mark","Myrrhanda","Hunter","Alex","Sadie","Avery"];
+const CL_NUDGE_IMG="";
+const clNudgeOn=()=>{ const me=String((typeof ME!=="undefined"&&ME)||"").trim().split(/\s+/)[0].toLowerCase(); return !!me&&CL_NUDGE_TECHS.some(n=>n.toLowerCase()===me); };
 function renderWorkItems(){
   const items=getItems();
   $("#itemCount").textContent=items.length?t("items_count",items.length,items.length===1?"":"s"):"";
@@ -2009,6 +2018,7 @@ function renderWorkItems(){
         <button class="carry${it.status==="carry"?" on":""}" data-act="carry">${t("carry_btn")}</button>
       </span>
       ${it.status!=="carry"?`<span></span>`:`<input type="number" min="0" step="1" placeholder="${t("days_ph")}" value="${esc(it.days||"")}" data-act="days" aria-label="${t("days_ph")} — ${esc(it.piano)}">`}
+      ${it.status==="done"&&clNudgeOn()?`<div class="clnudge">${t("cl_nudge")}${CL_NUDGE_IMG?`<img src="${CL_NUDGE_IMG}" alt="">`:""}</div>`:""}
       <textarea rows="1" class="wi-notes" placeholder="${t("notes_ph")}" data-act="notes">${esc(it.notes||"")}</textarea>
       <button class="del" data-act="del" title="✕">✕</button>
     </div>`).join("")
