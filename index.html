@@ -158,6 +158,7 @@
   .seg button{background:#fff;border:0;padding:6px 11px;font-size:12px;font-weight:700;color:var(--mut)}
   .seg button.done.on{background:var(--good);color:#fff}
   .seg button.carry.on{background:var(--warn);color:#fff}
+  .item.needpick .seg{outline:2px solid #c0392b;outline-offset:2px}
   textarea.extra{display:block;width:calc(100% - 32px);margin:12px 16px 14px;border:1px solid #cfc9bf;border-radius:6px;padding:12px 14px;font-size:14px;line-height:1.6;min-height:90px;resize:vertical}
   textarea.extra:focus{outline:2px solid var(--red);outline-offset:1px}
   .preview{margin:0 16px 14px;background:#faf8f4;border:1px dashed var(--line);border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#3d3a35}
@@ -741,6 +742,7 @@ const I18N = {
   items_count:["%1 item%2","%1 tarea%2"],
   done_btn:["✓ Completed","✓ Terminado"],
   carry_btn:["⟳ Continue next week","⟳ Continuar la próxima semana"],
+  pick_status:["Pick ✓ Completed or ⟳ Continue next week for each piano before submitting:","Elige ✓ Terminado o ⟳ Continuar la próxima semana para cada piano antes de enviar:"],
   days_ph:["Estimate # of days","Estima # de días"],
   notes_ph:["notes — what happened, what's left…","notas — qué se hizo, qué falta…"],
   no_items:["No work items yet — click a piano chip above or “+ add piano”.","Aún no hay tareas — toca un piano arriba o “+ agregar piano”."],
@@ -1991,17 +1993,22 @@ function addPianoFromInput(){
   setItems(items); renderReportForm();
 }
 
+// Mark 10/23: "Continue next week" LOOKED picked on every piano (it lit up
+// whenever the item wasn't Completed) while the item was still "not started",
+// so reports went in saying NOT STARTED. Neither button is lit until the tech
+// taps one, and Submit waits until every piano has a pick.
+let WR_NEEDPICK=false;
 function renderWorkItems(){
   const items=getItems();
   $("#itemCount").textContent=items.length?t("items_count",items.length,items.length===1?"":"s"):"";
   $("#workItems").innerHTML=items.length?items.map(it=>`
-    <div class="item" data-id="${it.id}">
+    <div class="item${WR_NEEDPICK&&!["done","carry","part"].includes(it.status)?" needpick":""}" data-id="${it.id}">
       <span class="plabel">${esc(it.piano)}</span>
       <span class="seg">
         <button class="done${it.status==="done"?" on":""}" data-act="done">${t("done_btn")}</button>
-        <button class="carry${it.status!=="done"?" on":""}" data-act="carry">${t("carry_btn")}</button>
+        <button class="carry${it.status==="carry"?" on":""}" data-act="carry">${t("carry_btn")}</button>
       </span>
-      ${it.status==="done"?`<span></span>`:`<input type="number" min="0" step="1" placeholder="${t("days_ph")}" value="${esc(it.days||"")}" data-act="days" aria-label="${t("days_ph")} — ${esc(it.piano)}">`}
+      ${it.status!=="carry"?`<span></span>`:`<input type="number" min="0" step="1" placeholder="${t("days_ph")}" value="${esc(it.days||"")}" data-act="days" aria-label="${t("days_ph")} — ${esc(it.piano)}">`}
       <textarea rows="1" class="wi-notes" placeholder="${t("notes_ph")}" data-act="notes">${esc(it.notes||"")}</textarea>
       <button class="del" data-act="del" title="✕">✕</button>
     </div>`).join("")
@@ -2049,6 +2056,14 @@ $("#submitBtn").onclick=async()=>{
   const text=composeText().trim();
   if(!ME){ $("#submitNotice").innerHTML=`<div class="notice err">${t("pick_first")} ${inlineWhoHTML()}</div>`; wireInlineWho($("#submitNotice")); return; }
   if(!text){ $("#submitNotice").innerHTML=`<div class="notice err">${t("add_first")}</div>`; return; }
+  const unpicked=getItems().filter(it=>!["done","carry","part"].includes(it.status));
+  if(unpicked.length){
+    WR_NEEDPICK=true; renderWorkItems();
+    $("#submitNotice").innerHTML=`<div class="notice err">${t("pick_status")} ${unpicked.map(it=>"<b>"+esc(it.piano)+"</b>").join(", ")}</div>`;
+    const first=document.querySelector("#workItems .item.needpick"); if(first) first.scrollIntoView({behavior:"smooth",block:"center"});
+    return;
+  }
+  WR_NEEDPICK=false;
   if(!CONFIG.APPS_SCRIPT_URL){
     $("#copyBtn").hidden=false;
     $("#submitNotice").innerHTML=`<div class="notice">Submission endpoint not configured yet — use <b>Copy for spreadsheet</b> and paste into your ${fmtShort(iso(thisFriday()))} cell on the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">sheet</a>.</div>`;
