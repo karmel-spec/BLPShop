@@ -160,7 +160,7 @@
   .seg button.carry.on{background:var(--warn);color:#fff}
   .item.needpick .seg{outline:2px solid #c0392b;outline-offset:2px}
   .item .clnudge{grid-column:1/-1;background:#fff7e0;border:1px solid #e6c860;border-radius:8px;padding:7px 10px;font-size:12.5px;color:#5c4a00}
-  .item .clnudge img{display:block;max-width:100%;margin-top:6px;border-radius:6px;border:1px solid #e4dfd5}
+  .item .clnudge img{display:block;max-width:min(100%,260px);margin-top:6px;border-radius:6px;border:1px solid #e4dfd5}
   textarea.extra{display:block;width:calc(100% - 32px);margin:12px 16px 14px;border:1px solid #cfc9bf;border-radius:6px;padding:12px 14px;font-size:14px;line-height:1.6;min-height:90px;resize:vertical}
   textarea.extra:focus{outline:2px solid var(--red);outline-offset:1px}
   .preview{margin:0 16px 14px;background:#faf8f4;border:1px dashed var(--line);border-radius:6px;padding:12px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap;color:#3d3a35}
@@ -2005,7 +2005,7 @@ let WR_NEEDPICK=false;
 // the techs listed here (first names, any case); an optional sample image of
 // the finished checklist sits under it when CL_NUDGE_IMG is set
 const CL_NUDGE_TECHS=["Curtis","Jake","McKinly","Korban","Matthew","Garrett","Jacob","Mark","Myrrhanda","Hunter","Alex","Sadie","Avery","Lupita","Guadalupe"];   // Lupita added 10/23 (her name is sometimes Guadalupe)
-const CL_NUDGE_IMG="";
+const CL_NUDGE_IMG="assets/shop-progress-phase-sample.jpg";   // the card's Shop Progress → Shop phase dropdown (Mark 10/23: most techs advance from there)
 const clNudgeOn=()=>{ const me=String((typeof ME!=="undefined"&&ME)||"").trim().split(/\s+/)[0].toLowerCase(); return !!me&&CL_NUDGE_TECHS.some(n=>n.toLowerCase()===me); };
 function renderWorkItems(){
   const items=getItems();
