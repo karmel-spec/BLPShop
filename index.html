@@ -2004,7 +2004,7 @@ let WR_NEEDPICK=false;
 // ✓ Completed → a reminder to advance the piano card (Mark 10/23) — only for
 // the techs listed here (first names, any case); an optional sample image of
 // the finished checklist sits under it when CL_NUDGE_IMG is set
-const CL_NUDGE_TECHS=["Curtis","Jake","McKinly","Korban","Matthew","Garrett","Jacob","Mark","Myrrhanda","Hunter","Alex","Sadie","Avery"];
+const CL_NUDGE_TECHS=["Curtis","Jake","McKinly","Korban","Matthew","Garrett","Jacob","Mark","Myrrhanda","Hunter","Alex","Sadie","Avery","Lupita","Guadalupe"];   // Lupita added 10/23 (her name is sometimes Guadalupe)
 const CL_NUDGE_IMG="";
 const clNudgeOn=()=>{ const me=String((typeof ME!=="undefined"&&ME)||"").trim().split(/\s+/)[0].toLowerCase(); return !!me&&CL_NUDGE_TECHS.some(n=>n.toLowerCase()===me); };
 function renderWorkItems(){
