@@ -991,7 +991,7 @@ const BLP_APPS=[
   {href:"https://pianotechnologylibrary.com", label:"PTL"},
 ];
 let APPS_OPEN=false;
-const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["requests","nav_requests"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["client","nav_client"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["training","nav_training"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
+const TABS=[["dash","nav_dashboard"],["review","nav_review"],["planner","nav_planner"],["shopboard","nav_shopboard"],["requests","nav_requests"],["walk","nav_walk"],["week","nav_week"],["sequence","nav_sequence"],["pipeline","nav_pipeline"],["qc","nav_qc"],["team","nav_team"],["schedule","nav_schedule"],["roster","nav_roster"],["training","nav_training"],["whiteboard","nav_whiteboard"],["curtis","nav_curtis"],["brigham","nav_brigham"]];
 let ACTIVE = location.hash.slice(1) || "review";
 // ?embed=1: framed by the Store Map dashboards — hide chrome, follow hash
 const EMBED = new URLSearchParams(location.search).has("embed");
@@ -2969,6 +2969,18 @@ function cliPanel(c){
 }
 function renderClients(){
   const el=$("#view-client"); if(!el) return;
+  // RETIRED 10/28 (Brigham): client updates are no longer drafted in batches here.
+  // Every client email is now triggered by a shop event (piano arrived + first shop
+  // tag, before/after photos approved, a phase passing its mini-QC, final QC, videos)
+  // and drafted straight into the info@ Gmail Drafts folder by the Client Portal.
+  el.innerHTML=`
+    <div class="row1"><div><h2 class="page">${t("cli_title")}</h2><div class="sub">Retired October 28, 2026</div></div></div>
+    <div class="card" style="padding:16px;line-height:1.5">
+      <p><b>Client progress emails are no longer written here.</b> They are drafted automatically, one per shop event, into the <b>info@brighamlarsonpianos.com Drafts folder</b> — open Gmail to read, edit and send each one.</p>
+      <p>Events that create a draft: the piano arrives and gets its first shop tag (with a copy of the tag and the deposit status) · before photos edited &amp; approved · each phase that passes its mini-QC (team photos attached) · final QC done · after photos edited &amp; approved · before / after / progress videos.</p>
+      <p>The list of drafts made so far is on the Client Portal: <a href="https://blpclientportal.netlify.app/admin/outbox" target="_blank" rel="noopener">Client Portal → Outbox → Owner updates ↗</a></p>
+    </div>`;
+  return;
   const all=clientPianos();
   const cut=new Date(); cut.setDate(cut.getDate()-25);
   const due=all.filter(c=>c.include&&(!c.lastSent||c.lastSent<iso(cut)));
