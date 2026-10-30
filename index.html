@@ -153,6 +153,7 @@
   .item input[type=number]{border:1px solid var(--line);border-radius:6px;padding:7px 8px;width:80px;font-size:13px}
   .item input[type=text]{border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%;font-size:13px}
   .item textarea.wi-notes{border:1px solid var(--line);border-radius:6px;padding:7px 10px;width:100%;font:inherit;font-size:13px;line-height:1.4;resize:vertical;min-height:34px;overflow:auto}
+  .item .wi-last{grid-column:1/-1;font-size:12.5px;line-height:1.45;color:var(--mut);background:#f7f4ee;border-radius:6px;padding:6px 10px}
   .item .del{background:none;border:0;color:var(--mut2);font-size:15px}
   .seg{display:inline-flex;border:1px solid var(--line);border-radius:99px;overflow:hidden}
   .seg button{background:#fff;border:0;padding:6px 11px;font-size:12px;font-weight:700;color:var(--mut)}
@@ -748,6 +749,7 @@ const I18N = {
   pick_status:["Pick ✓ Completed or ⟳ Continue next week for each piano before submitting:","Elige ✓ Terminado o ⟳ Continuar la próxima semana para cada piano antes de enviar:"],
   days_ph:["Estimate # of days","Estima # de días"],
   notes_ph:["notes — what happened, what's left…","notas — qué se hizo, qué falta…"],
+  last_note:["Last week:","La semana pasada:"],
   no_items:["No work items yet — click a piano chip above or “+ add piano”.","Aún no hay tareas — toca un piano arriba o “+ agregar piano”."],
   chars:["%1 characters","%1 caracteres"],
   lastweek_head:["Your report last week (%1):","Tu reporte de la semana pasada (%1):"],
@@ -1895,7 +1897,11 @@ function seedItems(){
       return !(k&&done.has(k));
     }).slice(0,6).forEach(line=>{
       const p=extractPianos(line)[0];
-      items.push({id:Date.now()+Math.random(),piano:p?p.label:"General",notes:stripStatusPrefix(line),hours:"",status:"carry",src:"carried from last week"});
+      // Mark 10/30 (102926hales68): the carried piano came in with last week's
+      // notes already in this week's box and "Continue next week" lit, so the
+      // tech had to delete them. Now only the piano carries over — no status
+      // picked, an empty notes box, last week's note shown under it to read.
+      items.push({id:Date.now()+Math.random(),piano:p?p.label:"General",notes:"",lastNote:stripStatusPrefix(line),hours:"",status:"todo",src:"carried from last week"});
     });
   }
   localStorage.setItem(seededKey,"1");
@@ -1911,7 +1917,7 @@ function renderMyWeek(){
     <div class="job" data-id="${it.id}">
       <div class="src">${srcMap[it.src]?t(srcMap[it.src]):esc(it.src||t("src_added_week"))}</div>
       <h5>${esc(it.piano)}</h5>
-      <p>${esc(it.notes||"")}</p>
+      <p>${esc(it.notes||(it.lastNote?t("last_note")+" "+it.lastNote:""))}</p>
       <div class="jfoot">
         <select data-act="status">
           <option value="todo"${it.status==="todo"?" selected":""}>${t("st_todo")}</option>
@@ -2019,6 +2025,7 @@ function renderWorkItems(){
       </span>
       ${it.status!=="carry"?`<span></span>`:`<input type="number" min="0" step="1" placeholder="${t("days_ph")}" value="${esc(it.days||"")}" data-act="days" aria-label="${t("days_ph")} — ${esc(it.piano)}">`}
       ${it.status==="done"&&clNudgeOn()?`<div class="clnudge">${t("cl_nudge")}${CL_NUDGE_IMG?`<img src="${CL_NUDGE_IMG}" alt="">`:""}</div>`:""}
+      ${it.lastNote?`<div class="wi-last"><b>${t("last_note")}</b> ${esc(it.lastNote)}</div>`:""}
       <textarea rows="1" class="wi-notes" placeholder="${t("notes_ph")}" data-act="notes">${esc(it.notes||"")}</textarea>
       <button class="del" data-act="del" title="✕">✕</button>
     </div>`).join("")
