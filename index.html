@@ -1582,8 +1582,26 @@ const TRAINING=[
 let BOOTED=false;
 async function boot(){
   BOOTED=true;
-  try{ DATA = await (await fetch("./data/report-history.json")).json(); }
-  catch(e){ document.querySelector("main").insertAdjacentHTML("afterbegin",`<div class="notice err">Could not load data/report-history.json.</div>`); return; }
+  // the 2.3 MB history snapshot: one failed download on a phone (Doris 11/5,
+  // 110526arancibia04) used to stop the whole page — no weekly report form at
+  // all. Now: three tries, then carry on with this year's reports read live
+  // from the sheet (the form, roster and last week's pianos all come from it)
+  DATA = null;
+  for(let a=0; a<3 && !DATA; a++){
+    try{
+      const r = await fetch("./data/report-history.json", a ? {cache:"reload"} : {});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const j = await r.json();
+      if(j && Array.isArray(j.entries)) DATA = j; else throw new Error("bad file");
+    }catch(e){ if(a<2) await new Promise(res=>setTimeout(res, 1500*(a+1))); }
+  }
+  if(!DATA){
+    // the year tabs of the report sheet (same as the snapshot's "tabs"), so the live read still finds this year
+    DATA = {entries:[], generated:"", tabs:{"1842144147":{year:2026}, "88315093":{year:2025}}};
+    document.querySelector("main").insertAdjacentHTML("afterbegin",`<div class="notice err">${LANG==="es"
+      ? "No se pudo cargar el historial de informes de años anteriores. El informe de esta semana funciona igual."
+      : "Older report history didn\u2019t load. This week\u2019s report still works."}</div>`);
+  }
   await tryLiveRefresh();
   DATA.entries.forEach(e=>{ e.tech = cleanTech(e.tech); });
   buildRoster();
