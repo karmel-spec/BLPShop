@@ -1619,8 +1619,19 @@ async function tryLiveRefresh(){
   const tabGid = Object.keys(DATA.tabs||{}).find(g=>DATA.tabs[g].year===year);
   if(!tabGid) return;
   try{
-    const text = await (await fetch(`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${tabGid}`)).text();
-    const rows = parseCSV(text);
+    // this year's tab through the sales app (Melissa 11/12, 111226terry19): Google's
+    // gviz CSV only answers a browser signed in to Google with sheet access, so most
+    // computers silently kept the 7/16 snapshot — no Jake/Lupita/Curtis on 55383
+    let rows=null;
+    try{
+      const j=await (await fetch(`${CONFIG.REPORT_API}?year=${year}`)).json();
+      if(j&&j.ok&&Array.isArray(j.values)) rows=j.values.map(r=>r.map(c=>String(c==null?"":c)));
+    }catch(e){}
+    if(!rows){
+      const text = await (await fetch(`https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&gid=${tabGid}`)).text();
+      if(/^\s*<!DOCTYPE|<html/i.test(text)) return;   // Google's sign-in page, not the CSV
+      rows = parseCSV(text);
+    }
     if(rows.length<2) return;
     const dates = rows[0].slice(1);
     const fresh = [];
