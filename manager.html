@@ -666,6 +666,20 @@ function parseCSV(text){
   if(cur!==""||row.length){row.push(cur);rows.push(row);}
   return rows;
 }
+// this year's report tab through the sales app (Mark 11/13): the report sheet is
+// owners/admins only since 11/12, so Google's gviz CSV answers a manager who isn't
+// one with a sign-in page — their reports stopped at the July snapshot (or worse,
+// the sign-in page was parsed as reports). gviz stays as the fallback.
+async function reportYearRows(gid){
+  try{
+    const j = await (await fetch(`https://blpsalesapp.netlify.app/.netlify/functions/weekly-report?year=${YEAR}`)).json();
+    if(j && j.ok && Array.isArray(j.values) && j.values.length > 1) return j.values.map(r => r.map(c => String(c == null ? "" : c)));
+  }catch(e){}
+  const r = await fetch(`https://docs.google.com/spreadsheets/d/${CONFIG.REPORT_SHEET}/gviz/tq?tqx=out:csv&headers=0&gid=${gid}`);
+  const text = await r.text();
+  if(/^\s*<!DOCTYPE|<html/i.test(text)) throw new Error("report sheet needs sign-in");
+  return parseCSV(text);
+}
 async function gviz(sheetId, gidOrName){
   const sel = /^\d+$/.test(String(gidOrName)) ? `gid=${gidOrName}` : `sheet=${encodeURIComponent(gidOrName)}`;
   const r = await fetch(`https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&headers=0&${sel}`);
@@ -808,7 +822,7 @@ async function boot(){
   try{
     const gid = Object.keys(hist.tabs||{}).find(g=>hist.tabs[g].year===YEAR);
     if(gid){
-      const rows = await gviz(CONFIG.REPORT_SHEET, gid);
+      const rows = await reportYearRows(gid);
       const dates = rows[0].slice(1);
       const fresh=[];
       rows.slice(1).forEach(r=>{ const tech=(r[0]||"").trim(); if(!tech)return;
