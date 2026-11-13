@@ -2035,8 +2035,9 @@ function renderShopBoard(){
   // Team full name when we have it, else the longest name seen.
   const NAME_ALIAS={guadalupe:"lupita"};   // Current Team uses her legal name; she goes by Lupita
   // Brigham's explicit board adjustments (8/25) — on top of the Current Team sheet
-  const BOARD_REMOVE=new Set(["louis","brielle","susie"]);
-  const BOARD_ADD={"Josh Larson":"mover","JoJo Larson":"mover","Lisa Litton":"admin"};
+  // Karmel 11/12 (111226larson32): Lisa Litton, Brig, Brigham and Karmel off the clock board
+  const BOARD_REMOVE=new Set(["louis","brielle","susie","lisa","brig","brigham","karmel"]);
+  const BOARD_ADD={"Josh Larson":"mover","JoJo Larson":"mover"};
   const firstOf=n=>{const f=String(n).trim().split(/\s+/)[0].toLowerCase();return NAME_ALIAS[f]||f;};
   const canon={};
   const pay=SB.pay||{open:[]};
