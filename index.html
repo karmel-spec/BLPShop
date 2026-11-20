@@ -875,6 +875,18 @@ function thisFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x
 // one just passed. (Submissions still target thisFriday — the upcoming column.)
 function reportFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+2)%7)); return x; }
 const iso = (d) => d.toISOString().slice(0,10);
+// The week the report FORM is for (Mark 11/20, Korban's report): reports are due
+// Thursday, so on Friday a tech who already sent this week's report gets NEXT
+// week's form (carry-overs seeded from the report just sent), not the finished one
+// again. Friday without a report on file stays on this week, so a late report still
+// lands in this week's column. Sat/Sun already point at next Friday.
+function reportFri(){
+  const fri=thisFriday();
+  if(new Date().getDay()!==5 || !ME) return fri;
+  const wk=weekKeyOf(iso(fri));
+  if(!(DATA.entries||[]).some(e=>e.tech===ME&&weekKeyOf(e.date)===wk)) return fri;
+  const next=new Date(fri); next.setDate(next.getDate()+7); return next;
+}
 function fmtLong(d){ return d.toLocaleDateString(LANG==="es"?"es-MX":"en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
 function fmtShort(s){ if(!s) return "—"; const [y,m,d]=String(s).split("-"); return d?`${+m}/${+d}/${String(y).slice(2)}`:s; }
 function mondayOf(fri){ const m=new Date(fri); m.setDate(m.getDate()-4); return m; }
@@ -1905,8 +1917,8 @@ function pianoHours(text,label){
 }
 
 /* ---------- work items store (My Week + Friday report share this) ---------- */
-function itemsKey(){ return `blp-shop-reports.items.${ME||"anon"}.${iso(thisFriday())}`; }
-function extraKey(){ return `blp-shop-reports.extra.${ME||"anon"}.${iso(thisFriday())}`; }
+function itemsKey(){ return `blp-shop-reports.items.${ME||"anon"}.${iso(reportFri())}`; }
+function extraKey(){ return `blp-shop-reports.extra.${ME||"anon"}.${iso(reportFri())}`; }
 function getItems(){ try{ return JSON.parse(localStorage.getItem(itemsKey()))||[]; }catch(e){ return []; } }
 function setItems(items){ localStorage.setItem(itemsKey(),JSON.stringify(items)); markSaved(); renderMyWeek(); renderWorkItems(); }
 function markSaved(){ $("#draftStatus").textContent=t("draft_saved",new Date().toLocaleTimeString([],{hour:"numeric",minute:"2-digit"})); }
@@ -1916,7 +1928,7 @@ function seedItems(){
   if(!ME) return;
   const seededKey=itemsKey()+".seeded";
   if(localStorage.getItem(seededKey)) return;
-  const prev=new Date(thisFriday()); prev.setDate(prev.getDate()-7);
+  const prev=new Date(reportFri()); prev.setDate(prev.getDate()-7);
   const last=DATA.entries.find(e=>e.tech===ME&&weekKeyOf(e.date)===weekKeyOf(iso(prev)));
   const items=getItems();
   if(last){
@@ -1978,7 +1990,7 @@ function addItemPrompt(){
 
 /* ---------- friday report portal ---------- */
 function renderReportForm(){
-  const fri=thisFriday();
+  const fri=reportFri();
   seedItems();
   $("#reportTitle").textContent=ME?t(new Date().getHours()<12?"greet_am":"greet_pm",ME):t("report_title");
   $("#reportSub").innerHTML=t("report_sub",mondayOf(fri).toLocaleDateString(LANG==="es"?"es-MX":"en-US",{month:"long",day:"numeric"}),fmtLong(fri),CONFIG.SHEET_URL);
@@ -2113,7 +2125,7 @@ $("#submitBtn").onclick=async()=>{
   WR_NEEDPICK=false;
   if(!CONFIG.APPS_SCRIPT_URL){
     $("#copyBtn").hidden=false;
-    $("#submitNotice").innerHTML=`<div class="notice">Submission endpoint not configured yet — use <b>Copy for spreadsheet</b> and paste into your ${fmtShort(iso(thisFriday()))} cell on the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">sheet</a>.</div>`;
+    $("#submitNotice").innerHTML=`<div class="notice">Submission endpoint not configured yet — use <b>Copy for spreadsheet</b> and paste into your ${fmtShort(iso(reportFri()))} cell on the <a href="${CONFIG.SHEET_URL}" target="_blank" rel="noreferrer">sheet</a>.</div>`;
     return;
   }
   const btn=$("#submitBtn"); btn.disabled=true; btn.textContent=t("submitting");
@@ -2123,17 +2135,17 @@ $("#submitBtn").onclick=async()=>{
   const ctl=new AbortController(); const timer=setTimeout(()=>ctl.abort(),45000);
   // a resubmit REPLACES what this device sent earlier this week (Walter 10/16 —
   // Avery fixed one status and the cell held both versions)
-  const sentKey=`blp-shop-reports.sent.${ME}.${iso(thisFriday())}`;
+  const sentKey=`blp-shop-reports.sent.${ME}.${iso(reportFri())}`;
   const prevSent=localStorage.getItem(sentKey)||"";
   try{
     const r=await fetch(CONFIG.REPORT_API,{method:"POST",headers:shopHeaders(true),signal:ctl.signal,
-      body:shopBody({tech:ME,date:iso(thisFriday()),text,replaces:prevSent&&prevSent!==text?prevSent:""})});
+      body:shopBody({tech:ME,date:iso(reportFri()),text,replaces:prevSent&&prevSent!==text?prevSent:""})});
     const out=await r.json();
     if(!out.ok) throw new Error(out.error||"unknown error");
     try{ localStorage.setItem(sentKey,text); }catch(e){}
     $("#copyBtn").hidden=true;
-    $("#submitNotice").innerHTML=`<div class="notice ok">${t(out.duplicate?"submitted_dup":out.updated?"submitted_upd":"submitted_ok",fmtShort(iso(thisFriday())))}</div>`;
-    if(!out.duplicate&&!out.updated) DATA.entries.push({tech:ME,date:iso(thisFriday()),week:null,year:new Date().getFullYear(),gid:"live",text});
+    $("#submitNotice").innerHTML=`<div class="notice ok">${t(out.duplicate?"submitted_dup":out.updated?"submitted_upd":"submitted_ok",fmtShort(iso(reportFri())))}</div>`;
+    if(!out.duplicate&&!out.updated) DATA.entries.push({tech:ME,date:iso(reportFri()),week:null,year:new Date().getFullYear(),gid:"live",text});
   }catch(e){
     $("#copyBtn").hidden=false;   // the fallback appears only now, next to the error that explains it
     const msg=e&&e.name==="AbortError"?t("submit_slow"):t("submit_fail",esc(String(e.message||e)));
