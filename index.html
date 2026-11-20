@@ -875,16 +875,18 @@ function thisFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x
 // one just passed. (Submissions still target thisFriday — the upcoming column.)
 function reportFriday(d = new Date()){ const x=new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate()-((x.getDay()+2)%7)); return x; }
 const iso = (d) => d.toISOString().slice(0,10);
-// The week the report FORM is for (Mark 11/20, Korban's report): reports are due
-// Thursday, so on Friday a tech who already sent this week's report gets NEXT
-// week's form (carry-overs seeded from the report just sent), not the finished one
-// again. Friday without a report on file stays on this week, so a late report still
-// lands in this week's column. Sat/Sun already point at next Friday.
+// The week the report FORM is for (Mark 11/20, Korban's report). Mon–Thu: this
+// week. Fri, Sat and Sun: the week that is ending, until that week's report is on
+// file — then NEXT week (carry-overs seeded from the report just sent). Before,
+// Sat/Sun always meant next week, so a report written over the weekend for the
+// week just worked (Korban's Hailun tunings, 11/14–15) was saved and filed as the
+// following week's; and on Friday the finished week reopened with its pianos.
 function reportFri(){
-  const fri=thisFriday();
-  if(new Date().getDay()!==5 || !ME) return fri;
+  const day=new Date().getDay();
+  if(day>=1 && day<=4) return thisFriday();
+  const fri=reportFriday();   // Friday of the week that is ending (today on a Friday)
   const wk=weekKeyOf(iso(fri));
-  if(!(DATA.entries||[]).some(e=>e.tech===ME&&weekKeyOf(e.date)===wk)) return fri;
+  if(!ME || !(DATA.entries||[]).some(e=>e.tech===ME&&weekKeyOf(e.date)===wk)) return fri;
   const next=new Date(fri); next.setDate(next.getDate()+7); return next;
 }
 function fmtLong(d){ return d.toLocaleDateString(LANG==="es"?"es-MX":"en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}); }
